@@ -25,9 +25,18 @@ export default function Page(): React.JSX.Element {
           xs: 12,
         }}
       >
-        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" />
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Cash Collection" />
       </Grid>
       <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Purchase Amount" />
+      </Grid>
+      {/* <Grid
         size={{
           lg: 3,
           sm: 6,
@@ -35,7 +44,7 @@ export default function Page(): React.JSX.Element {
         }}
       >
         <TotalCustomers diff={16} trend="down" sx={{ height: '100%' }} value="1.6k" />
-      </Grid>
+      </Grid> */}
       <Grid
         size={{
           lg: 3,
@@ -43,7 +52,116 @@ export default function Page(): React.JSX.Element {
           xs: 12,
         }}
       >
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Discount" />
+      </Grid>
+      {/* <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
         <TasksProgress sx={{ height: '100%' }} value={75.5} />
+      </Grid> */}
+      {/* <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Profit" />
+      </Grid> */}
+      {/* <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <TotalProfit sx={{ height: '100%' }} value="$15k" />
+      </Grid> */}
+
+      {/* <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Balance" />
+      </Grid> */}
+      {/* <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <TotalProfit sx={{ height: '100%' }} value="$15k" />
+      </Grid> */}
+      <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name='Amount to be' />
+      </Grid>
+      {/* <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <TotalCustomers diff={16} trend="down" sx={{ height: '100%' }} value="1.6k" />
+      </Grid> */}
+      <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name='Petrol' />
+      </Grid>
+      {/* <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <TasksProgress sx={{ height: '100%' }} value={75.5} />
+      </Grid> */}
+      <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name='Balance' />
+      </Grid>
+      {/* <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <TotalProfit sx={{ height: '100%' }} value="$15k" />
+      </Grid> */}
+      <Grid
+        size={{
+          lg: 3,
+          sm: 6,
+          xs: 12,
+        }}
+      >
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name='Expiry' />
       </Grid>
       <Grid
         size={{
@@ -56,7 +174,9 @@ export default function Page(): React.JSX.Element {
       </Grid>
       <Grid
         size={{
-          lg: 8,
+          lg: 12,
+          md: 12,
+          sm: 12,
           xs: 12,
         }}
       >
@@ -68,7 +188,7 @@ export default function Page(): React.JSX.Element {
           sx={{ height: '100%' }}
         />
       </Grid>
-      <Grid
+      {/* <Grid
         size={{
           lg: 4,
           md: 6,
@@ -76,8 +196,8 @@ export default function Page(): React.JSX.Element {
         }}
       >
         <Traffic chartSeries={[63, 15, 22]} labels={['Desktop', 'Tablet', 'Phone']} sx={{ height: '100%' }} />
-      </Grid>
-      <Grid
+      </Grid> */}
+      {/* <Grid
         size={{
           lg: 4,
           md: 6,
@@ -119,8 +239,8 @@ export default function Page(): React.JSX.Element {
           ]}
           sx={{ height: '100%' }}
         />
-      </Grid>
-      <Grid
+      </Grid> */}
+      {/* <Grid
         size={{
           lg: 8,
           md: 12,
@@ -174,7 +294,7 @@ export default function Page(): React.JSX.Element {
           ]}
           sx={{ height: '100%' }}
         />
-      </Grid>
+      </Grid> */}
     </Grid>
   );
 }
