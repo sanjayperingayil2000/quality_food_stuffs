@@ -3,45 +3,100 @@
 import * as React from 'react';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
-import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Divider from '@mui/material/Divider';
 import { alpha, useTheme } from '@mui/material/styles';
 import type { SxProps } from '@mui/material/styles';
-import { ArrowClockwiseIcon } from '@phosphor-icons/react/dist/ssr/ArrowClockwise';
-import { ArrowRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowRight';
+import { MenuItem, FormControl, InputLabel, TextField, Box } from '@mui/material';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
 import type { ApexOptions } from 'apexcharts';
 
 import { Chart } from '@/components/core/chart';
 
 export interface SalesProps {
   chartSeries: { name: string; data: number[] }[];
+  drivers?: string[];
   sx?: SxProps;
 }
 
-export function Sales({ chartSeries, sx }: SalesProps): React.JSX.Element {
+export function Sales({ chartSeries, drivers = ['John', 'Mike', 'Sara'], sx }: SalesProps): React.JSX.Element {
   const chartOptions = useChartOptions();
+
+  // State for filters
+  const [metricType, setMetricType] = React.useState<'Drivers' | 'Profit'>('Drivers');
+  const [selectedDriver, setSelectedDriver] = React.useState(drivers[0]);
+  const [selectedDate, setSelectedDate] = React.useState<string>('');
+
+  const handleMetricChange = (event: SelectChangeEvent<string>) => {
+    setMetricType(event.target.value as 'Drivers' | 'Profit');
+  };
+
+  const handleDriverChange = (event: SelectChangeEvent<string>) => {
+    setSelectedDriver(event.target.value as string);
+  };
+
+  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(event.target.value);
+  };
 
   return (
     <Card sx={sx}>
       <CardHeader
-        action={
-          <Button color="inherit" size="small" startIcon={<ArrowClockwiseIcon fontSize="var(--icon-fontSize-md)" />}>
-            Sync
-          </Button>
-        }
         title="Sales"
+        action={
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            {/* Metric Type Dropdown */}
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel id="metric-select-label">Metric</InputLabel>
+              <Select
+                labelId="metric-select-label"
+                value={metricType}
+                label="Metric"
+                onChange={handleMetricChange}
+              >
+                <MenuItem value="Drivers">Drivers</MenuItem>
+                <MenuItem value="Profit">Profit</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Conditional Driver Dropdown */}
+            {metricType === 'Drivers' && (
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel id="driver-select-label">Driver</InputLabel>
+                <Select
+                  labelId="driver-select-label"
+                  value={selectedDriver}
+                  label="Driver"
+                  onChange={handleDriverChange}
+                >
+                  {drivers.map((driver) => (
+                    <MenuItem key={driver} value={driver}>
+                      {driver}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Date Picker */}
+            <TextField
+              size="small"
+              type="date"
+              label="Date"
+              value={selectedDate}
+              onChange={handleDateChange}
+              slotProps={{
+                inputLabel: { shrink: true }, // ✅ replace deprecated InputLabelProps
+              }}
+            />
+          </Box>
+        }
       />
       <CardContent>
         <Chart height={350} options={chartOptions} series={chartSeries} type="bar" width="100%" />
       </CardContent>
       <Divider />
-      <CardActions sx={{ justifyContent: 'flex-end' }}>
-        <Button color="inherit" endIcon={<ArrowRightIcon fontSize="var(--icon-fontSize-md)" />} size="small">
-          Overview
-        </Button>
-      </CardActions>
     </Card>
   );
 }

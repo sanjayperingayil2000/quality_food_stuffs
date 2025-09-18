@@ -8,8 +8,10 @@ import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 import { ArrowSquareUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareUpRight';
-import { CaretUpDownIcon } from '@phosphor-icons/react/dist/ssr/CaretUpDown';
+import { ListIcon } from '@phosphor-icons/react/dist/ssr/List';
+import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
@@ -19,8 +21,14 @@ import { Logo } from '@/components/core/logo';
 import { navItems } from './config';
 import { navIcons } from './nav-icons';
 
-export function SideNav(): React.JSX.Element {
-  const pathname = usePathname();
+interface SideNavProps {
+  open: boolean;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {  const pathname = usePathname();
+
+  const toggleSidebar = () => setOpen((prev) => !prev);
 
   return (
     <Box
@@ -39,87 +47,105 @@ export function SideNav(): React.JSX.Element {
         color: 'var(--SideNav-color)',
         display: { xs: 'none', lg: 'flex' },
         flexDirection: 'column',
-        height: '100%',
+        height: '100vh', // full height
         left: 0,
-        maxWidth: '100%',
         position: 'fixed',
-        scrollbarWidth: 'none',
         top: 0,
-        width: 'var(--SideNav-width)',
+        transition: 'width 0.3s ease',
+        width: open ? '240px' : '72px',
         zIndex: 'var(--SideNav-zIndex)',
-        '&::-webkit-scrollbar': { display: 'none' },
+        overflow: 'hidden', // no page scroll
       }}
     >
-      <Stack spacing={2} sx={{ p: 3 }}>
-        <Box component={RouterLink} href={paths.home} sx={{ display: 'inline-flex' }}>
-          <Logo color="light" height={32} width={122} />
-        </Box>
-        <Box
-          sx={{
-            alignItems: 'center',
-            backgroundColor: 'var(--mui-palette-neutral-950)',
-            border: '1px solid var(--mui-palette-neutral-700)',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            display: 'flex',
-            p: '4px 12px',
-          }}
-        >
-          <Box sx={{ flex: '1 1 auto' }}>
-            <Typography color="var(--mui-palette-neutral-400)" variant="body2">
-              Workspace
-            </Typography>
-            <Typography color="inherit" variant="subtitle1">
-              Devias
-            </Typography>
+      {/* Header */}
+      <Stack
+        spacing={2}
+        sx={{
+          p: 2,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: open ? 'space-between' : 'center',
+        }}
+      >
+        {open && (
+          <Box component={RouterLink} href={paths.home} sx={{ display: 'inline-flex' }}>
+            <Logo color="light" height={32} width={122} />
           </Box>
-          <CaretUpDownIcon />
-        </Box>
+        )}
+        <IconButton onClick={toggleSidebar} sx={{ color: 'white' }}>
+          {open ? <XIcon size={20} /> : <ListIcon size={20} />}
+        </IconButton>
       </Stack>
+
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
-      <Box component="nav" sx={{ flex: '1 1 auto', p: '12px' }}>
-        {renderNavItems({ pathname, items: navItems })}
+
+      {/* Nav Items (scrollable area) */}
+      <Box
+        component="nav"
+        sx={{
+          flex: '1 1 auto',
+          overflowY: 'auto',
+          p: 1,
+          '&::-webkit-scrollbar': { width: 6 },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            borderRadius: 4,
+          },
+        }}
+      >
+        {renderNavItems({ pathname, items: navItems, open })}
       </Box>
+
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
-      <Stack spacing={2} sx={{ p: '12px' }}>
-        <div>
-          <Typography color="var(--mui-palette-neutral-100)" variant="subtitle2">
-            Need more features?
-          </Typography>
-          <Typography color="var(--mui-palette-neutral-400)" variant="body2">
-            Check out our Pro solution template.
-          </Typography>
-        </div>
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <Box
-            component="img"
-            alt="Pro version"
-            src="/assets/devias-kit-pro.png"
-            sx={{ height: 'auto', width: '160px' }}
-          />
-        </Box>
-        <Button
-          component="a"
-          endIcon={<ArrowSquareUpRightIcon fontSize="var(--icon-fontSize-md)" />}
-          fullWidth
-          href="https://material-kit-pro-react.devias.io/"
-          sx={{ mt: 2 }}
-          target="_blank"
-          variant="contained"
-        >
-          Pro version
-        </Button>
-      </Stack>
+
+      {/* Footer (pinned, only when expanded) */}
+      {/* {open && (
+        <Stack spacing={2} sx={{ p: 2 }}>
+          <div>
+            <Typography color="var(--mui-palette-neutral-100)" variant="subtitle2">
+              Need more features?
+            </Typography>
+            <Typography color="var(--mui-palette-neutral-400)" variant="body2">
+              Check out our Pro solution template.
+            </Typography>
+          </div>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Box
+              component="img"
+              alt="Pro version"
+              src="/assets/devias-kit-pro.png"
+              sx={{ height: 'auto', width: '160px' }}
+            />
+          </Box>
+          <Button
+            component="a"
+            endIcon={<ArrowSquareUpRightIcon fontSize="var(--icon-fontSize-md)" />}
+            fullWidth
+            href="https://material-kit-pro-react.devias.io/"
+            sx={{ mt: 2 }}
+            target="_blank"
+            variant="contained"
+          >
+            Pro version
+          </Button>
+        </Stack>
+      )} */}
     </Box>
   );
 }
 
-function renderNavItems({ items = [], pathname }: { items?: NavItemConfig[]; pathname: string }): React.JSX.Element {
+function renderNavItems({
+  items = [],
+  pathname,
+  open,
+}: {
+  items?: NavItemConfig[];
+  pathname: string;
+  open: boolean;
+}): React.JSX.Element {
   const children = items.reduce((acc: React.ReactNode[], curr: NavItemConfig): React.ReactNode[] => {
     const { key, ...item } = curr;
-
-    acc.push(<NavItem key={key} pathname={pathname} {...item} />);
-
+    acc.push(<NavItem key={key} pathname={pathname} open={open} {...item} />);
     return acc;
   }, []);
 
@@ -132,9 +158,10 @@ function renderNavItems({ items = [], pathname }: { items?: NavItemConfig[]; pat
 
 interface NavItemProps extends Omit<NavItemConfig, 'items'> {
   pathname: string;
+  open: boolean;
 }
 
-function NavItem({ disabled, external, href, icon, matcher, pathname, title }: NavItemProps): React.JSX.Element {
+function NavItem({ disabled, external, href, icon, matcher, pathname, title, open }: NavItemProps): React.JSX.Element {
   const active = isNavItemActive({ disabled, external, href, matcher, pathname });
   const Icon = icon ? navIcons[icon] : null;
 
@@ -157,8 +184,7 @@ function NavItem({ disabled, external, href, icon, matcher, pathname, title }: N
           display: 'flex',
           flex: '0 0 auto',
           gap: 1,
-          p: '6px 16px',
-          position: 'relative',
+          p: '6px 12px',
           textDecoration: 'none',
           whiteSpace: 'nowrap',
           ...(disabled && {
@@ -169,23 +195,23 @@ function NavItem({ disabled, external, href, icon, matcher, pathname, title }: N
           ...(active && { bgcolor: 'var(--NavItem-active-background)', color: 'var(--NavItem-active-color)' }),
         }}
       >
-        <Box sx={{ alignItems: 'center', display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>
-          {Icon ? (
+        {Icon && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>
             <Icon
               fill={active ? 'var(--NavItem-icon-active-color)' : 'var(--NavItem-icon-color)'}
               fontSize="var(--icon-fontSize-md)"
               weight={active ? 'fill' : undefined}
             />
-          ) : null}
-        </Box>
-        <Box sx={{ flex: '1 1 auto' }}>
+          </Box>
+        )}
+        {open && (
           <Typography
             component="span"
             sx={{ color: 'inherit', fontSize: '0.875rem', fontWeight: 500, lineHeight: '28px' }}
           >
             {title}
           </Typography>
-        </Box>
+        )}
       </Box>
     </li>
   );
