@@ -1,49 +1,55 @@
 'use client';
 
 import * as React from 'react';
-import Avatar from '@mui/material/Avatar';
-import Badge from '@mui/material/Badge';
-import Box from '@mui/material/Box';
-import IconButton from '@mui/material/IconButton';
-import Stack from '@mui/material/Stack';
-import Tooltip from '@mui/material/Tooltip';
+import {
+  Avatar,
+  Badge,
+  Box,
+  BoxProps,
+  Button,
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  Stack,
+  Tooltip,
+} from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs, { Dayjs } from 'dayjs';
 import { BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 import { ListIcon } from '@phosphor-icons/react/dist/ssr/List';
 import { UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
-import { usePopover } from '@/hooks/use-popover';
-
-import { MobileNav } from './mobile-nav';
-import { UserPopover } from './user-popover';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { Button } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import dayjs, { Dayjs } from 'dayjs';
 import { FilePdfIcon, FileXlsIcon } from '@phosphor-icons/react/dist/ssr';
 
-export function MainNav(): React.JSX.Element {
-  const [openNav, setOpenNav] = React.useState<boolean>(false);
+import { usePopover } from '@/hooks/use-popover';
+import { MobileNav } from './mobile-nav';
+import { UserPopover } from './user-popover';
 
+export interface MainNavProps extends BoxProps {}
+
+export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
+  const [openNav, setOpenNav] = React.useState(false);
   const [selection, setSelection] = React.useState('');
   const [driver, setDriver] = React.useState('');
+  const [dateRange, setDateRange] = React.useState<[Dayjs | null, Dayjs | null]>([
+    dayjs().subtract(7, 'day'),
+    dayjs(),
+  ]);
 
-  const [dateRange, setDateRange] = React.useState<[Dayjs | null, Dayjs | null]>([dayjs().subtract(7, 'day'), dayjs()]);
+  const userPopover = usePopover<HTMLDivElement>();
+
+  const driverList = ['John Doe', 'Jane Smith', 'Michael Brown'];
 
   const handleSelectionChange = (event: SelectChangeEvent) => {
     setSelection(event.target.value as string);
-    setDriver(''); // reset driver when switching back to Company
+    setDriver('');
   };
 
   const handleDriverChange = (event: SelectChangeEvent) => {
     setDriver(event.target.value as string);
   };
-
-  const userPopover = usePopover<HTMLDivElement>();
-
-  // Example driver list
-  const driverList = ['John Doe', 'Jane Smith', 'Michael Brown'];
 
   return (
     <React.Fragment>
@@ -54,25 +60,27 @@ export function MainNav(): React.JSX.Element {
           backgroundColor: 'var(--mui-palette-background-paper)',
           position: 'sticky',
           top: 0,
-          zIndex: 'var(--mui-zIndex-appBar)',
+          zIndex: (theme) => theme.zIndex.appBar,
+          ...sx, // ✅ allow overrides
         }}
+        {...props}
       >
         <Stack
           direction="row"
           spacing={2}
-          sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: '75px', px: 2 }}
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: '75px',
+            px: 2,
+          }}
         >
+          {/* Left side */}
           <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
-            <IconButton
-              onClick={(): void => {
-                setOpenNav(true);
-              }}
-              sx={{ display: { lg: 'none' } }}
-            >
+            <IconButton onClick={() => setOpenNav(true)} sx={{ display: { lg: 'none' } }}>
               <ListIcon />
             </IconButton>
 
-            {/* <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}> */}
             {/* First dropdown */}
             <Box sx={{ minWidth: 230 }}>
               <FormControl fullWidth>
@@ -84,18 +92,17 @@ export function MainNav(): React.JSX.Element {
                   label="Select"
                   onChange={handleSelectionChange}
                   sx={{
-                    borderRadius: '50px', // fully rounded like a pill
-                    backgroundColor: 'white', // optional: add bg so it looks clean
+                    borderRadius: '50px',
+                    backgroundColor: 'white',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderRadius: '50px', // ensures outline is rounded
+                      borderRadius: '50px',
                     },
                   }}
                 >
-                  <MenuItem value={'company'}>Company</MenuItem>
-                  <MenuItem value={'driver'}>Driver</MenuItem>
+                  <MenuItem value="company">Company</MenuItem>
+                  <MenuItem value="driver">Driver</MenuItem>
                 </Select>
               </FormControl>
-
             </Box>
 
             {/* Second dropdown */}
@@ -124,10 +131,10 @@ export function MainNav(): React.JSX.Element {
                     ))}
                   </Select>
                 </FormControl>
-
               </Box>
             )}
 
+            {/* Date pickers */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               <DatePicker
                 label="From"
@@ -163,16 +170,11 @@ export function MainNav(): React.JSX.Element {
               />
             </Box>
 
-
             <Button variant="contained">Apply Filter</Button>
           </Stack>
 
+          {/* Right side */}
           <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
-            {/* <Tooltip title="Contacts">
-              <IconButton>
-                <UsersIcon />
-              </IconButton>
-            </Tooltip> */}
             <Tooltip title="Download Report Pdf">
               <IconButton>
                 <FilePdfIcon size={32} />
@@ -182,13 +184,6 @@ export function MainNav(): React.JSX.Element {
               <IconButton>
                 <FileXlsIcon size={32} />
               </IconButton>
-            </Tooltip>
-            <Tooltip title="Notifications">
-              <Badge badgeContent={4} color="success" variant="dot">
-                <IconButton>
-                  <BellIcon />
-                </IconButton>
-              </Badge>
             </Tooltip>
             <Avatar
               onClick={userPopover.handleOpen}
@@ -200,18 +195,13 @@ export function MainNav(): React.JSX.Element {
         </Stack>
       </Box>
 
+      {/* Popovers + Mobile nav */}
       <UserPopover
         anchorEl={userPopover.anchorRef.current}
         onClose={userPopover.handleClose}
         open={userPopover.open}
       />
-
-      <MobileNav
-        onClose={() => {
-          setOpenNav(false);
-        }}
-        open={openNav}
-      />
+      <MobileNav onClose={() => setOpenNav(false)} open={openNav} />
     </React.Fragment>
   );
 }
