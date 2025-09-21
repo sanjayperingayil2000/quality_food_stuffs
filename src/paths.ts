@@ -6,6 +6,7 @@ export const paths = {
     account: '/dashboard/account',
     drivers: '/dashboard/drivers',
     products: '/dashboard/products',
+    additionalExpenses: '/dashboard/additional-expenses',
     settings: '/dashboard/settings',
   },
   errors: { notFound: '/errors/not-found' },
