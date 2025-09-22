@@ -1,5 +1,6 @@
+'use client';
+
 import * as React from 'react';
-import type { Metadata } from 'next';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
@@ -10,27 +11,11 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 
-import { config } from '@/config';
-
-export const metadata = { title: `Drivers | Dashboard | ${config.site.name}` } satisfies Metadata;
-
-interface Driver {
-  id: string;
-  name: string;
-  phone: string;
-  location: string;
-  routeName: string;
-}
-
-const drivers: Driver[] = [
-  { id: 'DRV-001', name: 'Rahul Kumar', phone: '98765 43210', location: 'Coimbatore', routeName: 'CBE → Pollachi' },
-  { id: 'DRV-002', name: 'Vijay Anand', phone: '90909 11223', location: 'Pollachi', routeName: 'Pollachi → Udumalpet' },
-  { id: 'DRV-003', name: 'Karthik', phone: '90031 77889', location: 'Udumalpet', routeName: 'Udumalpet → Tiruppur' },
-  { id: 'DRV-004', name: 'Senthil', phone: '95001 22334', location: 'Tiruppur', routeName: 'Tiruppur → Erode' },
-  { id: 'DRV-005', name: 'Suresh', phone: '96555 33445', location: 'Erode', routeName: 'Erode → Coimbatore' },
-];
+import { useDrivers } from '@/contexts/drivers-context';
 
 export default function Page(): React.JSX.Element {
+  const { drivers } = useDrivers();
+
   return (
     <Stack spacing={3} sx={{ px: { xs: 2, md: 4 } }}>
       <Stack direction="row" spacing={3}>

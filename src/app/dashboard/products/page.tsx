@@ -34,21 +34,13 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 
 import { config } from '@/config';
+import { useProducts, type Product } from '@/contexts/products-context';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 type Category = 'bakery' | 'fresh';
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  category: Category;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 const productSchema = zod.object({
   name: zod.string().min(1, 'Product name is required'),
@@ -59,56 +51,7 @@ const productSchema = zod.object({
 
 type ProductFormData = zod.infer<typeof productSchema>;
 
-const initialProducts: Product[] = [
-  {
-    id: 'PRD-001',
-    name: 'Sourdough Bread',
-    price: 12.50,
-    category: 'bakery',
-    createdAt: dayjs().subtract(14, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(1, 'day').utc().toDate(),
-  },
-  {
-    id: 'PRD-002',
-    name: 'Blueberry Muffin',
-    price: 8.00,
-    category: 'bakery',
-    createdAt: dayjs().subtract(12, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(2, 'day').utc().toDate(),
-  },
-  {
-    id: 'PRD-003',
-    name: 'Whole Wheat Loaf',
-    price: 10.75,
-    category: 'bakery',
-    createdAt: dayjs().subtract(20, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(3, 'day').utc().toDate(),
-  },
-  {
-    id: 'PRD-004',
-    name: 'Banana',
-    price: 1.60,
-    category: 'fresh',
-    createdAt: dayjs().subtract(5, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(2, 'hour').utc().toDate(),
-  },
-  {
-    id: 'PRD-005',
-    name: 'Strawberries (500g)',
-    price: 15.00,
-    category: 'fresh',
-    createdAt: dayjs().subtract(9, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(6, 'hour').utc().toDate(),
-  },
-  {
-    id: 'PRD-006',
-    name: 'Croissant',
-    price: 6.50,
-    category: 'bakery',
-    createdAt: dayjs().subtract(7, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(1, 'day').utc().toDate(),
-  },
-];
+// Products are now loaded from context
 
 function generateProductId(): string {
   const count = Math.floor(Math.random() * 1000) + 1;
@@ -116,11 +59,12 @@ function generateProductId(): string {
 }
 
 export default function Page(): React.JSX.Element {
-  const [products, setProducts] = React.useState<Product[]>(initialProducts);
+  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
   const [open, setOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-  const [filteredProducts, setFilteredProducts] = React.useState<Product[]>(initialProducts);
+  const [filteredProducts, setFilteredProducts] = React.useState<Product[]>([]);
   const [categoryFilter, setCategoryFilter] = React.useState<string>('');
+
 
   const {
     control,
@@ -166,12 +110,11 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = (productId: string) => {
-    const updatedProducts = products.filter(p => p.id !== productId);
-    setProducts(updatedProducts);
-    setFilteredProducts(updatedProducts);
+    deleteProduct(productId);
   };
 
-  const handleApplyFilter = () => {
+  // Auto-filter when categoryFilter changes
+  React.useEffect(() => {
     let filtered = products;
 
     // Filter by category
@@ -180,7 +123,7 @@ export default function Page(): React.JSX.Element {
     }
 
     setFilteredProducts(filtered);
-  };
+  }, [products, categoryFilter]);
 
   const handleExportPdf = () => {
     const htmlContent = `
@@ -298,20 +241,13 @@ export default function Page(): React.JSX.Element {
   const onSubmit = (data: ProductFormData) => {
     if (editingProduct) {
       // Edit existing product
-      const isIdChanged = data.productId !== editingProduct.id;
-      const updated = products.map(p => {
-        if (p.id !== editingProduct.id) return p;
-        return {
-          ...p,
-          id: data.productId,
-          name: data.name,
-          price: data.price,
-          category: data.category,
-          updatedAt: dayjs().utc().toDate(),
-        };
+      updateProduct(editingProduct.id, {
+        id: data.productId,
+        name: data.name,
+        price: data.price,
+        category: data.category,
+        updatedAt: dayjs().utc().toDate(),
       });
-      setProducts(updated);
-      setFilteredProducts(updated);
     } else {
       // Add new product
       const newProduct: Product = {
@@ -322,9 +258,7 @@ export default function Page(): React.JSX.Element {
         createdAt: dayjs().utc().toDate(),
         updatedAt: dayjs().utc().toDate(),
       };
-      const updatedProducts = [...products, newProduct];
-      setProducts(updatedProducts);
-      setFilteredProducts(updatedProducts);
+      addProduct(newProduct);
     }
     handleClose();
   };
@@ -369,9 +303,6 @@ export default function Page(): React.JSX.Element {
             <MenuItem value="fresh">Fresh</MenuItem>
           </Select>
         </FormControl>
-        <Button variant="outlined" onClick={handleApplyFilter}>
-          Apply
-        </Button>
       </Stack>
 
       <Table>
