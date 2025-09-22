@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Button from '@mui/material/Button';
+// import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
@@ -20,21 +20,21 @@ export interface SalesProps {
   sx?: SxProps;
 }
 
-export function Sales({ chartSeries, drivers = ['John', 'Mike', 'Sara'], sx }: SalesProps): React.JSX.Element {
+export function Sales({ chartSeries, drivers: _drivers = ['John', 'Mike', 'Sara'], sx }: SalesProps): React.JSX.Element {
   const chartOptions = useChartOptions();
 
   // State for filters
   const [metricType, setMetricType] = React.useState<'Drivers' | 'Profit'>('Drivers');
-  const [selectedDriver, setSelectedDriver] = React.useState(drivers[0]);
+  // const [selectedDriver, setSelectedDriver] = React.useState(drivers[0]); // Unused
   const [selectedDate, setSelectedDate] = React.useState<string>('');
 
   const handleMetricChange = (event: SelectChangeEvent<string>) => {
     setMetricType(event.target.value as 'Drivers' | 'Profit');
   };
 
-  const handleDriverChange = (event: SelectChangeEvent<string>) => {
-    setSelectedDriver(event.target.value as string);
-  };
+  // const handleDriverChange = (event: SelectChangeEvent<string>) => {
+  //   setSelectedDriver(event.target.value as string);
+  // }; // Unused
 
   const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedDate(event.target.value);
