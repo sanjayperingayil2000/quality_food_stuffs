@@ -155,10 +155,6 @@ export default function Page(): React.JSX.Element {
 
   const watchedProducts = watch('products');
 
-  React.useEffect(() => {
-    handleApplyFilter();
-  }, [handleApplyFilter]);
-
   const handleOpen = () => {
     setEditingTrip(null);
     setSelectedDriverId('');
@@ -216,6 +212,11 @@ export default function Page(): React.JSX.Element {
     setFilteredTrips(filtered);
   }, [trips, driverFilter, dateFrom, dateTo]);
 
+  // Apply filter when dependencies change
+  React.useEffect(() => {
+    handleApplyFilter();
+  }, [handleApplyFilter]);
+
   const handleProductQuantityChange = (productId: string, quantity: number) => {
     const currentProducts = watchedProducts || [];
     const existingIndex = currentProducts.findIndex(p => p.productId === productId);
@@ -230,7 +231,7 @@ export default function Page(): React.JSX.Element {
           quantity,
         };
 
-        if (existingIndex >= 0) {
+        if (existingIndex !== -1) {
           const updatedProducts = [...currentProducts];
           updatedProducts[existingIndex] = updatedProduct;
           setValue('products', updatedProducts);
@@ -239,7 +240,7 @@ export default function Page(): React.JSX.Element {
         }
       }
     } else {
-      if (existingIndex >= 0) {
+      if (existingIndex !== -1) {
         const updatedProducts = currentProducts.filter((_, index) => index !== existingIndex);
         setValue('products', updatedProducts);
       }
