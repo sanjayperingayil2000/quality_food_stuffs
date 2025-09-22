@@ -57,11 +57,18 @@ export function Sales({ chartSeries, drivers = ['John', 'Mike', 'Sara'], sx }: S
               >
                 <MenuItem value="Drivers">Drivers</MenuItem>
                 <MenuItem value="Profit">Profit</MenuItem>
+                <MenuItem value="Cash Collection">Cash Collection</MenuItem>
+                <MenuItem value="Purchase Amount">Purchase Amount</MenuItem>
+                <MenuItem value="Discount">Discount</MenuItem>
+                <MenuItem value="Amount to be">Amount to be</MenuItem>
+                <MenuItem value="Petrol">Petrol</MenuItem>
+                <MenuItem value="Balance">Balance</MenuItem>
+                <MenuItem value="Expiry">Expiry</MenuItem>
               </Select>
             </FormControl>
 
             {/* Conditional Driver Dropdown */}
-            {metricType === 'Drivers' && (
+            {/* {metricType === 'Drivers' && (
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <InputLabel id="driver-select-label">Driver</InputLabel>
                 <Select
@@ -77,7 +84,7 @@ export function Sales({ chartSeries, drivers = ['John', 'Mike', 'Sara'], sx }: S
                   ))}
                 </Select>
               </FormControl>
-            )}
+            )} */}
 
             {/* Date Picker */}
             <TextField

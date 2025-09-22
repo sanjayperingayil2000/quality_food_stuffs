@@ -25,7 +25,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             '--MainNav-zIndex': 1000,
             '--SideNav-width': '240px',
             '--SideNav-collapsed-width': '72px',
-            '--SideNav-zIndex': 1100,
+            '--SideNav-zIndex': 1500,
             '--MobileNav-width': '320px',
             '--MobileNav-zIndex': 1100,
           },
@@ -55,19 +55,18 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
           }}
         >
           {/* Top Navbar */}
-          <MainNav
+          {/* <MainNav
             sx={{
               position: 'sticky',
               top: 0,
               zIndex: (theme) => theme.zIndex.appBar,
               bgcolor: 'background.paper',
-              // ❌ remove ml here, wrapper already handles sidebar spacing
-            }}
-          />
+              }}
+          /> */}
 
           {/* Page Content */}
           <main>
-            <Container maxWidth={false} disableGutters sx={{ py: '64px' }}>
+            <Container maxWidth={false} disableGutters sx={{ py: '24px' }}>
               {children}
             </Container>
           </main>
