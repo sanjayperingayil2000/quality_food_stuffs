@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import type { Metadata } from 'next';
+// import type { Metadata } from 'next';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
@@ -33,7 +33,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 
-import { config } from '@/config';
+// import { config } from '@/config';
 
 // Configure dayjs plugins
 dayjs.extend(utc);

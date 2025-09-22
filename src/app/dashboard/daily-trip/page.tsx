@@ -157,7 +157,7 @@ export default function Page(): React.JSX.Element {
 
   React.useEffect(() => {
     handleApplyFilter();
-  }, [trips, driverFilter, dateFrom, dateTo]);
+  }, [handleApplyFilter]);
 
   const handleOpen = () => {
     setEditingTrip(null);
@@ -194,7 +194,7 @@ export default function Page(): React.JSX.Element {
     setFilteredTrips(updatedTrips);
   };
 
-  const handleApplyFilter = () => {
+  const handleApplyFilter = React.useCallback(() => {
     let filtered = trips;
 
     // Filter by driver
@@ -214,7 +214,7 @@ export default function Page(): React.JSX.Element {
     }
 
     setFilteredTrips(filtered);
-  };
+  }, [trips, driverFilter, dateFrom, dateTo]);
 
   const handleProductQuantityChange = (productId: string, quantity: number) => {
     const currentProducts = watchedProducts || [];
