@@ -27,7 +27,7 @@ import { usePopover } from '@/hooks/use-popover';
 import { MobileNav } from './mobile-nav';
 import { UserPopover } from './user-popover';
 
-export interface MainNavProps extends BoxProps {}
+export interface MainNavProps extends BoxProps { }
 
 export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState(false);
@@ -61,7 +61,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
           position: 'sticky',
           top: 0,
           zIndex: (theme) => theme.zIndex.appBar,
-          ...sx, // ✅ allow overrides
+          ...sx,
         }}
         {...props}
       >
@@ -170,7 +170,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
               />
             </Box>
 
-            <Button variant="contained">Apply Filter</Button>
+            <Button variant="contained">Apply</Button>
           </Stack>
 
           {/* Right side */}
@@ -203,5 +203,22 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
       />
       <MobileNav onClose={() => setOpenNav(false)} open={openNav} />
     </React.Fragment>
+  );
+}
+
+export function MainNavWrapper() {
+  return (
+    <MainNav
+      sx={{
+        position: 'sticky',
+        top: 0,
+        zIndex: (theme) => theme.zIndex.appBar,
+        bgcolor: 'background.paper',
+        width: '100%',
+        transition: 'all 0.3s ease',
+        mb: 2,
+        pb: 2,
+      }}
+    />
   );
 }
