@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
@@ -12,6 +14,8 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps): React.JSX.Element {
+  const [open, setOpen] = React.useState(true);
+
   return (
     <AuthGuard>
       <GlobalStyles
@@ -19,13 +23,15 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
           body: {
             '--MainNav-height': '56px',
             '--MainNav-zIndex': 1000,
-            '--SideNav-width': '280px',
-            '--SideNav-zIndex': 1100,
+            '--SideNav-width': '240px',
+            '--SideNav-collapsed-width': '72px',
+            '--SideNav-zIndex': 1500,
             '--MobileNav-width': '320px',
             '--MobileNav-zIndex': 1100,
           },
         }}
       />
+
       <Box
         sx={{
           bgcolor: 'var(--mui-palette-background-default)',
@@ -35,11 +41,32 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
           minHeight: '100%',
         }}
       >
-        <SideNav />
-        <Box sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column', pl: { lg: 'var(--SideNav-width)' } }}>
-          <MainNav />
+        {/* Fixed Sidebar */}
+        <SideNav open={open} setOpen={setOpen} />
+
+        {/* Main content */}
+        <Box
+          sx={{
+            display: 'flex',
+            flex: '1 1 auto',
+            flexDirection: 'column',
+            transition: 'margin-left 0.3s ease',
+            ml: { lg: open ? 'var(--SideNav-width)' : 'var(--SideNav-collapsed-width)' },
+          }}
+        >
+          {/* Top Navbar */}
+          {/* <MainNav
+            sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: (theme) => theme.zIndex.appBar,
+              bgcolor: 'background.paper',
+              }}
+          /> */}
+
+          {/* Page Content */}
           <main>
-            <Container maxWidth="xl" sx={{ py: '64px' }}>
+            <Container maxWidth={false} disableGutters sx={{ py: '24px' }}>
               {children}
             </Container>
           </main>

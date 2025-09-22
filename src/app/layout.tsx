@@ -4,6 +4,8 @@ import type { Viewport } from 'next';
 import '@/styles/global.css';
 
 import { UserProvider } from '@/contexts/user-context';
+import { ProductsProvider } from '@/contexts/products-context';
+import { DriversProvider } from '@/contexts/drivers-context';
 import { LocalizationProvider } from '@/components/core/localization-provider';
 import { ThemeProvider } from '@/components/core/theme-provider/theme-provider';
 
@@ -19,7 +21,11 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
       <body>
         <LocalizationProvider>
           <UserProvider>
-            <ThemeProvider>{children}</ThemeProvider>
+            <ProductsProvider>
+              <DriversProvider>
+                <ThemeProvider>{children}</ThemeProvider>
+              </DriversProvider>
+            </ProductsProvider>
           </UserProvider>
         </LocalizationProvider>
       </body>
