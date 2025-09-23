@@ -55,6 +55,7 @@ interface Expense {
   employeeName?: string;
   maintenanceName?: string;
   reason?: string;
+  description?: string;
   amount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -77,13 +78,14 @@ const expenseSchema = zod.object({
   employeeId: zod.string().optional(),
   maintenanceName: zod.string().optional(),
   reason: zod.string().optional(),
+  description: zod.string().optional(),
   amount: zod.number().min(0, 'Amount must be positive'),
 }).refine((data) => {
   if (data.type === 'petrol' || data.type === 'salary' || data.type === 'variance') {
     return data.employeeId && data.employeeId.length > 0;
   }
   if (data.type === 'maintenance') {
-    return data.employeeId && data.employeeId.length > 0 && data.maintenanceName && data.maintenanceName.length > 0;
+    return data.employeeId && data.employeeId.length > 0;
   }
   if (data.type === 'others') {
     return data.employeeId && data.employeeId.length > 0 && data.reason && data.reason.length > 0;
@@ -143,6 +145,7 @@ export default function Page(): React.JSX.Element {
   const [dateFrom, setDateFrom] = React.useState<string>('');
   const [dateTo, setDateTo] = React.useState<string>('');
   const [expenseTypeFilter, setExpenseTypeFilter] = React.useState<string>('');
+  const [employeeFilter, setEmployeeFilter] = React.useState<string>('');
 
   const {
     control,
@@ -158,6 +161,7 @@ export default function Page(): React.JSX.Element {
       employeeId: '',
       maintenanceName: '',
       reason: '',
+      description: '',
       amount: 0,
     },
   });
@@ -172,6 +176,7 @@ export default function Page(): React.JSX.Element {
       employeeId: '',
       maintenanceName: '',
       reason: '',
+      description: '',
       amount: 0,
     });
     setOpen(true);
@@ -185,6 +190,7 @@ export default function Page(): React.JSX.Element {
       employeeId: expense.employeeId || '',
       maintenanceName: expense.maintenanceName || '',
       reason: expense.reason || '',
+      description: expense.description || '',
       amount: expense.amount,
     });
     setOpen(true);
@@ -219,6 +225,11 @@ export default function Page(): React.JSX.Element {
     // Filter by expense type
     if (expenseTypeFilter) {
       filtered = filtered.filter(expense => expense.type === expenseTypeFilter);
+    }
+
+    // Filter by employee
+    if (employeeFilter) {
+      filtered = filtered.filter(expense => expense.employeeId === employeeFilter);
     }
 
     setFilteredExpenses(filtered);
@@ -294,11 +305,12 @@ export default function Page(): React.JSX.Element {
                   <td>${getExpenseTypeLabel(expense.type)}</td>
                   <td>${expense.employeeName || '-'}</td>
                   <td>
-                    ${expense.type === 'maintenance' && expense.maintenanceName}
-                    ${expense.type === 'others' && expense.reason}
-                    ${expense.type === 'petrol' && 'Petrol Expense'}
-                    ${expense.type === 'salary' && 'Salary Payment'}
-                    ${expense.type === 'variance' && 'Variance Adjustment'}
+                    ${expense.description || 
+                      (expense.type === 'maintenance' && expense.maintenanceName) ||
+                      (expense.type === 'others' && expense.reason) ||
+                      (expense.type === 'petrol' && 'Petrol Expense') ||
+                      (expense.type === 'salary' && 'Salary Payment') ||
+                      (expense.type === 'variance' && 'Variance Adjustment')}
                   </td>
                   <td>${expense.amount.toFixed(2)} AED</td>
                   <td>${dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</td>
@@ -327,10 +339,11 @@ export default function Page(): React.JSX.Element {
         dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY'),
         getExpenseTypeLabel(expense.type),
         expense.employeeName || '-',
-        expense.type === 'maintenance' ? expense.maintenanceName : 
+        expense.description || 
+        (expense.type === 'maintenance' ? expense.maintenanceName : 
         expense.type === 'others' ? expense.reason :
         expense.type === 'petrol' ? 'Petrol Expense' :
-        expense.type === 'salary' ? 'Salary Payment' : 'Variance Adjustment',
+        expense.type === 'salary' ? 'Salary Payment' : 'Variance Adjustment'),
         `${expense.amount.toFixed(2)} AED`,
         dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A') + ' GST',
         dayjs(expense.updatedAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A') + ' GST'
@@ -363,6 +376,7 @@ export default function Page(): React.JSX.Element {
               employeeName: employee?.name,
               maintenanceName: data.maintenanceName,
               reason: data.reason,
+              description: data.description,
               amount: data.amount,
               updatedAt: dayjs().utc().toDate() 
             }
@@ -380,6 +394,7 @@ export default function Page(): React.JSX.Element {
         employeeName: employee?.name,
         maintenanceName: data.maintenanceName,
         reason: data.reason,
+        description: data.description,
         amount: data.amount,
         createdAt: dayjs().utc().toDate(),
         updatedAt: dayjs().utc().toDate(),
@@ -472,6 +487,21 @@ export default function Page(): React.JSX.Element {
             <MenuItem value="others">Others</MenuItem>
           </Select>
         </FormControl>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Employee</InputLabel>
+          <Select
+            value={employeeFilter}
+            label="Employee"
+            onChange={(e) => setEmployeeFilter(e.target.value)}
+          >
+            <MenuItem value="">All Employees</MenuItem>
+            {employees.map((employee) => (
+              <MenuItem key={employee.id} value={employee.id}>
+                {employee.name} ({employee.role.toUpperCase()})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <Button variant="outlined" onClick={handleApplyFilter}>
           Apply
         </Button>
@@ -503,11 +533,12 @@ export default function Page(): React.JSX.Element {
               </TableCell>
               <TableCell>{expense.employeeName || '-'}</TableCell>
               <TableCell>
-                {expense.type === 'maintenance' && expense.maintenanceName}
-                {expense.type === 'others' && expense.reason}
-                {expense.type === 'petrol' && 'Petrol Expense'}
-                {expense.type === 'salary' && 'Salary Payment'}
-                {expense.type === 'variance' && 'Variance Adjustment'}
+                {expense.description || 
+                 (expense.type === 'maintenance' && expense.maintenanceName) ||
+                 (expense.type === 'others' && expense.reason) ||
+                 (expense.type === 'petrol' && 'Petrol Expense') ||
+                 (expense.type === 'salary' && 'Salary Payment') ||
+                 (expense.type === 'variance' && 'Variance Adjustment')}
               </TableCell>
               <TableCell>{expense.amount.toFixed(2)} AED</TableCell>
               <TableCell>{dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>
@@ -596,21 +627,6 @@ export default function Page(): React.JSX.Element {
                 />
               )}
 
-              {watchedType === 'maintenance' && (
-                <Controller
-                  control={control}
-                  name="maintenanceName"
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label="Maintenance Description"
-                      error={Boolean(errors.maintenanceName)}
-                      helperText={errors.maintenanceName?.message}
-                      fullWidth
-                    />
-                  )}
-                />
-              )}
 
               {watchedType === 'others' && (
                 <Controller
@@ -641,6 +657,19 @@ export default function Page(): React.JSX.Element {
                     helperText={errors.amount?.message}
                     fullWidth
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="description"
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Description"
+                    multiline
+                    rows={3}
+                    fullWidth
                   />
                 )}
               />

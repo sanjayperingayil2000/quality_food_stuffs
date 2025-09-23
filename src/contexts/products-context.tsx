@@ -9,6 +9,7 @@ export interface Product {
   name: string;
   price: number;
   category: Category;
+  description?: string;
   createdAt: Date;
   updatedAt: Date;
 }

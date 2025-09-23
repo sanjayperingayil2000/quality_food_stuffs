@@ -54,15 +54,7 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
             ml: { lg: open ? 'var(--SideNav-width)' : 'var(--SideNav-collapsed-width)' },
           }}
         >
-          {/* Top Navbar */}
-          {/* <MainNav
-            sx={{
-              position: 'sticky',
-              top: 0,
-              zIndex: (theme) => theme.zIndex.appBar,
-              bgcolor: 'background.paper',
-              }}
-          /> */}
+          {/* Top Navbar - Removed from layout, now only on overview page */}
 
           {/* Page Content */}
           <main>
