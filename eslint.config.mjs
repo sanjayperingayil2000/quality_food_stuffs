@@ -35,6 +35,7 @@ export default [
 				},
 			],
 			"@typescript-eslint/no-empty-object-type": "off",
+			"unicorn/no-zero-fractions": process.env.VERCEL ? "off" : "error",
 		},
 	},
 	configPrettier,
