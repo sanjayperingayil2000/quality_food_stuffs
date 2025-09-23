@@ -47,6 +47,7 @@ const productSchema = zod.object({
   price: zod.number().min(0, 'Price must be positive'),
   category: zod.enum(['bakery', 'fresh'], { required_error: 'Category is required' }),
   productId: zod.string().min(1, 'Product ID is required'),
+  description: zod.string().optional(),
 });
 
 type ProductFormData = zod.infer<typeof productSchema>;
@@ -78,6 +79,7 @@ export default function Page(): React.JSX.Element {
       price: 0,
       category: 'bakery',
       productId: '',
+      description: '',
     },
   });
 
@@ -88,6 +90,7 @@ export default function Page(): React.JSX.Element {
       price: 0,
       category: 'bakery',
       productId: generateProductId(),
+      description: '',
     });
     setOpen(true);
   };
@@ -99,6 +102,7 @@ export default function Page(): React.JSX.Element {
       price: product.price,
       category: product.category,
       productId: product.id,
+      description: product.description || '',
     });
     setOpen(true);
   };
@@ -246,6 +250,7 @@ export default function Page(): React.JSX.Element {
         name: data.name,
         price: data.price,
         category: data.category,
+        description: data.description,
         updatedAt: dayjs().utc().toDate(),
       });
     } else {
@@ -255,6 +260,7 @@ export default function Page(): React.JSX.Element {
         name: data.name,
         price: data.price,
         category: data.category,
+        description: data.description,
         createdAt: dayjs().utc().toDate(),
         updatedAt: dayjs().utc().toDate(),
       };
@@ -406,6 +412,19 @@ export default function Page(): React.JSX.Element {
                     helperText={errors.productId?.message}
                     fullWidth
                     disabled={false}
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="description"
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Description"
+                    multiline
+                    rows={3}
+                    fullWidth
                   />
                 )}
               />

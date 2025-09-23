@@ -8,6 +8,7 @@ export interface Driver {
   phone: string;
   location: string;
   routeName: string;
+  description?: string;
 }
 
 interface DriversContextType {
