@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 // import type { Metadata } from 'next';
+import type { ChipProps } from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
@@ -105,7 +106,7 @@ const initialExpenses: Expense[] = [
     type: 'petrol',
     employeeId: 'EMP-001',
     employeeName: 'Rahul Kumar',
-    amount: 150.00,
+    amount: 150,
     createdAt: dayjs().subtract(2, 'day').utc().toDate(),
     updatedAt: dayjs().subtract(2, 'day').utc().toDate(),
   },
@@ -116,7 +117,7 @@ const initialExpenses: Expense[] = [
     employeeId: 'EMP-006',
     employeeName: 'Rajesh Kumar',
     maintenanceName: 'Engine Oil Change',
-    amount: 250.00,
+    amount: 250,
     createdAt: dayjs().subtract(1, 'day').utc().toDate(),
     updatedAt: dayjs().subtract(1, 'day').utc().toDate(),
   },
@@ -126,7 +127,7 @@ const initialExpenses: Expense[] = [
     type: 'salary',
     employeeId: 'EMP-002',
     employeeName: 'Vijay Anand',
-    amount: 2500.00,
+    amount: 2500,
     createdAt: dayjs().subtract(3, 'day').utc().toDate(),
     updatedAt: dayjs().subtract(3, 'day').utc().toDate(),
   },
@@ -136,6 +137,30 @@ function generateExpenseId(): string {
   const count = Math.floor(Math.random() * 1000) + 1;
   return `EXP-${count.toString().padStart(3, '0')}`;
 }
+
+const getExpenseTypeLabel = (type: ExpenseType) => {
+  const labels = {
+    petrol: 'Petrol',
+    maintenance: 'Maintenance',
+    salary: 'Salary',
+    variance: 'Variance',
+    others: 'Others'
+  };
+  return labels[type];
+};
+
+
+const getExpenseTypeColor = (type: ExpenseType): ChipProps['color'] => {
+  const colors: Record<ExpenseType, ChipProps['color']> = {
+    petrol: 'primary',
+    maintenance: 'secondary',
+    salary: 'success',
+    variance: 'warning',
+    others: 'info',
+  };
+  return colors[type];
+};
+
 
 export default function Page(): React.JSX.Element {
   const [expenses, setExpenses] = React.useState<Expense[]>(initialExpenses);
@@ -305,12 +330,12 @@ export default function Page(): React.JSX.Element {
                   <td>${getExpenseTypeLabel(expense.type)}</td>
                   <td>${expense.employeeName || '-'}</td>
                   <td>
-                    ${expense.description || 
-                      (expense.type === 'maintenance' && expense.maintenanceName) ||
-                      (expense.type === 'others' && expense.reason) ||
-                      (expense.type === 'petrol' && 'Petrol Expense') ||
-                      (expense.type === 'salary' && 'Salary Payment') ||
-                      (expense.type === 'variance' && 'Variance Adjustment')}
+                    ${expense.description ||
+      (expense.type === 'maintenance' && expense.maintenanceName) ||
+      (expense.type === 'others' && expense.reason) ||
+      (expense.type === 'petrol' && 'Petrol Expense') ||
+      (expense.type === 'salary' && 'Salary Payment') ||
+      (expense.type === 'variance' && 'Variance Adjustment')}
                   </td>
                   <td>${expense.amount.toFixed(2)} AED</td>
                   <td>${dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</td>
@@ -326,7 +351,7 @@ export default function Page(): React.JSX.Element {
     const printWindow = window.open('', '_blank');
     printWindow?.document.write(htmlContent);
     printWindow?.document.close();
-    
+
     setTimeout(() => {
       printWindow?.print();
     }, 500);
@@ -339,11 +364,11 @@ export default function Page(): React.JSX.Element {
         dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY'),
         getExpenseTypeLabel(expense.type),
         expense.employeeName || '-',
-        expense.description || 
-        (expense.type === 'maintenance' ? expense.maintenanceName : 
-        expense.type === 'others' ? expense.reason :
-        expense.type === 'petrol' ? 'Petrol Expense' :
-        expense.type === 'salary' ? 'Salary Payment' : 'Variance Adjustment'),
+        expense.description ||
+        (expense.type === 'maintenance' ? expense.maintenanceName :
+          expense.type === 'others' ? expense.reason :
+            expense.type === 'petrol' ? 'Petrol Expense' :
+              expense.type === 'salary' ? 'Salary Payment' : 'Variance Adjustment'),
         `${expense.amount.toFixed(2)} AED`,
         dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A') + ' GST',
         dayjs(expense.updatedAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A') + ' GST'
@@ -356,30 +381,30 @@ export default function Page(): React.JSX.Element {
     link.setAttribute('href', url);
     link.setAttribute('download', `additional_expenses_${dayjs().format('YYYY-MM-DD')}.csv`);
     link.style.visibility = 'hidden';
-    document.body.appendChild(link);
+    document.body.append(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
   };
 
   const onSubmit = (data: ExpenseFormData) => {
     const employee = employees.find(emp => emp.id === data.employeeId);
-    
+
     if (editingExpense) {
       // Edit existing expense
-      const updatedExpenses = expenses.map(e => 
-        e.id === editingExpense.id 
-          ? { 
-              ...e, 
-              date: data.date,
-              type: data.type,
-              employeeId: data.employeeId,
-              employeeName: employee?.name,
-              maintenanceName: data.maintenanceName,
-              reason: data.reason,
-              description: data.description,
-              amount: data.amount,
-              updatedAt: dayjs().utc().toDate() 
-            }
+      const updatedExpenses = expenses.map(e =>
+        e.id === editingExpense.id
+          ? {
+            ...e,
+            date: data.date,
+            type: data.type,
+            employeeId: data.employeeId,
+            employeeName: employee?.name,
+            maintenanceName: data.maintenanceName,
+            reason: data.reason,
+            description: data.description,
+            amount: data.amount,
+            updatedAt: dayjs().utc().toDate()
+          }
           : e
       );
       setExpenses(updatedExpenses);
@@ -406,27 +431,6 @@ export default function Page(): React.JSX.Element {
     handleClose();
   };
 
-  const getExpenseTypeLabel = (type: ExpenseType) => {
-    const labels = {
-      petrol: 'Petrol',
-      maintenance: 'Maintenance',
-      salary: 'Salary',
-      variance: 'Variance',
-      others: 'Others'
-    };
-    return labels[type];
-  };
-
-  const getExpenseTypeColor = (type: ExpenseType) => {
-    const colors = {
-      petrol: 'primary',
-      maintenance: 'secondary',
-      salary: 'success',
-      variance: 'warning',
-      others: 'info'
-    };
-    return colors[type];
-  };
 
   return (
     <Stack spacing={3} sx={{ px: { xs: 2, md: 4 } }}>
@@ -435,15 +439,15 @@ export default function Page(): React.JSX.Element {
           <Typography variant="h4">Additional Expenses</Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button 
-            color="inherit" 
+          <Button
+            color="inherit"
             startIcon={<FilePdfIcon fontSize="var(--icon-fontSize-md)" />}
             onClick={handleExportPdf}
           >
             PDF
           </Button>
-          <Button 
-            color="inherit" 
+          <Button
+            color="inherit"
             startIcon={<TableIcon fontSize="var(--icon-fontSize-md)" />}
             onClick={handleExportExcel}
           >
@@ -525,20 +529,20 @@ export default function Page(): React.JSX.Element {
             <TableRow hover key={expense.id}>
               <TableCell>{dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST</TableCell>
               <TableCell>
-                <Chip 
-                  label={getExpenseTypeLabel(expense.type)} 
-                  size="small" 
-                  color={getExpenseTypeColor(expense.type) as any}
+                <Chip
+                  label={getExpenseTypeLabel(expense.type)}
+                  size="small"
+                  color={getExpenseTypeColor(expense.type)}
                 />
               </TableCell>
               <TableCell>{expense.employeeName || '-'}</TableCell>
               <TableCell>
-                {expense.description || 
-                 (expense.type === 'maintenance' && expense.maintenanceName) ||
-                 (expense.type === 'others' && expense.reason) ||
-                 (expense.type === 'petrol' && 'Petrol Expense') ||
-                 (expense.type === 'salary' && 'Salary Payment') ||
-                 (expense.type === 'variance' && 'Variance Adjustment')}
+                {expense.description ||
+                  (expense.type === 'maintenance' && expense.maintenanceName) ||
+                  (expense.type === 'others' && expense.reason) ||
+                  (expense.type === 'petrol' && 'Petrol Expense') ||
+                  (expense.type === 'salary' && 'Salary Payment') ||
+                  (expense.type === 'variance' && 'Variance Adjustment')}
               </TableCell>
               <TableCell>{expense.amount.toFixed(2)} AED</TableCell>
               <TableCell>{dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>
@@ -580,7 +584,7 @@ export default function Page(): React.JSX.Element {
                   />
                 )}
               />
-              
+
               <Controller
                 control={control}
                 name="type"
@@ -651,12 +655,12 @@ export default function Page(): React.JSX.Element {
                   <TextField
                     {...field}
                     label="Amount (AED)"
-                    type="number"
-                    inputProps={{ step: 0.01, min: 0 }}
+                    type="text"
+                    // inputProps={{ step: 0.01, min: 0 }}
                     error={Boolean(errors.amount)}
                     helperText={errors.amount?.message}
                     fullWidth
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || 0)}
                   />
                 )}
               />

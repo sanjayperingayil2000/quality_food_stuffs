@@ -29,7 +29,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-001',
     name: 'Sourdough Bread',
-    price: 12.50,
+    price: 12.5,
     category: 'bakery',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
@@ -37,7 +37,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-002',
     name: 'Blueberry Muffin',
-    price: 8.00,
+    price: 8,
     category: 'bakery',
     createdAt: new Date('2024-01-02'),
     updatedAt: new Date('2024-01-02'),
@@ -45,7 +45,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-003',
     name: 'Croissant',
-    price: 6.50,
+    price: 6.5,
     category: 'bakery',
     createdAt: new Date('2024-01-03'),
     updatedAt: new Date('2024-01-03'),
@@ -69,7 +69,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-006',
     name: 'Cinnamon Roll',
-    price: 7.50,
+    price: 7.5,
     category: 'bakery',
     createdAt: new Date('2024-01-06'),
     updatedAt: new Date('2024-01-06'),
@@ -77,7 +77,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-007',
     name: 'Bagel',
-    price: 4.00,
+    price: 4,
     category: 'bakery',
     createdAt: new Date('2024-01-07'),
     updatedAt: new Date('2024-01-07'),
@@ -93,7 +93,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-009',
     name: 'Pretzel',
-    price: 3.50,
+    price: 3.5,
     category: 'bakery',
     createdAt: new Date('2024-01-09'),
     updatedAt: new Date('2024-01-09'),
@@ -117,7 +117,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-012',
     name: 'Focaccia',
-    price: 11.00,
+    price: 11,
     category: 'bakery',
     createdAt: new Date('2024-01-12'),
     updatedAt: new Date('2024-01-12'),
@@ -126,7 +126,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-013',
     name: 'Fresh Apples',
-    price: 15.00,
+    price: 15,
     category: 'fresh',
     createdAt: new Date('2024-01-13'),
     updatedAt: new Date('2024-01-13'),
@@ -134,7 +134,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-014',
     name: 'Bananas',
-    price: 8.50,
+    price: 8.5,
     category: 'fresh',
     createdAt: new Date('2024-01-14'),
     updatedAt: new Date('2024-01-14'),
@@ -142,7 +142,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-015',
     name: 'Orange Juice',
-    price: 12.00,
+    price: 12,
     category: 'fresh',
     createdAt: new Date('2024-01-15'),
     updatedAt: new Date('2024-01-15'),
@@ -166,7 +166,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-018',
     name: 'Mango',
-    price: 22.50,
+    price: 22.5,
     category: 'fresh',
     createdAt: new Date('2024-01-18'),
     updatedAt: new Date('2024-01-18'),
@@ -174,7 +174,7 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-019',
     name: 'Pineapple',
-    price: 16.00,
+    price: 16,
     category: 'fresh',
     createdAt: new Date('2024-01-19'),
     updatedAt: new Date('2024-01-19'),
@@ -182,12 +182,13 @@ const initialProducts: Product[] = [
   {
     id: 'PRD-020',
     name: 'Watermelon',
-    price: 25.00,
+    price: 25,
     category: 'fresh',
     createdAt: new Date('2024-01-20'),
     updatedAt: new Date('2024-01-20'),
   },
 ];
+
 
 export function ProductsProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = React.useState<Product[]>(initialProducts);

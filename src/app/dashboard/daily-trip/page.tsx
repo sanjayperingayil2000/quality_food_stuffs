@@ -220,7 +220,7 @@ export default function Page(): React.JSX.Element {
   const handleProductQuantityChange = (productId: string, quantity: number) => {
     const currentProducts = watchedProducts || [];
     const existingIndex = currentProducts.findIndex(p => p.productId === productId);
-    
+
     if (quantity > 0) {
       const product = products.find(p => p.id === productId);
       if (product) {
@@ -231,12 +231,12 @@ export default function Page(): React.JSX.Element {
           quantity,
         };
 
-        if (existingIndex !== -1) {
+        if (existingIndex == -1) {
+          setValue('products', [...currentProducts, updatedProduct]);
+        } else {
           const updatedProducts = [...currentProducts];
           updatedProducts[existingIndex] = updatedProduct;
           setValue('products', updatedProducts);
-        } else {
-          setValue('products', [...currentProducts, updatedProduct]);
         }
       }
     } else {
@@ -256,13 +256,13 @@ export default function Page(): React.JSX.Element {
       const updatedTrips = trips.map(t =>
         t.id === editingTrip.id
           ? {
-              ...t,
-              driverId: data.driverId,
-              driverName: driver?.name || '',
-              date: data.date,
-              products: filteredProducts,
-              updatedAt: dayjs().utc().toDate(),
-            }
+            ...t,
+            driverId: data.driverId,
+            driverName: driver?.name || '',
+            date: data.date,
+            products: filteredProducts,
+            updatedAt: dayjs().utc().toDate(),
+          }
           : t
       );
       setTrips(updatedTrips);
@@ -293,357 +293,357 @@ export default function Page(): React.JSX.Element {
   // Drivers are loaded from the drivers array
 
   // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
-    return <div>Loading...</div>;
+  if (mounted) {
+    return (
+      <Stack spacing={3} sx={{ px: { xs: 2, md: 4 } }}>
+        <Stack direction="row" spacing={3}>
+          <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
+            <Typography variant="h4">Daily Trip</Typography>
+          </Stack>
+          <div>
+            <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>
+              Add Trip
+            </Button>
+          </div>
+        </Stack>
+
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Driver</InputLabel>
+            <Select
+              value={driverFilter}
+              label="Driver"
+              onChange={(e) => setDriverFilter(e.target.value)}
+            >
+              <MenuItem value="">All Drivers</MenuItem>
+              {drivers.map((driver) => (
+                <MenuItem key={driver.id} value={driver.id}>
+                  {driver.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="From Date"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            size="small"
+          />
+          <TextField
+            label="To Date"
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            size="small"
+          />
+          <Button variant="outlined" onClick={handleApplyFilter}>
+            Apply
+          </Button>
+        </Stack>
+
+        <Stack spacing={2}>
+          {filteredTrips.map((trip) => (
+            <Card key={trip.id} sx={{ p: 2 }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                <Typography variant="h6">
+                  {trip.driverName} - {dayjs(trip.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  <IconButton onClick={() => handleEdit(trip)} size="small">
+                    <PencilIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleDelete(trip.id)} size="small" color="error">
+                    <TrashIcon />
+                  </IconButton>
+                </Stack>
+              </Stack>
+              <Grid container spacing={2}>
+                {trip.products.map((product) => (
+                  <Grid
+                    key={product.productId}
+                    size={{
+                      xs: 12,
+                      sm: 6,
+                      md: 4,
+                    }}
+                  >
+                    <Paper sx={{ p: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {product.productId}
+                      </Typography>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {product.productName}
+                      </Typography>
+                      <Chip
+                        label={product.category === 'bakery' ? 'Bakery' : 'Fresh'}
+                        size="small"
+                        color={product.category === 'bakery' ? 'primary' : 'success'}
+                        sx={{ mt: 1 }}
+                      />
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        Quantity: {product.quantity}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Card>
+          ))}
+        </Stack>
+
+        <Dialog
+          open={open}
+          onClose={handleClose}
+          maxWidth="lg"
+          fullWidth
+          BackdropProps={{
+            sx: { zIndex: 1600 }
+          }}
+          sx={{
+            zIndex: 1700,
+            '& .MuiDialog-paper': {
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1700,
+              maxHeight: '90vh',
+              overflow: 'auto',
+              margin: 0,
+            }
+          }}
+        >
+          <DialogTitle>{editingTrip ? 'Edit Trip' : 'Add Trip'}</DialogTitle>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <DialogContent>
+              <Stack spacing={3} sx={{ pt: 1 }}>
+                <Box sx={{ width: '100%' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: errors.driverId ? 'error.main' : 'text.secondary',
+                      mb: 1,
+                      fontSize: '0.75rem',
+                      fontWeight: 500
+                    }}
+                  >
+                    Driver * (Select from list below)
+                  </Typography>
+
+                  {/* Test driver selection - clickable cards */}
+                  <Box sx={{
+                    border: `1px solid ${errors.driverId ? '#d32f2f' : '#c4c4c4'}`,
+                    borderRadius: 1,
+                    p: 1,
+                    minHeight: '56px',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    alignItems: 'center'
+                  }}>
+                    {selectedDriverId ? (
+                      <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        bgcolor: 'primary.main',
+                        color: 'white',
+                        px: 2,
+                        py: 1,
+                        borderRadius: 1,
+                        fontSize: '0.875rem'
+                      }}>
+                        <span>
+                          {drivers.find(d => d.id === selectedDriverId)?.name} - {drivers.find(d => d.id === selectedDriverId)?.routeName}
+                        </span>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedDriverId('');
+                            setValue('driverId', '');
+                          }}
+                          sx={{
+                            minWidth: 'auto',
+                            p: 0.5,
+                            color: 'white',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+                          }}
+                        >
+                          ✕
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Click on a driver below to select
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {/* Driver selection cards */}
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
+                      Available Drivers:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {drivers.map((driver) => (
+                        <Box
+                          key={driver.id}
+                          sx={{
+                            p: 2,
+                            cursor: 'pointer',
+                            border: selectedDriverId === driver.id ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                            borderRadius: 1,
+                            bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                            '&:hover': {
+                              bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'rgba(0,0,0,0.04)',
+                              borderColor: selectedDriverId === driver.id ? '#1976d2' : '#bdbdbd'
+                            },
+                            transition: 'all 0.2s ease',
+                            minWidth: '200px'
+                          }}
+                          onClick={() => {
+                            setSelectedDriverId(driver.id);
+                            setValue('driverId', driver.id);
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                            {driver.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {driver.routeName}
+                          </Typography>
+                          <br />
+                          <Typography variant="caption" color="text.secondary">
+                            {driver.location}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+
+                  {errors.driverId && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                      {errors.driverId.message}
+                    </Typography>
+                  )}
+                </Box>
+
+
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <Controller
+                    control={control}
+                    name="date"
+                    render={({ field }) => (
+                      <DatePicker
+                        {...field}
+                        label="Date"
+                        format="MMM D, YYYY"
+                        value={dayjs(field.value)}
+                        onChange={(newValue) => field.onChange(newValue?.toDate())}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            error: Boolean(errors.date),
+                            helperText: errors.date?.message,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </LocalizationProvider>
+
+                <Typography variant="h6">Select Products</Typography>
+
+
+                <Grid container spacing={3}>
+                  <Grid
+                    size={{
+                      xs: 12,
+                      md: 6,
+                    }}
+                  >
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                      Bakery Items ({bakeryProducts.length})
+                    </Typography>
+                    <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
+                      <Stack spacing={2}>
+                        {bakeryProducts.map((product) => (
+                          <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                {product.id}
+                              </Typography>
+                              <Typography variant="body1">
+                                {product.name}
+                              </Typography>
+                            </Box>
+                            <TextField
+                              type="number"
+                              label="Qty"
+                              size="small"
+                              sx={{ width: 80 }}
+                              inputProps={{ min: 0 }}
+                              value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
+                              onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
+                            />
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  </Grid>
+
+                  <Grid
+                    size={{
+                      xs: 12,
+                      md: 6,
+                    }}
+                  >
+                    <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                      Fresh Items ({freshProducts.length})
+                    </Typography>
+                    <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
+                      <Stack spacing={2}>
+                        {freshProducts.map((product) => (
+                          <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                {product.id}
+                              </Typography>
+                              <Typography variant="body1">
+                                {product.name}
+                              </Typography>
+                            </Box>
+                            <TextField
+                              type="number"
+                              label="Qty"
+                              size="small"
+                              sx={{ width: 80 }}
+                              inputProps={{ min: 0 }}
+                              value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
+                              onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
+                            />
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleClose}>Cancel</Button>
+              <Button type="submit" variant="contained">
+                Save
+              </Button>
+            </DialogActions>
+          </form>
+        </Dialog>
+      </Stack>
+    );
   }
 
-  return (
-    <Stack spacing={3} sx={{ px: { xs: 2, md: 4 } }}>
-      <Stack direction="row" spacing={3}>
-        <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
-          <Typography variant="h4">Daily Trip</Typography>
-        </Stack>
-        <div>
-          <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>
-            Add Trip
-          </Button>
-        </div>
-      </Stack>
-
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Driver</InputLabel>
-          <Select
-            value={driverFilter}
-            label="Driver"
-            onChange={(e) => setDriverFilter(e.target.value)}
-          >
-            <MenuItem value="">All Drivers</MenuItem>
-            {drivers.map((driver) => (
-              <MenuItem key={driver.id} value={driver.id}>
-                {driver.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField
-          label="From Date"
-          type="date"
-          value={dateFrom}
-          onChange={(e) => setDateFrom(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-          size="small"
-        />
-        <TextField
-          label="To Date"
-          type="date"
-          value={dateTo}
-          onChange={(e) => setDateTo(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-          size="small"
-        />
-        <Button variant="outlined" onClick={handleApplyFilter}>
-          Apply
-        </Button>
-      </Stack>
-
-      <Stack spacing={2}>
-        {filteredTrips.map((trip) => (
-          <Card key={trip.id} sx={{ p: 2 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-              <Typography variant="h6">
-                {trip.driverName} - {dayjs(trip.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <IconButton onClick={() => handleEdit(trip)} size="small">
-                  <PencilIcon />
-                </IconButton>
-                <IconButton onClick={() => handleDelete(trip.id)} size="small" color="error">
-                  <TrashIcon />
-                </IconButton>
-              </Stack>
-            </Stack>
-            <Grid container spacing={2}>
-              {trip.products.map((product) => (
-                <Grid
-                  key={product.productId}
-                  size={{
-                    xs: 12,
-                    sm: 6,
-                    md: 4,
-                  }}
-                >
-                  <Paper sx={{ p: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {product.productId}
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {product.productName}
-                    </Typography>
-                    <Chip
-                      label={product.category === 'bakery' ? 'Bakery' : 'Fresh'}
-                      size="small"
-                      color={product.category === 'bakery' ? 'primary' : 'success'}
-                      sx={{ mt: 1 }}
-                    />
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      Quantity: {product.quantity}
-                    </Typography>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
-          </Card>
-        ))}
-      </Stack>
-
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="lg" 
-        fullWidth
-        BackdropProps={{
-          sx: { zIndex: 1600 }
-        }}
-        sx={{
-          zIndex: 1700,
-          '& .MuiDialog-paper': {
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 1700,
-            maxHeight: '90vh',
-            overflow: 'auto',
-            margin: 0,
-          }
-        }}
-      >
-        <DialogTitle>{editingTrip ? 'Edit Trip' : 'Add Trip'}</DialogTitle>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogContent>
-            <Stack spacing={3} sx={{ pt: 1 }}>
-              <Box sx={{ width: '100%' }}>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: errors.driverId ? 'error.main' : 'text.secondary',
-                    mb: 1,
-                    fontSize: '0.75rem',
-                    fontWeight: 500
-                  }}
-                >
-                  Driver * (Select from list below)
-                </Typography>
-                
-                {/* Test driver selection - clickable cards */}
-                <Box sx={{ 
-                  border: `1px solid ${errors.driverId ? '#d32f2f' : '#c4c4c4'}`,
-                  borderRadius: 1,
-                  p: 1,
-                  minHeight: '56px',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 1,
-                  alignItems: 'center'
-                }}>
-                  {selectedDriverId ? (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 1,
-                      bgcolor: 'primary.main',
-                      color: 'white',
-                      px: 2,
-                      py: 1,
-                      borderRadius: 1,
-                      fontSize: '0.875rem'
-                    }}>
-                      <span>
-                        {drivers.find(d => d.id === selectedDriverId)?.name} - {drivers.find(d => d.id === selectedDriverId)?.routeName}
-                      </span>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          setSelectedDriverId('');
-                          setValue('driverId', '');
-                        }}
-                        sx={{ 
-                          minWidth: 'auto', 
-                          p: 0.5, 
-                          color: 'white',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
-                        }}
-                      >
-                        ✕
-                      </Button>
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      Click on a driver below to select
-                    </Typography>
-                  )}
-                </Box>
-                
-                {/* Driver selection cards */}
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
-                    Available Drivers:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {drivers.map((driver) => (
-                      <Box 
-                        key={driver.id} 
-                        sx={{ 
-                          p: 2, 
-                          cursor: 'pointer', 
-                          border: selectedDriverId === driver.id ? '2px solid #1976d2' : '1px solid #e0e0e0',
-                          borderRadius: 1,
-                          bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'white',
-                          '&:hover': { 
-                            bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'rgba(0,0,0,0.04)',
-                            borderColor: selectedDriverId === driver.id ? '#1976d2' : '#bdbdbd'
-                          },
-                          transition: 'all 0.2s ease',
-                          minWidth: '200px'
-                        }}
-                        onClick={() => {
-                          setSelectedDriverId(driver.id);
-                          setValue('driverId', driver.id);
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                          {driver.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {driver.routeName}
-                        </Typography>
-                        <br />
-                        <Typography variant="caption" color="text.secondary">
-                          {driver.location}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-                
-                {errors.driverId && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                    {errors.driverId.message}
-                  </Typography>
-                )}
-              </Box>
-              
-
-              <LocalizationProvider dateAdapter={AdapterDayjs}>
-                <Controller
-                  control={control}
-                  name="date"
-                  render={({ field }) => (
-                    <DatePicker
-                      {...field}
-                      label="Date"
-                      format="MMM D, YYYY"
-                      value={dayjs(field.value)}
-                      onChange={(newValue) => field.onChange(newValue?.toDate())}
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          error: Boolean(errors.date),
-                          helperText: errors.date?.message,
-                        },
-                      }}
-                    />
-                  )}
-                />
-              </LocalizationProvider>
-
-              <Typography variant="h6">Select Products</Typography>
-              
-              
-              <Grid container spacing={3}>
-                <Grid
-                  size={{
-                    xs: 12,
-                    md: 6,
-                  }}
-                >
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                    Bakery Items ({bakeryProducts.length})
-                  </Typography>
-                  <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
-                    <Stack spacing={2}>
-                      {bakeryProducts.map((product) => (
-                        <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              {product.id}
-                            </Typography>
-                            <Typography variant="body1">
-                              {product.name}
-                            </Typography>
-                          </Box>
-                          <TextField
-                            type="number"
-                            label="Qty"
-                            size="small"
-                            sx={{ width: 80 }}
-                            inputProps={{ min: 0 }}
-                            value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                            onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
-                          />
-                        </Box>
-                      ))}
-                    </Stack>
-                  </Box>
-                </Grid>
-                
-                <Grid
-                  size={{
-                    xs: 12,
-                    md: 6,
-                  }}
-                >
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                    Fresh Items ({freshProducts.length})
-                  </Typography>
-                  <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
-                    <Stack spacing={2}>
-                      {freshProducts.map((product) => (
-                        <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              {product.id}
-                            </Typography>
-                            <Typography variant="body1">
-                              {product.name}
-                            </Typography>
-                          </Box>
-                          <TextField
-                            type="number"
-                            label="Qty"
-                            size="small"
-                            sx={{ width: 80 }}
-                            inputProps={{ min: 0 }}
-                            value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                            onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
-                          />
-                        </Box>
-                      ))}
-                    </Stack>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              Save
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-    </Stack>
-  );
+  return <div>Loading...</div>;
 }
