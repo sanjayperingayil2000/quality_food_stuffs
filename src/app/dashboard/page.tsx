@@ -13,17 +13,15 @@ import { Sales } from '@/components/dashboard/overview/sales';
 // import { TotalCustomers } from '@/components/dashboard/overview/total-customers';
 import { TotalProfit } from '@/components/dashboard/overview/total-profit';
 // import { Traffic } from '@/components/dashboard/overview/traffic';
-// import { MainNav, MainNavWrapper } from '@/components/dashboard/layout/main-nav';
+import { MainNav, MainNavWrapper } from '@/components/dashboard/layout/main-nav';
 
 export const metadata = { title: `Overview | Dashboard | ${config.site.name}` } satisfies Metadata;
 
 export default function Page(): React.JSX.Element {
   return (
     <> 
-      {/* <MainNavWrapper
-      //  open={true} 
-       /> */} 
-<Grid container spacing={3} sx={{ pl: 2 }}>
+      <MainNavWrapper />
+      <Grid container spacing={3} sx={{ pl: 2 }}>
         <Grid
           size={{
             lg: 3,
