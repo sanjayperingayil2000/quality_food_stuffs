@@ -211,7 +211,7 @@ export default function Page(): React.JSX.Element {
     const printWindow = window.open('', '_blank');
     printWindow?.document.write(htmlContent);
     printWindow?.document.close();
-    
+
     // Wait for content to load, then trigger print
     setTimeout(() => {
       printWindow?.print();
@@ -237,9 +237,9 @@ export default function Page(): React.JSX.Element {
     link.setAttribute('href', url);
     link.setAttribute('download', `products_${dayjs().format('YYYY-MM-DD')}.csv`);
     link.style.visibility = 'hidden';
-    document.body.appendChild(link);
+    document.body.append(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
   };
 
   const onSubmit = (data: ProductFormData) => {
@@ -276,15 +276,15 @@ export default function Page(): React.JSX.Element {
           <Typography variant="h4">Products</Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button 
-            color="inherit" 
+          <Button
+            color="inherit"
             startIcon={<FilePdfIcon fontSize="var(--icon-fontSize-md)" />}
             onClick={handleExportPdf}
           >
             PDF
           </Button>
-          <Button 
-            color="inherit" 
+          <Button
+            color="inherit"
             startIcon={<TableIcon fontSize="var(--icon-fontSize-md)" />}
             onClick={handleExportExcel}
           >
@@ -375,11 +375,11 @@ export default function Page(): React.JSX.Element {
                     {...field}
                     label="Price"
                     type="number"
-                    inputProps={{ step: 0.01, min: 0 }}
+                    // inputProps={{ step: 0.01, min: 0 }}
                     error={Boolean(errors.price)}
                     helperText={errors.price?.message}
                     fullWidth
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || 0)}
                   />
                 )}
               />

@@ -13,7 +13,7 @@ import { Sales } from '@/components/dashboard/overview/sales';
 // import { TotalCustomers } from '@/components/dashboard/overview/total-customers';
 import { TotalProfit } from '@/components/dashboard/overview/total-profit';
 // import { Traffic } from '@/components/dashboard/overview/traffic';
-import { MainNav, MainNavWrapper } from '@/components/dashboard/layout/main-nav';
+import { MainNavWrapper } from '@/components/dashboard/layout/main-nav';
 
 export const metadata = { title: `Overview | Dashboard | ${config.site.name}` } satisfies Metadata;
 

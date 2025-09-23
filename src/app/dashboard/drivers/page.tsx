@@ -250,9 +250,10 @@ export default function Page(): React.JSX.Element {
       <Dialog open={deleteDialogOpen} onClose={handleCloseDialogs}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete driver "{selectedDriver?.name}"? This action cannot be undone.
-          </Typography>
+      <Typography>
+  {`Are you sure you want to delete driver "${selectedDriver?.name}"? This action cannot be undone.`}
+</Typography>
+
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialogs}>Cancel</Button>
