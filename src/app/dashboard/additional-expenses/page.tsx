@@ -74,10 +74,7 @@ type ExpenseFormData = zod.infer<typeof expenseSchema>;
 
 // Data will be loaded from context
 
-function generateExpenseId(): string {
-  const count = Math.floor(Math.random() * 1000) + 1;
-  return `EXP-${count.toString().padStart(3, '0')}`;
-}
+// generateExpenseId function removed - using context for ID generation
 
 const getExpenseTypeLabel = (type: ExpenseType) => {
   const labels = {
@@ -104,7 +101,7 @@ const getExpenseTypeColor = (type: ExpenseType): ChipProps['color'] => {
 
 
 export default function Page(): React.JSX.Element {
-  const { expenses } = useAdditionalExpenses();
+  const { expenses, addExpense, updateExpense } = useAdditionalExpenses();
   const { employees } = useEmployees();
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
@@ -170,10 +167,10 @@ export default function Page(): React.JSX.Element {
     setEditingExpense(expense);
     reset({
       date: expense.date,
-      type: expense.type,
-      employeeId: expense.employeeId || '',
-      maintenanceName: expense.maintenanceName || '',
-      reason: expense.reason || '',
+      type: expense.category,
+      employeeId: expense.driverId || '',
+      maintenanceName: expense.vendor || '',
+      reason: expense.description || '',
       description: expense.description || '',
       amount: expense.amount,
     });
@@ -349,43 +346,40 @@ export default function Page(): React.JSX.Element {
     const employee = employees.find(emp => emp.id === data.employeeId);
 
     if (editingExpense) {
-      // Edit existing expense
-      const updatedExpenses = expenses.map(e =>
-        e.id === editingExpense.id
-          ? {
-            ...e,
-            date: data.date,
-            type: data.type,
-            employeeId: data.employeeId,
-            employeeName: employee?.name,
-            maintenanceName: data.maintenanceName,
-            reason: data.reason,
-            description: data.description,
-            amount: data.amount,
-            updatedAt: dayjs().utc().toDate()
-          }
-          : e
-      );
-      setExpenses(updatedExpenses);
-      setFilteredExpenses(updatedExpenses);
-    } else {
-      // Add new expense
-      const newExpense: Expense = {
-        id: generateExpenseId(),
-        date: data.date,
-        type: data.type,
-        employeeId: data.employeeId,
-        employeeName: employee?.name,
-        maintenanceName: data.maintenanceName,
-        reason: data.reason,
+      // Edit existing expense using context
+      updateExpense(editingExpense.id, {
+        title: data.description || 'Expense',
         description: data.description,
+        category: data.type,
         amount: data.amount,
-        createdAt: dayjs().utc().toDate(),
-        updatedAt: dayjs().utc().toDate(),
-      };
-      const updatedExpenses = [...expenses, newExpense];
-      setExpenses(updatedExpenses);
-      setFilteredExpenses(updatedExpenses);
+        currency: 'AED',
+        date: data.date,
+        driverId: data.employeeId,
+        driverName: employee?.name,
+        receiptNumber: undefined,
+        vendor: data.maintenanceName,
+        isReimbursable: true,
+        status: 'pending',
+        updatedAt: new Date(),
+        updatedBy: 'current-user', // You might want to get this from auth context
+      });
+    } else {
+      // Add new expense using context
+      addExpense({
+        title: data.description || 'Expense',
+        description: data.description,
+        category: data.type,
+        amount: data.amount,
+        currency: 'AED',
+        date: data.date,
+        driverId: data.employeeId,
+        driverName: employee?.name,
+        receiptNumber: undefined,
+        vendor: data.maintenanceName,
+        isReimbursable: true,
+        status: 'pending',
+        createdBy: 'current-user', // You might want to get this from auth context
+      });
     }
     handleClose();
   };
