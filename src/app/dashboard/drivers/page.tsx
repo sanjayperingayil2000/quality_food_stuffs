@@ -19,16 +19,16 @@ import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
-import { useDrivers, Driver } from '@/contexts/drivers-context';
+import { useEmployees, Employee } from '@/contexts/employee-context';
 
 export default function Page(): React.JSX.Element {
-  const { drivers, addDriver, updateDriver, deleteDriver } = useDrivers();
+  const { drivers, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [selectedDriver, setSelectedDriver] = React.useState<Driver | null>(null);
+  const [selectedDriver, setSelectedDriver] = React.useState<Employee | null>(null);
   
   // Form states
   const [formData, setFormData] = React.useState({
@@ -44,7 +44,7 @@ export default function Page(): React.JSX.Element {
     setAddDialogOpen(true);
   };
 
-  const handleEditClick = (driver: Driver) => {
+  const handleEditClick = (driver: Employee) => {
     setSelectedDriver(driver);
     setFormData({
       name: driver.name,
@@ -56,7 +56,7 @@ export default function Page(): React.JSX.Element {
     setEditDialogOpen(true);
   };
 
-  const handleDeleteClick = (driver: Driver) => {
+  const handleDeleteClick = (driver: Employee) => {
     setSelectedDriver(driver);
     setDeleteDialogOpen(true);
   };
@@ -67,18 +67,25 @@ export default function Page(): React.JSX.Element {
 
   const handleAddSubmit = () => {
     if (formData.name && formData.phone && formData.location && formData.routeName) {
-      const newDriver: Driver = {
-        id: `DRV-${Date.now()}`,
+      const newDriver: Employee = {
+        id: `EMP-${Date.now()}`,
+        designation: 'driver',
+        email: '',
+        address: '',
+        hireDate: new Date(),
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         ...formData
       };
-      addDriver(newDriver);
+      addEmployee(newDriver);
       setAddDialogOpen(false);
     }
   };
 
   const handleEditSubmit = () => {
     if (selectedDriver && formData.name && formData.phone && formData.location && formData.routeName) {
-      updateDriver(selectedDriver.id, formData);
+      updateEmployee(selectedDriver.id, formData);
       setEditDialogOpen(false);
       setSelectedDriver(null);
     }
@@ -86,7 +93,7 @@ export default function Page(): React.JSX.Element {
 
   const handleDeleteConfirm = () => {
     if (selectedDriver) {
-      deleteDriver(selectedDriver.id);
+      deleteEmployee(selectedDriver.id);
       setDeleteDialogOpen(false);
       setSelectedDriver(null);
     }

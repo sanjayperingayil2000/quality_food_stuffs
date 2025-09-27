@@ -34,7 +34,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 
 // import { config } from '@/config';
-import { useProducts, type Product } from '@/contexts/products-context';
+import { useProducts, type Product } from '@/contexts/product-context';
 
 // Configure dayjs plugins
 dayjs.extend(utc);

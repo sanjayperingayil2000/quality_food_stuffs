@@ -32,8 +32,9 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 
-import { useProducts } from '@/contexts/products-context';
-import { useDrivers } from '@/contexts/drivers-context';
+import { useProducts } from '@/contexts/product-context';
+import { useEmployees } from '@/contexts/employee-context';
+import { useDailyTrips } from '@/contexts/daily-trip-context';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -63,8 +64,20 @@ interface DailyTrip {
   driverName: string;
   date: Date;
   transfer: ProductTransfer;
+  // Financial fields
+  collectionAmount: number;
+  purchaseAmount: number;
+  expiry: number; // Days until expiry
+  discount: number; // Discount percentage
+  // Calculated totals
+  totalAmount: number;
+  netTotal: number;
+  grandTotal: number;
+  // Metadata
   createdAt: Date;
   updatedAt: Date;
+  createdBy?: string; // Employee ID who created this trip
+  updatedBy?: string; // Employee ID who last updated this trip
 }
 
 const tripSchema = zod.object({
@@ -81,6 +94,10 @@ const tripSchema = zod.object({
     quantity: zod.number().min(0, 'Quantity must be non-negative'),
     unitPrice: zod.number().min(0, 'Unit price must be non-negative'),
   })),
+  collectionAmount: zod.number().min(0, 'Collection amount must be non-negative'),
+  purchaseAmount: zod.number().min(0, 'Purchase amount must be non-negative'),
+  expiry: zod.number().min(0, 'Expiry amount must be non-negative'),
+  discount: zod.number().min(0, 'Discount amount must be non-negative'),
 });
 
 type TripFormData = zod.infer<typeof tripSchema>;
@@ -105,57 +122,17 @@ const calculateTotals = (products: TripProduct[]) => {
   };
 };
 
-// Drivers will be loaded from context
+// Data will be loaded from contexts
 
-// Products will be loaded from context
-
-const initialTrips: DailyTrip[] = [
-  {
-    id: 'TRP-001',
-    driverId: 'DRV-001',
-    driverName: 'Rahul Kumar',
-    date: dayjs().subtract(1, 'day').utc().toDate(),
-    transfer: {
-      type: 'no_transfer',
-      products: [
-        // Bakery items with minimum quantity 2
-        { productId: 'PRD-001', productName: 'Sourdough Bread', category: 'bakery', quantity: 2, unitPrice: 12.5 },
-        { productId: 'PRD-002', productName: 'Blueberry Muffin', category: 'bakery', quantity: 2, unitPrice: 8 },
-        { productId: 'PRD-003', productName: 'Croissant', category: 'bakery', quantity: 2, unitPrice: 6.5 },
-        { productId: 'PRD-004', productName: 'Whole Wheat Loaf', category: 'bakery', quantity: 2, unitPrice: 10.75 },
-        { productId: 'PRD-005', productName: 'Chocolate Chip Cookie', category: 'bakery', quantity: 2, unitPrice: 3.25 },
-        { productId: 'PRD-006', productName: 'Cinnamon Roll', category: 'bakery', quantity: 2, unitPrice: 7.5 },
-        { productId: 'PRD-007', productName: 'Bagel', category: 'bakery', quantity: 2, unitPrice: 4 },
-        { productId: 'PRD-008', productName: 'Danish Pastry', category: 'bakery', quantity: 2, unitPrice: 5.75 },
-        { productId: 'PRD-009', productName: 'Pretzel', category: 'bakery', quantity: 2, unitPrice: 3.5 },
-        { productId: 'PRD-010', productName: 'Donut', category: 'bakery', quantity: 2, unitPrice: 2.75 },
-        { productId: 'PRD-011', productName: 'Baguette', category: 'bakery', quantity: 2, unitPrice: 9.25 },
-        { productId: 'PRD-012', productName: 'Focaccia', category: 'bakery', quantity: 2, unitPrice: 11 },
-        // Fresh items with minimum quantity 2
-        { productId: 'PRD-013', productName: 'Fresh Apples', category: 'fresh', quantity: 2, unitPrice: 15 },
-        { productId: 'PRD-014', productName: 'Bananas', category: 'fresh', quantity: 2, unitPrice: 8.5 },
-        { productId: 'PRD-015', productName: 'Orange Juice', category: 'fresh', quantity: 2, unitPrice: 12 },
-        { productId: 'PRD-016', productName: 'Strawberries', category: 'fresh', quantity: 2, unitPrice: 18.75 },
-        { productId: 'PRD-017', productName: 'Grapes', category: 'fresh', quantity: 2, unitPrice: 14.25 },
-        { productId: 'PRD-018', productName: 'Mango', category: 'fresh', quantity: 2, unitPrice: 22.5 },
-        { productId: 'PRD-019', productName: 'Pineapple', category: 'fresh', quantity: 2, unitPrice: 16 },
-        { productId: 'PRD-020', productName: 'Watermelon', category: 'fresh', quantity: 2, unitPrice: 25 },
-      ],
-    },
-    createdAt: dayjs().subtract(1, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(1, 'day').utc().toDate(),
-  },
-];
-
-function generateTripId(): string {
+function _generateTripId(): string {
   const _count = Math.floor(Math.random() * 1000) + 1;
   return `TRP-AED ${_count.toString().padStart(3, '0')}`;
 }
 
 export default function Page(): React.JSX.Element {
   const { products } = useProducts();
-  const { drivers } = useDrivers();
-  const [trips, setTrips] = React.useState<DailyTrip[]>([]);
+  const { drivers } = useEmployees();
+  const { trips, addTrip, updateTrip, deleteTrip } = useDailyTrips();
   const [open, setOpen] = React.useState(false);
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
   const [filteredTrips, setFilteredTrips] = React.useState<DailyTrip[]>([]);
@@ -169,9 +146,8 @@ export default function Page(): React.JSX.Element {
   // Initialize state after component mounts to avoid hydration issues
   React.useEffect(() => {
     setMounted(true);
-    setTrips(initialTrips);
-    setFilteredTrips(initialTrips);
-  }, []);
+    setFilteredTrips(trips);
+  }, [trips]);
 
   const {
     control,
@@ -190,6 +166,10 @@ export default function Page(): React.JSX.Element {
       toDriverId: '',
       selectedCategory: 'bakery',
       products: [],
+      collectionAmount: 0,
+      purchaseAmount: 0,
+      expiry: 0,
+      discount: 0,
     },
     mode: 'onChange',
   });
@@ -234,6 +214,10 @@ export default function Page(): React.JSX.Element {
       toDriverId: trip.transfer.toDriverId || '',
       selectedCategory: 'bakery',
       products: trip.transfer.products,
+      collectionAmount: trip.collectionAmount,
+      purchaseAmount: trip.purchaseAmount,
+      expiry: trip.expiry,
+      discount: trip.discount,
     });
     setOpen(true);
   };
@@ -247,9 +231,7 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = (tripId: string) => {
-    const updatedTrips = trips.filter(t => t.id !== tripId);
-    setTrips(updatedTrips);
-    setFilteredTrips(updatedTrips);
+    deleteTrip(tripId);
   };
 
   const handleApplyFilter = React.useCallback(() => {
@@ -321,36 +303,24 @@ export default function Page(): React.JSX.Element {
       products: filteredProducts,
     };
 
+    const tripData = {
+      driverId: data.driverId,
+      driverName: driver?.name || '',
+      date: data.date,
+      transfer,
+      collectionAmount: data.collectionAmount,
+      purchaseAmount: data.purchaseAmount,
+      expiry: data.expiry,
+      discount: data.discount,
+      totalAmount: 0, // Will be calculated in context
+      netTotal: 0, // Will be calculated in context
+      grandTotal: 0, // Will be calculated in context
+    };
+
     if (editingTrip) {
-      // Edit existing trip
-      const updatedTrips = trips.map(t =>
-        t.id === editingTrip.id
-          ? {
-              ...t,
-              driverId: data.driverId,
-              driverName: driver?.name || '',
-              date: data.date,
-              transfer,
-              updatedAt: dayjs().utc().toDate(),
-            }
-          : t
-      );
-      setTrips(updatedTrips);
-      setFilteredTrips(updatedTrips);
+      updateTrip(editingTrip.id, tripData);
     } else {
-      // Add new trip
-      const newTrip: DailyTrip = {
-        id: generateTripId(),
-        driverId: data.driverId,
-        driverName: driver?.name || '',
-        date: data.date,
-        transfer,
-        createdAt: dayjs().utc().toDate(),
-        updatedAt: dayjs().utc().toDate(),
-      };
-      const updatedTrips = [...trips, newTrip];
-      setTrips(updatedTrips);
-      setFilteredTrips(updatedTrips);
+      addTrip(tripData);
     }
     handleClose();
   };
@@ -486,9 +456,32 @@ export default function Page(): React.JSX.Element {
                 ))}
               </Grid>
 
+              {/* Financial Information Display */}
+              <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>Financial Information</Typography>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Typography variant="body2" color="text.secondary">Collection Amount</Typography>
+                    <Typography variant="h6" color="success.main">AED {trip.collectionAmount.toFixed(2)}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Typography variant="body2" color="text.secondary">Purchase Amount</Typography>
+                    <Typography variant="h6" color="primary.main">AED {trip.purchaseAmount.toFixed(2)}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Typography variant="body2" color="text.secondary">Expiry Amount</Typography>
+                    <Typography variant="h6" color="warning.main">AED {trip.expiry.toFixed(2)}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Typography variant="body2" color="text.secondary">Discount Amount</Typography>
+                    <Typography variant="h6" color="warning.main">AED {trip.discount.toFixed(2)}</Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
               {trip.transfer.products.length > 0 && (
                 <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>Calculations</Typography>
+                  <Typography variant="h6" sx={{ mb: 2 }}>Product Calculations</Typography>
                   {(() => {
                     const totals = calculateTotals(trip.transfer.products);
                     return (
@@ -504,6 +497,12 @@ export default function Page(): React.JSX.Element {
                           <Typography variant="body2">Total: AED {totals.bakery.total.toFixed(2)}</Typography>
                           <Typography variant="body2">Net Total: AED {totals.bakery.netTotal.toFixed(2)}</Typography>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.bakery.grandTotal.toFixed(2)}</Typography>
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                          <Typography variant="subtitle2" color="text.primary" sx={{ mb: 1, borderTop: 1, borderColor: 'divider', pt: 1 }}>Overall Totals</Typography>
+                          <Typography variant="body2">Total Amount: AED {trip.totalAmount.toFixed(2)}</Typography>
+                          <Typography variant="body2">Net Total: AED {trip.netTotal.toFixed(2)}</Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>Grand Total: AED {trip.grandTotal.toFixed(2)}</Typography>
                         </Grid>
                       </Grid>
                     );
@@ -687,10 +686,18 @@ export default function Page(): React.JSX.Element {
                     setTransferType(e.target.value);
                     setValue('transferType', e.target.value as 'no_transfer' | 'product_transferred' | 'product_accepted');
                     // Reset dependent fields when transfer type changes
-                    setValue('fromDriverId', '');
-                    setValue('toDriverId', '');
-                    setValue('selectedCategory', 'bakery');
-                    setValue('products', []);
+    setValue('fromDriverId', '');
+    setValue('toDriverId', '');
+    setValue('selectedCategory', 'bakery');
+    setValue('products', []);
+    setValue('collectionAmount', 0);
+    setValue('purchaseAmount', 0);
+    setValue('expiry', 0);
+    setValue('discount', 0);
+                    setValue('collectionAmount', 0);
+                    setValue('purchaseAmount', 0);
+                    setValue('expiry', 0);
+                    setValue('discount', 0);
                   }}
                 >
                   <MenuItem value="no_transfer">No Product Transferred</MenuItem>
@@ -886,6 +893,79 @@ export default function Page(): React.JSX.Element {
                   )}
                 </Stack>
               )}
+
+              {/* Financial Information */}
+              <Typography variant="h6" sx={{ mb: 2 }}>Financial Information</Typography>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Controller
+                    control={control}
+                    name="collectionAmount"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Collection Amount (AED)"
+                        type="number"
+                        fullWidth
+                        error={Boolean(errors.collectionAmount)}
+                        helperText={errors.collectionAmount?.message}
+                        inputProps={{ min: 0, step: 0.01 }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Controller
+                    control={control}
+                    name="purchaseAmount"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Purchase Amount (AED)"
+                        type="number"
+                        fullWidth
+                        error={Boolean(errors.purchaseAmount)}
+                        helperText={errors.purchaseAmount?.message}
+                        inputProps={{ min: 0, step: 0.01 }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Controller
+                    control={control}
+                    name="expiry"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Expiry Amount (AED)"
+                        type="number"
+                        fullWidth
+                        error={Boolean(errors.expiry)}
+                        helperText={errors.expiry?.message}
+                        inputProps={{ min: 0, step: 1 }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Controller
+                    control={control}
+                    name="discount"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Discount Amount (AED)"
+                        type="number"
+                        fullWidth
+                        error={Boolean(errors.discount)}
+                        helperText={errors.discount?.message}
+                        inputProps={{ min: 0, step: 0.01 }}
+                      />
+                    )}
+                  />
+                </Grid>
+              </Grid>
 
               {/* Display Calculations */}
               {watchedProducts && watchedProducts.length > 0 && (
