@@ -141,7 +141,6 @@ export default function Page(): React.JSX.Element {
   const [dateTo, setDateTo] = React.useState<string>('');
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
-  const [transferType, setTransferType] = React.useState<string>('no_transfer');
 
   // Initialize state after component mounts to avoid hydration issues
   React.useEffect(() => {
@@ -177,6 +176,9 @@ export default function Page(): React.JSX.Element {
   const watchedProducts = watch('products');
   const watchedTransferType = watch('transferType');
   const watchedSelectedCategory = watch('selectedCategory');
+  
+  // Use watched transfer type instead of separate state
+  const transferType = watchedTransferType || 'no_transfer';
 
   // Debug logging
   React.useEffect(() => {
@@ -189,7 +191,6 @@ export default function Page(): React.JSX.Element {
   const handleOpen = () => {
     setEditingTrip(null);
     setSelectedDriverId('');
-    setTransferType('no_transfer');
     reset({
       driverId: '',
       date: dayjs().toDate(),
@@ -198,6 +199,10 @@ export default function Page(): React.JSX.Element {
       toDriverId: '',
       selectedCategory: 'bakery',
       products: [],
+      collectionAmount: 0,
+      purchaseAmount: 0,
+      expiry: 0,
+      discount: 0,
     });
     setOpen(true);
   };
@@ -205,7 +210,6 @@ export default function Page(): React.JSX.Element {
   const handleEdit = (trip: DailyTrip) => {
     setEditingTrip(trip);
     setSelectedDriverId(trip.driverId);
-    setTransferType(trip.transfer.type);
     reset({
       driverId: trip.driverId,
       date: trip.date,
@@ -226,7 +230,6 @@ export default function Page(): React.JSX.Element {
     setOpen(false);
     setEditingTrip(null);
     setSelectedDriverId('');
-    setTransferType('no_transfer');
     reset();
   };
 
@@ -676,40 +679,41 @@ export default function Page(): React.JSX.Element {
                 </LocalizationProvider>
 
               {/* Transfer Type Selection */}
-              <FormControl fullWidth error={Boolean(errors.transferType)}>
-                <InputLabel>Transfer Type</InputLabel>
-                <Select
-                  value={transferType}
-                  label="Transfer Type"
-                  onChange={(e) => {
-                    console.log('Transfer type changed to:', e.target.value);
-                    setTransferType(e.target.value);
-                    setValue('transferType', e.target.value as 'no_transfer' | 'product_transferred' | 'product_accepted');
-                    // Reset dependent fields when transfer type changes
-    setValue('fromDriverId', '');
-    setValue('toDriverId', '');
-    setValue('selectedCategory', 'bakery');
-    setValue('products', []);
-    setValue('collectionAmount', 0);
-    setValue('purchaseAmount', 0);
-    setValue('expiry', 0);
-    setValue('discount', 0);
-                    setValue('collectionAmount', 0);
-                    setValue('purchaseAmount', 0);
-                    setValue('expiry', 0);
-                    setValue('discount', 0);
-                  }}
-                >
-                  <MenuItem value="no_transfer">No Product Transferred</MenuItem>
-                  <MenuItem value="product_transferred">Product Transferred</MenuItem>
-                  <MenuItem value="product_accepted">Product Accepted</MenuItem>
-                </Select>
-                {errors.transferType && (
-                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                    {errors.transferType.message}
-                  </Typography>
+              <Controller
+                control={control}
+                name="transferType"
+                render={({ field }) => (
+                  <FormControl fullWidth error={Boolean(errors.transferType)}>
+                    <InputLabel>Transfer Type</InputLabel>
+                    <Select
+                      {...field}
+                      label="Transfer Type"
+                      onChange={(e) => {
+                        console.log('Transfer type changed to:', e.target.value);
+                        field.onChange(e.target.value);
+                        // Reset dependent fields when transfer type changes
+                        setValue('fromDriverId', '');
+                        setValue('toDriverId', '');
+                        setValue('selectedCategory', 'bakery');
+                        setValue('products', []);
+                        setValue('collectionAmount', 0);
+                        setValue('purchaseAmount', 0);
+                        setValue('expiry', 0);
+                        setValue('discount', 0);
+                      }}
+                    >
+                      <MenuItem value="no_transfer">No Product Transferred</MenuItem>
+                      <MenuItem value="product_transferred">Product Transferred</MenuItem>
+                      <MenuItem value="product_accepted">Product Accepted</MenuItem>
+                    </Select>
+                    {errors.transferType && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                        {errors.transferType.message}
+                      </Typography>
+                    )}
+                  </FormControl>
                 )}
-              </FormControl>
+              />
 
               {/* Driver Selection for Transfer/Acceptance */}
               {transferType !== 'no_transfer' && (
