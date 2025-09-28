@@ -261,6 +261,10 @@ export default function Page(): React.JSX.Element {
         price: data.price,
         category: data.category,
         description: data.description,
+        sku: `PRD-${data.productId}`,
+        unit: 'piece',
+        minimumQuantity: 1,
+        isActive: true,
         createdAt: dayjs().utc().toDate(),
         updatedAt: dayjs().utc().toDate(),
       };

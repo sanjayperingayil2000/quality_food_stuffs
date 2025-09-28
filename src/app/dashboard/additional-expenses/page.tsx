@@ -101,7 +101,7 @@ const getExpenseTypeColor = (type: ExpenseType): ChipProps['color'] => {
 
 
 export default function Page(): React.JSX.Element {
-  const { expenses, addExpense, updateExpense } = useAdditionalExpenses();
+  const { expenses, addExpense, updateExpense, deleteExpense } = useAdditionalExpenses();
   const { employees } = useEmployees();
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
@@ -184,9 +184,9 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = (expenseId: string) => {
-    const updatedExpenses = expenses.filter(e => e.id !== expenseId);
-    setExpenses(updatedExpenses);
-    setFilteredExpenses(updatedExpenses);
+    deleteExpense(expenseId);
+    // Update filtered expenses to reflect the deletion
+    setFilteredExpenses(prev => prev.filter(e => e.id !== expenseId));
   };
 
   const handleApplyFilter = () => {
@@ -283,15 +283,15 @@ export default function Page(): React.JSX.Element {
               ${filteredExpenses.map(expense => `
                 <tr>
                   <td>${dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')}</td>
-                  <td>${getExpenseTypeLabel(expense.type)}</td>
-                  <td>${expense.employeeName || '-'}</td>
+                  <td>${getExpenseTypeLabel(expense.category)}</td>
+                  <td>${expense.driverName || '-'}</td>
                   <td>
                     ${expense.description ||
-      (expense.type === 'maintenance' && expense.maintenanceName) ||
-      (expense.type === 'others' && expense.reason) ||
-      (expense.type === 'petrol' && 'Petrol Expense') ||
-      (expense.type === 'salary' && 'Salary Payment') ||
-      (expense.type === 'variance' && 'Variance Adjustment')}
+      (expense.category === 'maintenance' && expense.vendor) ||
+      (expense.category === 'others' && expense.description) ||
+      (expense.category === 'petrol' && 'Petrol Expense') ||
+      (expense.category === 'salary' && 'Salary Payment') ||
+      (expense.category === 'variance' && 'Variance Adjustment')}
                   </td>
                   <td>${expense.amount.toFixed(2)} AED</td>
                   <td>${dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</td>
@@ -318,13 +318,13 @@ export default function Page(): React.JSX.Element {
       ['Date', 'Type', 'Employee', 'Description', 'Amount (AED)', 'Added', 'Last Edited'],
       ...filteredExpenses.map(expense => [
         dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY'),
-        getExpenseTypeLabel(expense.type),
-        expense.employeeName || '-',
+        getExpenseTypeLabel(expense.category),
+        expense.driverName || '-',
         expense.description ||
-        (expense.type === 'maintenance' ? expense.maintenanceName :
-          expense.type === 'others' ? expense.reason :
-            expense.type === 'petrol' ? 'Petrol Expense' :
-              expense.type === 'salary' ? 'Salary Payment' : 'Variance Adjustment'),
+        (expense.category === 'maintenance' ? expense.vendor :
+          expense.category === 'others' ? expense.description :
+            expense.category === 'petrol' ? 'Petrol Expense' :
+              expense.category === 'salary' ? 'Salary Payment' : 'Variance Adjustment'),
         `${expense.amount.toFixed(2)} AED`,
         dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A') + ' GST',
         dayjs(expense.updatedAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A') + ' GST'
@@ -483,19 +483,19 @@ export default function Page(): React.JSX.Element {
               <TableCell>{dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST</TableCell>
               <TableCell>
                 <Chip
-                  label={getExpenseTypeLabel(expense.type)}
+                  label={getExpenseTypeLabel(expense.category)}
                   size="small"
-                  color={getExpenseTypeColor(expense.type)}
+                  color={getExpenseTypeColor(expense.category)}
                 />
               </TableCell>
-              <TableCell>{expense.employeeName || '-'}</TableCell>
+              <TableCell>{expense.driverName || '-'}</TableCell>
               <TableCell>
                 {expense.description ||
-                  (expense.type === 'maintenance' && expense.maintenanceName) ||
-                  (expense.type === 'others' && expense.reason) ||
-                  (expense.type === 'petrol' && 'Petrol Expense') ||
-                  (expense.type === 'salary' && 'Salary Payment') ||
-                  (expense.type === 'variance' && 'Variance Adjustment')}
+                  (expense.category === 'maintenance' && expense.vendor) ||
+                  (expense.category === 'others' && expense.description) ||
+                  (expense.category === 'petrol' && 'Petrol Expense') ||
+                  (expense.category === 'salary' && 'Salary Payment') ||
+                  (expense.category === 'variance' && 'Variance Adjustment')}
               </TableCell>
               <TableCell>{expense.amount.toFixed(2)} AED</TableCell>
               <TableCell>{dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>

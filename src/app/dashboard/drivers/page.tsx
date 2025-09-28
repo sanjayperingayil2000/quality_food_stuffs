@@ -33,14 +33,14 @@ export default function Page(): React.JSX.Element {
   // Form states
   const [formData, setFormData] = React.useState({
     name: '',
-    phone: '',
+    phoneNumber: '',
     location: '',
     routeName: '',
     description: ''
   });
 
   const handleAddClick = () => {
-    setFormData({ name: '', phone: '', location: '', routeName: '', description: '' });
+    setFormData({ name: '', phoneNumber: '', location: '', routeName: '', description: '' });
     setAddDialogOpen(true);
   };
 
@@ -48,10 +48,10 @@ export default function Page(): React.JSX.Element {
     setSelectedDriver(driver);
     setFormData({
       name: driver.name,
-      phone: driver.phone,
-      location: driver.location,
-      routeName: driver.routeName,
-      description: driver.description || ''
+      phoneNumber: driver.phoneNumber,
+      location: driver.location || '',
+      routeName: driver.routeName || '',
+      description: ''
     });
     setEditDialogOpen(true);
   };
@@ -66,17 +66,20 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleAddSubmit = () => {
-    if (formData.name && formData.phone && formData.location && formData.routeName) {
+    if (formData.name && formData.phoneNumber && formData.location && formData.routeName) {
       const newDriver: Employee = {
         id: `EMP-${Date.now()}`,
+        name: formData.name,
         designation: 'driver',
+        phoneNumber: formData.phoneNumber,
         email: '',
         address: '',
+        routeName: formData.routeName,
+        location: formData.location,
         hireDate: new Date(),
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-        ...formData
       };
       addEmployee(newDriver);
       setAddDialogOpen(false);
@@ -84,7 +87,7 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleEditSubmit = () => {
-    if (selectedDriver && formData.name && formData.phone && formData.location && formData.routeName) {
+    if (selectedDriver && formData.name && formData.phoneNumber && formData.location && formData.routeName) {
       updateEmployee(selectedDriver.id, formData);
       setEditDialogOpen(false);
       setSelectedDriver(null);
@@ -137,7 +140,7 @@ export default function Page(): React.JSX.Element {
           {drivers.map((driver) => (
             <TableRow hover key={driver.id}>
               <TableCell>{driver.name}</TableCell>
-              <TableCell>{driver.phone}</TableCell>
+              <TableCell>{driver.phoneNumber}</TableCell>
               <TableCell>{driver.location}</TableCell>
               <TableCell>{driver.routeName}</TableCell>
               <TableCell>
@@ -169,8 +172,8 @@ export default function Page(): React.JSX.Element {
             />
             <TextField
               label="Phone Number"
-              value={formData.phone}
-              onChange={handleFormChange('phone')}
+              value={formData.phoneNumber}
+              onChange={handleFormChange('phoneNumber')}
               fullWidth
               required
             />
@@ -218,8 +221,8 @@ export default function Page(): React.JSX.Element {
             />
             <TextField
               label="Phone Number"
-              value={formData.phone}
-              onChange={handleFormChange('phone')}
+              value={formData.phoneNumber}
+              onChange={handleFormChange('phoneNumber')}
               fullWidth
               required
             />
