@@ -6,7 +6,7 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardHeader from '@mui/material/CardHeader';
 import Divider from '@mui/material/Divider';
-import { alpha, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import type { SxProps } from '@mui/material/styles';
 import { MenuItem, FormControl, InputLabel, TextField, Box } from '@mui/material';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
@@ -25,8 +25,14 @@ export function Sales({ chartSeries, drivers: _drivers = ['John', 'Mike', 'Sara'
 
   // State for filters
   const [metricType, setMetricType] = React.useState<'Drivers' | 'Profit'>('Drivers');
-  // const [selectedDriver, setSelectedDriver] = React.useState(drivers[0]); // Unused
-  const [selectedDate, setSelectedDate] = React.useState<string>('');
+
+  // Default yesterday's date
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const formattedYesterday = yesterday.toISOString().split('T')[0];
+
+  const [selectedDate, setSelectedDate] = React.useState<string>(formattedYesterday);
+
 
   const handleMetricChange = (event: SelectChangeEvent<string>) => {
     setMetricType(event.target.value as 'Drivers' | 'Profit');
@@ -43,7 +49,7 @@ export function Sales({ chartSeries, drivers: _drivers = ['John', 'Mike', 'Sara'
   return (
     <Card sx={sx}>
       <CardHeader
-        title="Sales"
+        title="Metrics"
         action={
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             {/* Metric Type Dropdown */}
@@ -94,7 +100,7 @@ export function Sales({ chartSeries, drivers: _drivers = ['John', 'Mike', 'Sara'
               value={selectedDate}
               onChange={handleDateChange}
               slotProps={{
-                inputLabel: { shrink: true }, // ✅ replace deprecated InputLabelProps
+                inputLabel: { shrink: true },
               }}
             />
           </Box>
@@ -113,7 +119,7 @@ function useChartOptions(): ApexOptions {
 
   return {
     chart: { background: 'transparent', stacked: false, toolbar: { show: false } },
-    colors: [theme.palette.primary.main, alpha(theme.palette.primary.main, 0.25)],
+    colors: [theme.palette.primary.main],   // ✅ only one color (dark blue)
     dataLabels: { enabled: false },
     fill: { opacity: 1, type: 'solid' },
     grid: {
@@ -126,6 +132,11 @@ function useChartOptions(): ApexOptions {
     plotOptions: { bar: { columnWidth: '40px' } },
     stroke: { colors: ['transparent'], show: true, width: 2 },
     theme: { mode: theme.palette.mode },
+    tooltip: { enabled: false },
+    // states: {
+    //   hover: { filter: { type: 'none' } },
+    //   active: { filter: { type: 'none' } },
+    // },
     xaxis: {
       axisBorder: { color: theme.palette.divider, show: true },
       axisTicks: { color: theme.palette.divider, show: true },

@@ -5,7 +5,8 @@ import CardContent from '@mui/material/CardContent';
 import Stack from '@mui/material/Stack';
 import type { SxProps } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
-import { ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
+// import { ReceiptIcon } from '@phosphor-icons/react/dist/ssr/Receipt';
+import Box from '@mui/material/Box';
 
 export interface TotalProfitProps {
   sx?: SxProps;
@@ -23,8 +24,14 @@ export function TotalProfit({ value, sx }: TotalProfitProps): React.JSX.Element 
             </Typography>
             <Typography variant="h4">{value}</Typography>
           </Stack>
-          <Avatar sx={{ backgroundColor: 'var(--mui-palette-primary-main)', height: '56px', width: '56px' }}>
-            <ReceiptIcon fontSize="var(--icon-fontSize-lg)" />
+          <Avatar sx={{ backgroundColor: 'var(--mui-palette-primary-main)', height: 56, width: 56 }}>
+            <Box
+              alt="AED"
+              component="img"
+              height={24}
+              width={24}
+              src="/assets/UAE_Dirham_Symbol.svg"
+            />
           </Avatar>
         </Stack>
       </CardContent>

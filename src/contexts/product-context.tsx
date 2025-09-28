@@ -11,6 +11,13 @@ dayjs.extend(timezone);
 
 export type ProductCategory = 'bakery' | 'fresh';
 
+export interface PriceHistoryEntry {
+  version: number;      // version number
+  price: number;        // previous price
+  updatedAt: Date;      // timestamp when price was updated
+  updatedBy: string;    // user who updated it
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -28,6 +35,7 @@ export interface Product {
   updatedAt: Date;
   createdBy?: string; // Employee ID who created this product
   updatedBy?: string; // Employee ID who last updated this product
+  priceHistory?: PriceHistoryEntry[];
 }
 
 interface ProductContextType {
@@ -62,6 +70,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 11, updatedAt: new Date('2024-01-01'), updatedBy: 'Admin' },
+      { version: 2, price: 12, updatedAt: new Date('2024-02-01'), updatedBy: 'Admin' },
+      { version: 3, price: 12.5, updatedAt: new Date('2024-03-01'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-002',
@@ -80,6 +93,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 7.5, updatedAt: new Date('2024-01-02'), updatedBy: 'Admin' },
+      { version: 2, price: 7.8, updatedAt: new Date('2024-02-01'), updatedBy: 'Admin' },
+      { version: 3, price: 8, updatedAt: new Date('2024-02-15'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-003',
@@ -98,6 +116,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+      priceHistory: [
+      { version: 1, price: 6, updatedAt: new Date('2024-01-03'), updatedBy: 'Admin' },
+      { version: 2, price: 6.2, updatedAt: new Date('2024-02-01'), updatedBy: 'Admin' },
+      { version: 3, price: 6.5, updatedAt: new Date('2024-02-20'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-004',
@@ -116,6 +139,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 10, updatedAt: new Date('2024-01-04'), updatedBy: 'Admin' },
+      { version: 2, price: 10.5, updatedAt: new Date('2024-02-10'), updatedBy: 'Admin' },
+      { version: 3, price: 10.75, updatedAt: new Date('2024-03-05'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-005',
@@ -134,6 +162,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 3, updatedAt: new Date('2024-01-05'), updatedBy: 'Admin' },
+      { version: 2, price: 3.1, updatedAt: new Date('2024-02-01'), updatedBy: 'Admin' },
+      { version: 3, price: 3.25, updatedAt: new Date('2024-03-02'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-006',
@@ -152,6 +185,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 7, updatedAt: new Date('2024-01-06'), updatedBy: 'Admin' },
+      { version: 2, price: 7.3, updatedAt: new Date('2024-02-15'), updatedBy: 'Admin' },
+      { version: 3, price: 7.5, updatedAt: new Date('2024-03-08'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-007',
@@ -170,6 +208,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+    priceHistory: [
+      { version: 1, price: 3.5, updatedAt: new Date('2024-01-07'), updatedBy: 'Admin' },
+      { version: 2, price: 3.8, updatedAt: new Date('2024-02-20'), updatedBy: 'Admin' },
+      { version: 3, price: 4, updatedAt: new Date('2024-03-10'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-008',
@@ -188,6 +231,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+    priceHistory: [
+      { version: 1, price: 5.5, updatedAt: new Date('2024-01-08'), updatedBy: 'Admin' },
+      { version: 2, price: 5.6, updatedAt: new Date('2024-02-25'), updatedBy: 'Admin' },
+      { version: 3, price: 5.75, updatedAt: new Date('2024-03-12'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-009',
@@ -206,6 +254,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 3, updatedAt: new Date('2024-01-09'), updatedBy: 'Admin' },
+      { version: 2, price: 3.25, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 3.5, updatedAt: new Date('2024-03-15'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-010',
@@ -224,6 +277,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+    priceHistory: [
+      { version: 1, price: 2.5, updatedAt: new Date('2024-01-10'), updatedBy: 'Admin' },
+      { version: 2, price: 2.65, updatedAt: new Date('2024-03-01'), updatedBy: 'Admin' },
+      { version: 3, price: 2.75, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-011',
@@ -242,6 +300,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+    priceHistory: [
+      { version: 1, price: 8.75, updatedAt: new Date('2024-01-11'), updatedBy: 'Admin' },
+      { version: 2, price: 9, updatedAt: new Date('2024-02-15'), updatedBy: 'Admin' },
+      { version: 3, price: 9.25, updatedAt: new Date('2024-03-20'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-012',
@@ -260,6 +323,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 10.5, updatedAt: new Date('2024-01-12'), updatedBy: 'Admin' },
+      { version: 2, price: 10.75, updatedAt: new Date('2024-02-20'), updatedBy: 'Admin' },
+      { version: 3, price: 11, updatedAt: new Date('2024-03-22'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-013',
@@ -278,6 +346,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 14, updatedAt: new Date('2024-01-13'), updatedBy: 'Admin' },
+      { version: 2, price: 14.5, updatedAt: new Date('2024-02-01'), updatedBy: 'Admin' },
+      { version: 3, price: 15, updatedAt: new Date('2024-03-01'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-014',
@@ -296,6 +369,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 8, updatedAt: new Date('2024-01-14'), updatedBy: 'Admin' },
+      { version: 2, price: 8.25, updatedAt: new Date('2024-02-05'), updatedBy: 'Admin' },
+      { version: 3, price: 8.5, updatedAt: new Date('2024-03-03'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-015',
@@ -314,6 +392,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 11, updatedAt: new Date('2024-01-15'), updatedBy: 'Admin' },
+      { version: 2, price: 11.5, updatedAt: new Date('2024-02-10'), updatedBy: 'Admin' },
+      { version: 3, price: 12, updatedAt: new Date('2024-03-05'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-016',
@@ -332,6 +415,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 17, updatedAt: new Date('2024-01-16'), updatedBy: 'Admin' },
+      { version: 2, price: 18, updatedAt: new Date('2024-02-15'), updatedBy: 'Admin' },
+      { version: 3, price: 18.75, updatedAt: new Date('2024-03-08'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-017',
@@ -350,6 +438,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+     priceHistory: [
+      { version: 1, price: 13.5, updatedAt: new Date('2024-01-17'), updatedBy: 'Admin' },
+      { version: 2, price: 14, updatedAt: new Date('2024-02-20'), updatedBy: 'Admin' },
+      { version: 3, price: 14.25, updatedAt: new Date('2024-03-10'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-018',
@@ -368,6 +461,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
+    priceHistory: [
+      { version: 1, price: 21, updatedAt: new Date('2024-01-18'), updatedBy: 'Admin' },
+      { version: 2, price: 22, updatedAt: new Date('2024-02-25'), updatedBy: 'Admin' },
+      { version: 3, price: 22.5, updatedAt: new Date('2024-03-12'), updatedBy: 'Admin' },
+    ],
   },
 
   // Bakery Products (13 items)
@@ -388,6 +486,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+     priceHistory: [
+      { version: 1, price: 15, updatedAt: new Date('2024-01-19'), updatedBy: 'Admin' },
+      { version: 2, price: 15.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 16, updatedAt: new Date('2024-03-15'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-020',
@@ -406,6 +509,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-021',
@@ -424,6 +532,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-022',
@@ -442,6 +555,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-023',
@@ -460,6 +578,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-024',
@@ -478,6 +601,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-025',
@@ -496,6 +624,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-026',
@@ -514,6 +647,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-027',
@@ -532,6 +670,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-028',
@@ -550,6 +693,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-029',
@@ -568,6 +716,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-030',
@@ -586,6 +739,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
   {
     id: 'PRD-031',
@@ -604,6 +762,11 @@ const initialProducts: Product[] = [
     updatedAt: dayjs().subtract(1, 'week').toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
+      priceHistory: [
+      { version: 1, price: 23.5, updatedAt: new Date('2024-01-20'), updatedBy: 'Admin' },
+      { version: 2, price: 24.5, updatedAt: new Date('2024-02-28'), updatedBy: 'Admin' },
+      { version: 3, price: 25, updatedAt: new Date('2024-03-18'), updatedBy: 'Admin' },
+    ],
   },
 ];
 
@@ -631,7 +794,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setProducts(prev => [...prev, newProduct]);
+    setProducts(prev => [newProduct,...prev ]);
   }, [products.length]);
 
   const updateProduct = React.useCallback((id: string, updates: Partial<Product>) => {
