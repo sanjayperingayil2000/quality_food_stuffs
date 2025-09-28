@@ -34,58 +34,31 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 
-// import { config } from '@/config';
+import { useAdditionalExpenses, AdditionalExpense, ExpenseCategory } from '@/contexts/additional-expense-context';
+import { useEmployees } from '@/contexts/employee-context';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-type ExpenseType = 'petrol' | 'maintenance' | 'salary' | 'variance' | 'others';
+type ExpenseType = ExpenseCategory;
 
-interface Employee {
-  id: string;
-  name: string;
-  role: 'driver' | 'manager' | 'ceo';
-}
+// Employee interface removed - using context
 
-interface Expense {
-  id: string;
-  date: Date;
-  type: ExpenseType;
-  employeeId?: string;
-  employeeName?: string;
-  maintenanceName?: string;
-  reason?: string;
-  description?: string;
-  amount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+type Expense = AdditionalExpense;
 
-const employees: Employee[] = [
-  { id: 'EMP-001', name: 'Rahul Kumar', role: 'driver' },
-  { id: 'EMP-002', name: 'Vijay Anand', role: 'driver' },
-  { id: 'EMP-003', name: 'Karthik', role: 'driver' },
-  { id: 'EMP-004', name: 'Senthil', role: 'driver' },
-  { id: 'EMP-005', name: 'Suresh', role: 'driver' },
-  { id: 'EMP-006', name: 'Rajesh Kumar', role: 'manager' },
-  { id: 'EMP-007', name: 'Priya Sharma', role: 'ceo' },
-  { id: 'COMP-001', name: 'Quality Food Stuffs', role: 'ceo' },
-];
+// Employees will be loaded from context
 
 const expenseSchema = zod.object({
   date: zod.date({ required_error: 'Date is required' }),
-  type: zod.enum(['petrol', 'maintenance', 'salary', 'variance', 'others'], { required_error: 'Expense type is required' }),
+  type: zod.enum(['petrol', 'maintenance', 'variance', 'salary', 'others'], { required_error: 'Expense type is required' }),
   employeeId: zod.string().optional(),
   maintenanceName: zod.string().optional(),
   reason: zod.string().optional(),
   description: zod.string().optional(),
   amount: zod.number().min(0, 'Amount must be positive'),
 }).refine((data) => {
-  if (data.type === 'petrol' || data.type === 'salary' || data.type === 'variance') {
-    return data.employeeId && data.employeeId.length > 0;
-  }
-  if (data.type === 'maintenance') {
+  if (data.type === 'petrol' || data.type === 'maintenance' || data.type === 'variance' || data.type === 'salary') {
     return data.employeeId && data.employeeId.length > 0;
   }
   if (data.type === 'others') {
@@ -99,51 +72,16 @@ const expenseSchema = zod.object({
 
 type ExpenseFormData = zod.infer<typeof expenseSchema>;
 
-const initialExpenses: Expense[] = [
-  {
-    id: 'EXP-001',
-    date: dayjs().subtract(2, 'day').utc().toDate(),
-    type: 'petrol',
-    employeeId: 'EMP-001',
-    employeeName: 'Rahul Kumar',
-    amount: 150,
-    createdAt: dayjs().subtract(2, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(2, 'day').utc().toDate(),
-  },
-  {
-    id: 'EXP-002',
-    date: dayjs().subtract(1, 'day').utc().toDate(),
-    type: 'maintenance',
-    employeeId: 'EMP-006',
-    employeeName: 'Rajesh Kumar',
-    maintenanceName: 'Engine Oil Change',
-    amount: 250,
-    createdAt: dayjs().subtract(1, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(1, 'day').utc().toDate(),
-  },
-  {
-    id: 'EXP-003',
-    date: dayjs().subtract(3, 'day').utc().toDate(),
-    type: 'salary',
-    employeeId: 'EMP-002',
-    employeeName: 'Vijay Anand',
-    amount: 2500,
-    createdAt: dayjs().subtract(3, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(3, 'day').utc().toDate(),
-  },
-];
+// Data will be loaded from context
 
-function generateExpenseId(): string {
-  const count = Math.floor(Math.random() * 1000) + 1;
-  return `EXP-${count.toString().padStart(3, '0')}`;
-}
+// generateExpenseId function removed - using context for ID generation
 
 const getExpenseTypeLabel = (type: ExpenseType) => {
   const labels = {
     petrol: 'Petrol',
     maintenance: 'Maintenance',
-    salary: 'Salary',
     variance: 'Variance',
+    salary: 'Salary',
     others: 'Others'
   };
   return labels[type];
@@ -154,8 +92,8 @@ const getExpenseTypeColor = (type: ExpenseType): ChipProps['color'] => {
   const colors: Record<ExpenseType, ChipProps['color']> = {
     petrol: 'primary',
     maintenance: 'secondary',
-    salary: 'success',
     variance: 'warning',
+    salary: 'success',
     others: 'info',
   };
   return colors[type];
@@ -163,14 +101,32 @@ const getExpenseTypeColor = (type: ExpenseType): ChipProps['color'] => {
 
 
 export default function Page(): React.JSX.Element {
-  const [expenses, setExpenses] = React.useState<Expense[]>(initialExpenses);
+  const { expenses, addExpense, updateExpense, deleteExpense } = useAdditionalExpenses();
+  const { employees } = useEmployees();
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
-  const [filteredExpenses, setFilteredExpenses] = React.useState<Expense[]>(initialExpenses);
+  const [filteredExpenses, setFilteredExpenses] = React.useState<Expense[]>([]);
   const [dateFrom, setDateFrom] = React.useState<string>('');
   const [dateTo, setDateTo] = React.useState<string>('');
   const [expenseTypeFilter, setExpenseTypeFilter] = React.useState<string>('');
   const [employeeFilter, setEmployeeFilter] = React.useState<string>('');
+
+  // Map context expenses to display format
+  const mappedExpenses = React.useMemo(() => {
+    return expenses.map(expense => ({
+      ...expense,
+      type: expense.category as ExpenseType,
+      employeeId: expense.driverId,
+      employeeName: expense.driverName,
+      maintenanceName: expense.vendor,
+      reason: expense.description,
+    }));
+  }, [expenses]);
+
+  // Initialize filtered expenses
+  React.useEffect(() => {
+    setFilteredExpenses(mappedExpenses);
+  }, [mappedExpenses]);
 
   const {
     control,
@@ -211,10 +167,10 @@ export default function Page(): React.JSX.Element {
     setEditingExpense(expense);
     reset({
       date: expense.date,
-      type: expense.type,
-      employeeId: expense.employeeId || '',
-      maintenanceName: expense.maintenanceName || '',
-      reason: expense.reason || '',
+      type: expense.category,
+      employeeId: expense.driverId || '',
+      maintenanceName: expense.vendor || '',
+      reason: expense.description || '',
       description: expense.description || '',
       amount: expense.amount,
     });
@@ -228,13 +184,13 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = (expenseId: string) => {
-    const updatedExpenses = expenses.filter(e => e.id !== expenseId);
-    setExpenses(updatedExpenses);
-    setFilteredExpenses(updatedExpenses);
+    deleteExpense(expenseId);
+    // Update filtered expenses to reflect the deletion
+    setFilteredExpenses(prev => prev.filter(e => e.id !== expenseId));
   };
 
   const handleApplyFilter = () => {
-    let filtered = expenses;
+    let filtered = mappedExpenses;
 
     // Filter by date range
     if (dateFrom && dateTo) {
@@ -327,15 +283,15 @@ export default function Page(): React.JSX.Element {
               ${filteredExpenses.map(expense => `
                 <tr>
                   <td>${dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')}</td>
-                  <td>${getExpenseTypeLabel(expense.type)}</td>
-                  <td>${expense.employeeName || '-'}</td>
+                  <td>${getExpenseTypeLabel(expense.category)}</td>
+                  <td>${expense.driverName || '-'}</td>
                   <td>
                     ${expense.description ||
-      (expense.type === 'maintenance' && expense.maintenanceName) ||
-      (expense.type === 'others' && expense.reason) ||
-      (expense.type === 'petrol' && 'Petrol Expense') ||
-      (expense.type === 'salary' && 'Salary Payment') ||
-      (expense.type === 'variance' && 'Variance Adjustment')}
+      (expense.category === 'maintenance' && expense.vendor) ||
+      (expense.category === 'others' && expense.description) ||
+      (expense.category === 'petrol' && 'Petrol Expense') ||
+      (expense.category === 'salary' && 'Salary Payment') ||
+      (expense.category === 'variance' && 'Variance Adjustment')}
                   </td>
                   <td>${expense.amount.toFixed(2)} AED</td>
                   <td>${dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</td>
@@ -362,13 +318,13 @@ export default function Page(): React.JSX.Element {
       ['Date', 'Type', 'Employee', 'Description', 'Amount (AED)', 'Added', 'Last Edited'],
       ...filteredExpenses.map(expense => [
         dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY'),
-        getExpenseTypeLabel(expense.type),
-        expense.employeeName || '-',
+        getExpenseTypeLabel(expense.category),
+        expense.driverName || '-',
         expense.description ||
-        (expense.type === 'maintenance' ? expense.maintenanceName :
-          expense.type === 'others' ? expense.reason :
-            expense.type === 'petrol' ? 'Petrol Expense' :
-              expense.type === 'salary' ? 'Salary Payment' : 'Variance Adjustment'),
+        (expense.category === 'maintenance' ? expense.vendor :
+          expense.category === 'others' ? expense.description :
+            expense.category === 'petrol' ? 'Petrol Expense' :
+              expense.category === 'salary' ? 'Salary Payment' : 'Variance Adjustment'),
         `${expense.amount.toFixed(2)} AED`,
         dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A') + ' GST',
         dayjs(expense.updatedAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A') + ' GST'
@@ -390,43 +346,40 @@ export default function Page(): React.JSX.Element {
     const employee = employees.find(emp => emp.id === data.employeeId);
 
     if (editingExpense) {
-      // Edit existing expense
-      const updatedExpenses = expenses.map(e =>
-        e.id === editingExpense.id
-          ? {
-            ...e,
-            date: data.date,
-            type: data.type,
-            employeeId: data.employeeId,
-            employeeName: employee?.name,
-            maintenanceName: data.maintenanceName,
-            reason: data.reason,
-            description: data.description,
-            amount: data.amount,
-            updatedAt: dayjs().utc().toDate()
-          }
-          : e
-      );
-      setExpenses(updatedExpenses);
-      setFilteredExpenses(updatedExpenses);
-    } else {
-      // Add new expense
-      const newExpense: Expense = {
-        id: generateExpenseId(),
-        date: data.date,
-        type: data.type,
-        employeeId: data.employeeId,
-        employeeName: employee?.name,
-        maintenanceName: data.maintenanceName,
-        reason: data.reason,
+      // Edit existing expense using context
+      updateExpense(editingExpense.id, {
+        title: data.description || 'Expense',
         description: data.description,
+        category: data.type,
         amount: data.amount,
-        createdAt: dayjs().utc().toDate(),
-        updatedAt: dayjs().utc().toDate(),
-      };
-      const updatedExpenses = [...expenses, newExpense];
-      setExpenses(updatedExpenses);
-      setFilteredExpenses(updatedExpenses);
+        currency: 'AED',
+        date: data.date,
+        driverId: data.employeeId,
+        driverName: employee?.name,
+        receiptNumber: undefined,
+        vendor: data.maintenanceName,
+        isReimbursable: true,
+        status: 'pending',
+        updatedAt: new Date(),
+        updatedBy: 'current-user', // You might want to get this from auth context
+      });
+    } else {
+      // Add new expense using context
+      addExpense({
+        title: data.description || 'Expense',
+        description: data.description,
+        category: data.type,
+        amount: data.amount,
+        currency: 'AED',
+        date: data.date,
+        driverId: data.employeeId,
+        driverName: employee?.name,
+        receiptNumber: undefined,
+        vendor: data.maintenanceName,
+        isReimbursable: true,
+        status: 'pending',
+        createdBy: 'current-user', // You might want to get this from auth context
+      });
     }
     handleClose();
   };
@@ -486,8 +439,8 @@ export default function Page(): React.JSX.Element {
             <MenuItem value="">All Types</MenuItem>
             <MenuItem value="petrol">Petrol</MenuItem>
             <MenuItem value="maintenance">Maintenance</MenuItem>
-            <MenuItem value="salary">Salary</MenuItem>
             <MenuItem value="variance">Variance</MenuItem>
+            <MenuItem value="salary">Salary</MenuItem>
             <MenuItem value="others">Others</MenuItem>
           </Select>
         </FormControl>
@@ -501,7 +454,7 @@ export default function Page(): React.JSX.Element {
             <MenuItem value="">All Employees</MenuItem>
             {employees.map((employee) => (
               <MenuItem key={employee.id} value={employee.id}>
-                {employee.name} ({employee.role.toUpperCase()})
+                {employee.name} ({employee.designation.toUpperCase()})
               </MenuItem>
             ))}
           </Select>
@@ -530,19 +483,19 @@ export default function Page(): React.JSX.Element {
               <TableCell>{dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST</TableCell>
               <TableCell>
                 <Chip
-                  label={getExpenseTypeLabel(expense.type)}
+                  label={getExpenseTypeLabel(expense.category)}
                   size="small"
-                  color={getExpenseTypeColor(expense.type)}
+                  color={getExpenseTypeColor(expense.category)}
                 />
               </TableCell>
-              <TableCell>{expense.employeeName || '-'}</TableCell>
+              <TableCell>{expense.driverName || '-'}</TableCell>
               <TableCell>
                 {expense.description ||
-                  (expense.type === 'maintenance' && expense.maintenanceName) ||
-                  (expense.type === 'others' && expense.reason) ||
-                  (expense.type === 'petrol' && 'Petrol Expense') ||
-                  (expense.type === 'salary' && 'Salary Payment') ||
-                  (expense.type === 'variance' && 'Variance Adjustment')}
+                  (expense.category === 'maintenance' && expense.vendor) ||
+                  (expense.category === 'others' && expense.description) ||
+                  (expense.category === 'petrol' && 'Petrol Expense') ||
+                  (expense.category === 'salary' && 'Salary Payment') ||
+                  (expense.category === 'variance' && 'Variance Adjustment')}
               </TableCell>
               <TableCell>{expense.amount.toFixed(2)} AED</TableCell>
               <TableCell>{dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>
@@ -607,7 +560,7 @@ export default function Page(): React.JSX.Element {
                 )}
               />
 
-              {(watchedType === 'petrol' || watchedType === 'maintenance' || watchedType === 'salary' || watchedType === 'variance' || watchedType === 'others') && (
+              {(watchedType === 'petrol' || watchedType === 'maintenance' || watchedType === 'variance' || watchedType === 'salary' || watchedType === 'others') && (
                 <Controller
                   control={control}
                   name="employeeId"
@@ -617,7 +570,7 @@ export default function Page(): React.JSX.Element {
                       <Select {...field} label="Employee/Company">
                         {employees.map((employee) => (
                           <MenuItem key={employee.id} value={employee.id}>
-                            {employee.name} ({employee.role.toUpperCase()})
+                            {employee.name} ({employee.designation.toUpperCase()})
                           </MenuItem>
                         ))}
                       </Select>

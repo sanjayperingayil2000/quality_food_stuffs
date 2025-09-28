@@ -93,7 +93,7 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {  c
           },
         }}
       >
-        {renderNavItems({ pathname, items: navItems, open })}
+        {renderNavItems({ pathname: pathname ?? '', items: navItems, open })}
       </Box>
 
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />

@@ -34,7 +34,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 
 // import { config } from '@/config';
-import { useProducts, type Product } from '@/contexts/products-context';
+import { useProducts, type Product } from '@/contexts/product-context';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -261,6 +261,10 @@ export default function Page(): React.JSX.Element {
         price: data.price,
         category: data.category,
         description: data.description,
+        sku: `PRD-${data.productId}`,
+        unit: 'piece',
+        minimumQuantity: 1,
+        isActive: true,
         createdAt: dayjs().utc().toDate(),
         updatedAt: dayjs().utc().toDate(),
       };
