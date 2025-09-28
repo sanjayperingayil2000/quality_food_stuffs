@@ -3,7 +3,6 @@
 import * as React from 'react';
 import {
   Avatar,
-  // Badge,
   Box,
   BoxProps,
   Button,
@@ -18,9 +17,7 @@ import {
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
-// import { BellIcon } from '@phosphor-icons/react/dist/ssr/Bell';
 import { ListIcon } from '@phosphor-icons/react/dist/ssr/List';
-// import { UsersIcon } from '@phosphor-icons/react/dist/ssr/Users';
 import { FilePdfIcon, FileXlsIcon } from '@phosphor-icons/react/dist/ssr';
 
 import { usePopover } from '@/hooks/use-popover';
@@ -31,11 +28,15 @@ export interface MainNavProps extends BoxProps { }
 
 export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState(false);
-  const [selection, setSelection] = React.useState('');
-  const [driver, setDriver] = React.useState('');
+
+  // 👇 defaults: Company + All drivers
+  const [selection, setSelection] = React.useState('company');
+  const [driver, setDriver] = React.useState('All drivers');
+
+
   const [dateRange, setDateRange] = React.useState<[Dayjs | null, Dayjs | null]>([
-    dayjs().subtract(7, 'day'),
-    dayjs(),
+    dayjs().subtract(1, 'day'), // From = yesterday
+    dayjs().subtract(1, 'day'), // To = yesterday
   ]);
 
   const userPopover = usePopover<HTMLDivElement>();
@@ -43,8 +44,9 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
   const driverList = ['John Doe', 'Jane Smith', 'Michael Brown'];
 
   const handleSelectionChange = (event: SelectChangeEvent) => {
-    setSelection(event.target.value as string);
-    setDriver('');
+    const value = event.target.value as string;
+    setSelection(value);
+    setDriver(value === 'driver' ? 'All drivers' : ''); // reset driver if switching
   };
 
   const handleDriverChange = (event: SelectChangeEvent) => {
@@ -105,7 +107,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
               </FormControl>
             </Box>
 
-            {/* Second dropdown */}
+            {/* Second dropdown (only when Driver selected) */}
             {selection === 'driver' && (
               <Box sx={{ minWidth: 230 }}>
                 <FormControl fullWidth>
@@ -124,6 +126,8 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
                       },
                     }}
                   >
+                    {/* Default All drivers option */}
+                    <MenuItem value="All drivers">All drivers</MenuItem>
                     {driverList.map((d) => (
                       <MenuItem key={d} value={d}>
                         {d}
