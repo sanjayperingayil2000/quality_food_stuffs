@@ -21,6 +21,7 @@ export interface AdditionalExpense {
   date: Date;
   driverId?: string; // Optional - if expense is related to a specific driver
   driverName?: string;
+  designation: 'driver' | 'manager' | 'ceo'; // Role of the person who created the expense
   receiptNumber?: string;
   vendor?: string;
   isReimbursable: boolean;
@@ -62,6 +63,7 @@ const initialExpenses: AdditionalExpense[] = [
     date: dayjs().subtract(1, 'day').toDate(),
     driverId: 'EMP-004',
     driverName: 'Rahul Kumar',
+    designation: 'driver',
     receiptNumber: 'RCP-001-2024',
     vendor: 'ADNOC Station - Downtown',
     isReimbursable: true,
@@ -83,6 +85,7 @@ const initialExpenses: AdditionalExpense[] = [
     date: dayjs().subtract(3, 'day').toDate(),
     driverId: 'EMP-005',
     driverName: 'Ali Ahmed',
+    designation: 'driver',
     receiptNumber: 'RCP-002-2024',
     vendor: 'AutoCare Center - Marina',
     isReimbursable: true,
@@ -104,6 +107,7 @@ const initialExpenses: AdditionalExpense[] = [
     date: dayjs().subtract(5, 'day').toDate(),
     driverId: 'EMP-006',
     driverName: 'David Wilson',
+    designation: 'driver',
     receiptNumber: 'RCP-003-2024',
     vendor: 'RTA - Salik',
     isReimbursable: true,
@@ -122,6 +126,7 @@ const initialExpenses: AdditionalExpense[] = [
     date: dayjs().subtract(2, 'day').toDate(),
     driverId: 'EMP-007',
     driverName: 'Fatima Al-Zahra',
+    designation: 'driver',
     receiptNumber: 'RCP-004-2024',
     vendor: 'Various Parking Lots',
     isReimbursable: true,
@@ -141,6 +146,7 @@ const initialExpenses: AdditionalExpense[] = [
     amount: 1200,
     currency: 'AED',
     date: dayjs().subtract(7, 'day').toDate(),
+    designation: 'manager', // createdBy EMP-002 (Sarah Johnson, manager)
     receiptNumber: 'RCP-005-2024',
     vendor: 'National Insurance Co.',
     isReimbursable: false,
@@ -162,6 +168,7 @@ const initialExpenses: AdditionalExpense[] = [
     date: dayjs().subtract(4, 'day').toDate(),
     driverId: 'EMP-008',
     driverName: 'James Brown',
+    designation: 'driver',
     receiptNumber: 'RCP-006-2024',
     vendor: 'Quick Fix Garage',
     isReimbursable: true,
@@ -181,6 +188,7 @@ const initialExpenses: AdditionalExpense[] = [
     amount: 45.75,
     currency: 'AED',
     date: dayjs().subtract(6, 'day').toDate(),
+    designation: 'manager', // createdBy EMP-002 (Sarah Johnson, manager)
     receiptNumber: 'RCP-007-2024',
     vendor: 'Office Depot',
     isReimbursable: true,
@@ -201,6 +209,7 @@ const initialExpenses: AdditionalExpense[] = [
     date: dayjs().subtract(1, 'day').toDate(),
     driverId: 'EMP-005',
     driverName: 'Ali Ahmed',
+    designation: 'driver',
     receiptNumber: 'RCP-008-2024',
     vendor: 'ENOC Station - Marina',
     isReimbursable: true,
@@ -225,17 +234,23 @@ export function AdditionalExpenseProvider({ children }: { children: React.ReactN
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setExpenses(prev => [...prev, newExpense]);
+    setExpenses(prev => [newExpense, ...prev]);
   }, [expenses.length]);
 
   const updateExpense = React.useCallback((id: string, updates: Partial<AdditionalExpense>) => {
-    setExpenses(prev => 
-      prev.map(expense => 
-        expense.id === id 
+    setExpenses(prev => {
+      const updatedList = prev.map(expense =>
+        expense.id === id
           ? { ...expense, ...updates, updatedAt: new Date() }
           : expense
-      )
-    );
+      );
+
+      // Find the updated expense and put it first
+      const updatedExpense = updatedList.find(exp => exp.id === id);
+      const remaining = updatedList.filter(exp => exp.id !== id);
+
+      return updatedExpense ? [updatedExpense, ...remaining] : updatedList;
+    });
   }, []);
 
   const deleteExpense = React.useCallback((id: string) => {
@@ -262,33 +277,33 @@ export function AdditionalExpenseProvider({ children }: { children: React.ReactN
   }, [expenses]);
 
   const approveExpense = React.useCallback((id: string, approvedBy: string) => {
-    setExpenses(prev => 
-      prev.map(expense => 
-        expense.id === id 
-          ? { 
-              ...expense, 
-              status: 'approved' as const,
-              approvedBy,
-              approvedAt: new Date(),
-              updatedAt: new Date(),
-              updatedBy: approvedBy
-            }
+    setExpenses(prev =>
+      prev.map(expense =>
+        expense.id === id
+          ? {
+            ...expense,
+            status: 'approved' as const,
+            approvedBy,
+            approvedAt: new Date(),
+            updatedAt: new Date(),
+            updatedBy: approvedBy
+          }
           : expense
       )
     );
   }, []);
 
   const rejectExpense = React.useCallback((id: string, rejectedBy: string, reason: string) => {
-    setExpenses(prev => 
-      prev.map(expense => 
-        expense.id === id 
-          ? { 
-              ...expense, 
-              status: 'rejected' as const,
-              rejectedReason: reason,
-              updatedAt: new Date(),
-              updatedBy: rejectedBy
-            }
+    setExpenses(prev =>
+      prev.map(expense =>
+        expense.id === id
+          ? {
+            ...expense,
+            status: 'rejected' as const,
+            rejectedReason: reason,
+            updatedAt: new Date(),
+            updatedBy: rejectedBy
+          }
           : expense
       )
     );
