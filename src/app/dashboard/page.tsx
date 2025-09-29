@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import type { Metadata } from 'next';
 import Grid from '@mui/material/Grid';
@@ -29,7 +28,7 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Cash Collection" />
+          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name="Cash Collection" />
         </Grid>
         <Grid
           size={{
@@ -38,7 +37,7 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Purchase Amount" />
+          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name="Purchase Amount" />
         </Grid>
         {/* <Grid
         size={{
@@ -56,7 +55,7 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Discount" />
+          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name="Discount" />
         </Grid>
         {/* <Grid
         size={{
@@ -74,7 +73,7 @@ export default function Page(): React.JSX.Element {
           xs: 12,
         }}
       >
-        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Profit" />
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name="Profit" />
       </Grid> */}
         {/* <Grid
         size={{
@@ -93,7 +92,7 @@ export default function Page(): React.JSX.Element {
           xs: 12,
         }}
       >
-        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name="Balance" />
+        <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name="Balance" />
       </Grid> */}
         {/* <Grid
         size={{
@@ -111,7 +110,7 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name='Amount to be' />
+          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name='Amount to be' />
         </Grid>
         {/* <Grid
         size={{
@@ -129,7 +128,7 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name='Petrol' />
+          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name='Petrol' />
         </Grid>
         {/* <Grid
         size={{
@@ -147,7 +146,7 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name='Balance' />
+          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name='Balance' />
         </Grid>
         {/* <Grid
         size={{
@@ -165,7 +164,7 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="$24k" name='Expiry' />
+          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name='Expiry' />
         </Grid>
         <Grid
           size={{
@@ -174,7 +173,7 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <TotalProfit sx={{ height: '100%' }} value="$15k" />
+          <TotalProfit sx={{ height: '100%' }} value="AED 15k" />
         </Grid>
         <Grid
           size={{
@@ -187,7 +186,7 @@ export default function Page(): React.JSX.Element {
           <Sales
             chartSeries={[
               { name: 'This year', data: [18, 16, 5, 8, 3, 14, 14, 16, 17, 19, 18, 20] },
-              { name: 'Last year', data: [12, 11, 4, 6, 2, 9, 9, 10, 11, 12, 13, 13] },
+              // { name: 'Last year', data: [12, 11, 4, 6, 2, 9, 9, 10, 11, 12, 13, 13] },
             ]}
             sx={{ height: '100%' }}
           />

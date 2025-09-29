@@ -19,44 +19,56 @@ import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
-import { useDrivers, Driver } from '@/contexts/drivers-context';
+import { useEmployees, Employee } from '@/contexts/employee-context';
+import { Tooltip } from '@mui/material';
 
 export default function Page(): React.JSX.Element {
-  const { drivers, addDriver, updateDriver, deleteDriver } = useDrivers();
-  
+  const { drivers, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
+
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [selectedDriver, setSelectedDriver] = React.useState<Driver | null>(null);
-  
+  const [selectedDriver, setSelectedDriver] = React.useState<Employee | null>(null);
+
   // Form states
   const [formData, setFormData] = React.useState({
     name: '',
-    phone: '',
+    phoneNumber: '',
     location: '',
     routeName: '',
-    description: ''
   });
 
+  type FormErrors = {
+    name?: string;
+    phoneNumber?: string;
+    location?: string;
+    routeName?: string;
+  };
+
+  // Validation errors
+  const [formErrors, setFormErrors] = React.useState<FormErrors>({});
+
+
   const handleAddClick = () => {
-    setFormData({ name: '', phone: '', location: '', routeName: '', description: '' });
+    setFormData({ name: '', phoneNumber: '', location: '', routeName: '' });
+    setFormErrors({ name: '', phoneNumber: '', location: '', routeName: '' });
     setAddDialogOpen(true);
   };
 
-  const handleEditClick = (driver: Driver) => {
+  const handleEditClick = (driver: Employee) => {
     setSelectedDriver(driver);
     setFormData({
       name: driver.name,
-      phone: driver.phone,
-      location: driver.location,
-      routeName: driver.routeName,
-      description: driver.description || ''
+      phoneNumber: driver.phoneNumber,
+      location: driver.location || '',
+      routeName: driver.routeName || '',
     });
+    setFormErrors({ name: '', phoneNumber: '', location: '', routeName: '' });
     setEditDialogOpen(true);
   };
 
-  const handleDeleteClick = (driver: Driver) => {
+  const handleDeleteClick = (driver: Employee) => {
     setSelectedDriver(driver);
     setDeleteDialogOpen(true);
   };
@@ -65,20 +77,58 @@ export default function Page(): React.JSX.Element {
     setFormData(prev => ({ ...prev, [field]: event.target.value }));
   };
 
+  const validateForm = () => {
+    const errors: FormErrors = {};
+
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required';
+    } else if (formData.name.trim().length < 3) {
+      errors.name = 'Name must be at least 3 characters';
+    }
+
+    if (!formData.phoneNumber.trim()) {
+      errors.phoneNumber = 'Phone number is required';
+    } else if (!/^\d{10}$/.test(formData.phoneNumber)) {
+      errors.phoneNumber = 'Phone number must be 10 digits';
+    }
+
+    if (!formData.location.trim()) {
+      errors.location = 'Location is required';
+    }
+
+    if (!formData.routeName.trim()) {
+      errors.routeName = 'Route name is required';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+
   const handleAddSubmit = () => {
-    if (formData.name && formData.phone && formData.location && formData.routeName) {
-      const newDriver: Driver = {
-        id: `DRV-${Date.now()}`,
-        ...formData
+    if (validateForm() && formData.name && formData.phoneNumber && formData.location && formData.routeName) {
+      const newDriver: Employee = {
+        id: `EMP-${Date.now()}`,
+        name: formData.name,
+        designation: 'driver',
+        phoneNumber: formData.phoneNumber,
+        email: '',
+        address: '',
+        routeName: formData.routeName,
+        location: formData.location,
+        hireDate: new Date(),
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
-      addDriver(newDriver);
+      addEmployee(newDriver);
       setAddDialogOpen(false);
     }
   };
 
   const handleEditSubmit = () => {
-    if (selectedDriver && formData.name && formData.phone && formData.location && formData.routeName) {
-      updateDriver(selectedDriver.id, formData);
+    if (selectedDriver && validateForm()) {
+      updateEmployee(selectedDriver.id, formData);
       setEditDialogOpen(false);
       setSelectedDriver(null);
     }
@@ -86,7 +136,7 @@ export default function Page(): React.JSX.Element {
 
   const handleDeleteConfirm = () => {
     if (selectedDriver) {
-      deleteDriver(selectedDriver.id);
+      deleteEmployee(selectedDriver.id);
       setDeleteDialogOpen(false);
       setSelectedDriver(null);
     }
@@ -97,6 +147,7 @@ export default function Page(): React.JSX.Element {
     setEditDialogOpen(false);
     setDeleteDialogOpen(false);
     setSelectedDriver(null);
+    setFormErrors({ name: '', phoneNumber: '', location: '', routeName: '' });
   };
 
   return (
@@ -106,8 +157,8 @@ export default function Page(): React.JSX.Element {
           <Typography variant="h4">Drivers</Typography>
         </Stack>
         <div>
-          <Button 
-            startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} 
+          <Button
+            startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />}
             variant="contained"
             onClick={handleAddClick}
           >
@@ -130,17 +181,22 @@ export default function Page(): React.JSX.Element {
           {drivers.map((driver) => (
             <TableRow hover key={driver.id}>
               <TableCell>{driver.name}</TableCell>
-              <TableCell>{driver.phone}</TableCell>
+              <TableCell>{driver.phoneNumber}</TableCell>
               <TableCell>{driver.location}</TableCell>
               <TableCell>{driver.routeName}</TableCell>
               <TableCell>
                 <Stack direction="row" spacing={1.5}>
-                  <IconButton onClick={() => handleEditClick(driver)} size="small">
-                    <PencilIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDeleteClick(driver)} size="small" color="error">
-                    <TrashIcon />
-                  </IconButton>
+                  <Tooltip title="Edit Driver">
+                    <IconButton onClick={() => handleEditClick(driver)} size="small">
+                      <PencilIcon />
+                    </IconButton>
+                  </Tooltip>
+
+                  <Tooltip title="Delete Driver">
+                    <IconButton onClick={() => handleDeleteClick(driver)} size="small" color="error">
+                      <TrashIcon />
+                    </IconButton>
+                  </Tooltip>
                 </Stack>
               </TableCell>
             </TableRow>
@@ -159,13 +215,17 @@ export default function Page(): React.JSX.Element {
               onChange={handleFormChange('name')}
               fullWidth
               required
+              error={!!formErrors.name}
+              helperText={formErrors.name}
             />
             <TextField
               label="Phone Number"
-              value={formData.phone}
-              onChange={handleFormChange('phone')}
+              value={formData.phoneNumber}
+              onChange={handleFormChange('phoneNumber')}
               fullWidth
               required
+              error={!!formErrors.phoneNumber}
+              helperText={formErrors.phoneNumber}
             />
             <TextField
               label="Location"
@@ -173,6 +233,8 @@ export default function Page(): React.JSX.Element {
               onChange={handleFormChange('location')}
               fullWidth
               required
+              error={!!formErrors.location}
+              helperText={formErrors.location}
             />
             <TextField
               label="Route Name"
@@ -180,14 +242,8 @@ export default function Page(): React.JSX.Element {
               onChange={handleFormChange('routeName')}
               fullWidth
               required
-            />
-            <TextField
-              label="Description"
-              value={formData.description}
-              onChange={handleFormChange('description')}
-              fullWidth
-              multiline
-              rows={3}
+              error={!!formErrors.routeName}
+              helperText={formErrors.routeName}
             />
           </Stack>
         </DialogContent>
@@ -208,13 +264,17 @@ export default function Page(): React.JSX.Element {
               onChange={handleFormChange('name')}
               fullWidth
               required
+              error={!!formErrors.name}
+              helperText={formErrors.name}
             />
             <TextField
               label="Phone Number"
-              value={formData.phone}
-              onChange={handleFormChange('phone')}
+              value={formData.phoneNumber}
+              onChange={handleFormChange('phoneNumber')}
               fullWidth
               required
+              error={!!formErrors.phoneNumber}
+              helperText={formErrors.phoneNumber}
             />
             <TextField
               label="Location"
@@ -222,6 +282,8 @@ export default function Page(): React.JSX.Element {
               onChange={handleFormChange('location')}
               fullWidth
               required
+              error={!!formErrors.location}
+              helperText={formErrors.location}
             />
             <TextField
               label="Route Name"
@@ -229,14 +291,8 @@ export default function Page(): React.JSX.Element {
               onChange={handleFormChange('routeName')}
               fullWidth
               required
-            />
-            <TextField
-              label="Description"
-              value={formData.description}
-              onChange={handleFormChange('description')}
-              fullWidth
-              multiline
-              rows={3}
+              error={!!formErrors.routeName}
+              helperText={formErrors.routeName}
             />
           </Stack>
         </DialogContent>
@@ -250,10 +306,9 @@ export default function Page(): React.JSX.Element {
       <Dialog open={deleteDialogOpen} onClose={handleCloseDialogs}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
-      <Typography>
-  {`Are you sure you want to delete driver "${selectedDriver?.name}"? This action cannot be undone.`}
-</Typography>
-
+          <Typography>
+            {`Are you sure you want to delete driver "${selectedDriver?.name}"? This action cannot be undone.`}
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialogs}>Cancel</Button>
@@ -265,7 +320,3 @@ export default function Page(): React.JSX.Element {
     </Stack>
   );
 }
-
-
-
-
