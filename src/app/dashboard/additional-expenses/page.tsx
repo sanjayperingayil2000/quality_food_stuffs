@@ -33,6 +33,8 @@ import { z as zod } from 'zod';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
 import { useAdditionalExpenses, AdditionalExpense, ExpenseCategory } from '@/contexts/additional-expense-context';
 import { useEmployees } from '@/contexts/employee-context';
@@ -40,6 +42,8 @@ import { useEmployees } from '@/contexts/employee-context';
 // Configure dayjs plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 type ExpenseType = ExpenseCategory;
 
@@ -56,7 +60,7 @@ const expenseSchema = zod.object({
   maintenanceName: zod.string().optional(),
   reason: zod.string().optional(),
   description: zod.string().optional(),
-  amount: zod.number().min(0, 'Amount must be positive'),
+  amount: zod.number().gt(0, 'Amount must be greater than 0'),
 }).refine((data) => {
   if (data.type === 'petrol' || data.type === 'maintenance' || data.type === 'variance' || data.type === 'salary') {
     return data.employeeId && data.employeeId.length > 0;
@@ -106,10 +110,10 @@ export default function Page(): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
   const [filteredExpenses, setFilteredExpenses] = React.useState<Expense[]>([]);
-  const [dateFrom, setDateFrom] = React.useState<string>('');
-  const [dateTo, setDateTo] = React.useState<string>('');
-  const [expenseTypeFilter, setExpenseTypeFilter] = React.useState<string>('');
-  const [employeeFilter, setEmployeeFilter] = React.useState<string>('');
+  const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(1, 'day').format('YYYY-MM-DD'));
+  const [dateTo, setDateTo] = React.useState<string>(dayjs().subtract(1, 'day').format('YYYY-MM-DD'));
+  const [expenseTypeFilter, setExpenseTypeFilter] = React.useState<string>('allTypes');
+  const [employeeFilter, setEmployeeFilter] = React.useState<string>('allEmployees');
 
   // Map context expenses to display format
   const mappedExpenses = React.useMemo(() => {
@@ -192,29 +196,34 @@ export default function Page(): React.JSX.Element {
   const handleApplyFilter = () => {
     let filtered = mappedExpenses;
 
-    // Filter by date range
-    if (dateFrom && dateTo) {
+    // Date range filter
+    if (dateFrom) {
       const fromDate = dayjs(dateFrom).startOf('day').utc();
-      const toDate = dayjs(dateTo).endOf('day').utc();
-
-      filtered = filtered.filter(expense => {
-        const expenseDate = dayjs(expense.date).utc();
-        return expenseDate.isAfter(fromDate) && expenseDate.isBefore(toDate);
-      });
+      filtered = filtered.filter(expense =>
+        dayjs(expense.date).utc().isSameOrAfter(fromDate)
+      );
     }
 
-    // Filter by expense type
-    if (expenseTypeFilter) {
+    if (dateTo) {
+      const toDate = dayjs(dateTo).endOf('day').utc();
+      filtered = filtered.filter(expense =>
+        dayjs(expense.date).utc().isSameOrBefore(toDate)
+      );
+    }
+
+    // Expense type filter
+    if (expenseTypeFilter !== 'allTypes') {
       filtered = filtered.filter(expense => expense.type === expenseTypeFilter);
     }
 
-    // Filter by employee
-    if (employeeFilter) {
+    // Employee filter
+    if (employeeFilter !== 'allEmployees') {
       filtered = filtered.filter(expense => expense.employeeId === employeeFilter);
     }
 
     setFilteredExpenses(filtered);
   };
+
 
   const handleExportPdf = () => {
     const htmlContent = `
@@ -374,6 +383,7 @@ export default function Page(): React.JSX.Element {
         date: data.date,
         driverId: data.employeeId,
         driverName: employee?.name,
+        designation: employee?.designation || 'driver',
         receiptNumber: undefined,
         vendor: data.maintenanceName,
         isReimbursable: true,
@@ -436,7 +446,7 @@ export default function Page(): React.JSX.Element {
             label="Expense Type"
             onChange={(e) => setExpenseTypeFilter(e.target.value)}
           >
-            <MenuItem value="">All Types</MenuItem>
+            <MenuItem value="allTypes">All Types</MenuItem>
             <MenuItem value="petrol">Petrol</MenuItem>
             <MenuItem value="maintenance">Maintenance</MenuItem>
             <MenuItem value="variance">Variance</MenuItem>
@@ -451,7 +461,7 @@ export default function Page(): React.JSX.Element {
             label="Employee"
             onChange={(e) => setEmployeeFilter(e.target.value)}
           >
-            <MenuItem value="">All Employees</MenuItem>
+            <MenuItem value="allEmployees">All Employees</MenuItem>
             {employees.map((employee) => (
               <MenuItem key={employee.id} value={employee.id}>
                 {employee.name} ({employee.designation.toUpperCase()})
@@ -459,68 +469,80 @@ export default function Page(): React.JSX.Element {
             ))}
           </Select>
         </FormControl>
-        <Button variant="outlined" onClick={handleApplyFilter}>
+        <Button variant="contained" onClick={handleApplyFilter}>
           Apply
         </Button>
       </Stack>
 
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Date</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Employee</TableCell>
-            <TableCell>Description</TableCell>
-            <TableCell>Amount</TableCell>
-            <TableCell>Added</TableCell>
-            <TableCell>Last Edited</TableCell>
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredExpenses.map((expense) => (
-            <TableRow hover key={expense.id}>
-              <TableCell>{dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST</TableCell>
-              <TableCell>
-                <Chip
-                  label={getExpenseTypeLabel(expense.category)}
-                  size="small"
-                  color={getExpenseTypeColor(expense.category)}
-                />
-              </TableCell>
-              <TableCell>{expense.driverName || '-'}</TableCell>
-              <TableCell>
-                {expense.description ||
-                  (expense.category === 'maintenance' && expense.vendor) ||
-                  (expense.category === 'others' && expense.description) ||
-                  (expense.category === 'petrol' && 'Petrol Expense') ||
-                  (expense.category === 'salary' && 'Salary Payment') ||
-                  (expense.category === 'variance' && 'Variance Adjustment')}
-              </TableCell>
-              <TableCell>{expense.amount.toFixed(2)} AED</TableCell>
-              <TableCell>{dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>
-              <TableCell>{dayjs(expense.updatedAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>
-              <TableCell>
-                <Stack direction="row" spacing={1.5}>
-                  <IconButton onClick={() => handleEdit(expense)} size="small">
-                    <PencilIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(expense.id)} size="small" color="error">
-                    <TrashIcon />
-                  </IconButton>
-                </Stack>
-              </TableCell>
+      {filteredExpenses.length > 0 ? (
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Date</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Employee</TableCell>
+              <TableCell>Designation</TableCell>
+              <TableCell>Description</TableCell>
+              <TableCell>Amount</TableCell>
+              <TableCell>Added</TableCell>
+              <TableCell>Last Edited</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+          <TableBody>
+            {filteredExpenses.map((expense) => (
+              <TableRow hover key={expense.id}>
+                <TableCell>{dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST</TableCell>
+                <TableCell>
+                  <Chip
+                    label={getExpenseTypeLabel(expense.category)}
+                    size="small"
+                    color={getExpenseTypeColor(expense.category)}
+                  />
+                </TableCell>
+                <TableCell>{expense.driverName || '-'}</TableCell>
+                <TableCell>{expense.designation}</TableCell>
+                <TableCell>
+                  {expense.description ||
+                    (expense.category === 'maintenance' && expense.vendor) ||
+                    (expense.category === 'others' && expense.description) ||
+                    (expense.category === 'petrol' && 'Petrol Expense') ||
+                    (expense.category === 'salary' && 'Salary Payment') ||
+                    (expense.category === 'variance' && 'Variance Adjustment')}
+                </TableCell>
+                <TableCell>{expense.amount.toFixed(2)} AED</TableCell>
+                <TableCell>{dayjs(expense.createdAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>
+                <TableCell>{dayjs(expense.updatedAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1.5}>
+                    <IconButton onClick={() => handleEdit(expense)} size="small">
+                      <PencilIcon />
+                    </IconButton>
+                    <IconButton onClick={() => handleDelete(expense.id)} size="small" color="error">
+                      <TrashIcon />
+                    </IconButton>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : (
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{ textAlign: 'center', mt: 4 }}
+        >
+          No expenses found for the selected filters.
+        </Typography>
+      )}
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingExpense ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogContent>
             <Stack spacing={2} sx={{ pt: 1 }}>
-              <Controller
+              {/* <Controller
                 control={control}
                 name="date"
                 render={({ field }) => (
@@ -536,7 +558,7 @@ export default function Page(): React.JSX.Element {
                     value={field.value ? dayjs(field.value).format('YYYY-MM-DD') : ''}
                   />
                 )}
-              />
+              /> */}
 
               <Controller
                 control={control}
@@ -585,7 +607,7 @@ export default function Page(): React.JSX.Element {
               )}
 
 
-              {watchedType === 'others' && (
+              {/* {watchedType === 'others' && (
                 <Controller
                   control={control}
                   name="reason"
@@ -599,7 +621,7 @@ export default function Page(): React.JSX.Element {
                     />
                   )}
                 />
-              )}
+              )} */}
 
               <Controller
                 control={control}

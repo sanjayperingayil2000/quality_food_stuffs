@@ -10,7 +10,6 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export type Category = 'bakery' | 'fresh';
-export type TransferType = 'no_transfer' | 'product_transferred' | 'product_accepted';
 
 export interface TripProduct {
   productId: string;
@@ -18,13 +17,20 @@ export interface TripProduct {
   category: Category;
   quantity: number;
   unitPrice: number;
+  transferredFromDriverId?: string;
+  transferredFromDriverName?: string;
+}
+
+export interface TransferredProduct extends TripProduct {
+  receivingDriverId: string;
+  receivingDriverName: string;
+  transferredFromDriverId: string;
+  transferredFromDriverName: string;
 }
 
 export interface ProductTransfer {
-  type: TransferType;
-  fromDriverId?: string;
-  toDriverId?: string;
-  products: TripProduct[];
+  isProductTransferred: boolean;
+  transferredProducts: TransferredProduct[];
 }
 
 export interface DailyTrip {
@@ -32,7 +38,9 @@ export interface DailyTrip {
   driverId: string;
   driverName: string;
   date: Date;
-  transfer: ProductTransfer;
+  products: TripProduct[]; // Regular products in the trip
+  transfer: ProductTransfer; // Product transfer information
+  acceptedProducts: TripProduct[]; // Products accepted from other drivers
   // Financial fields
   collectionAmount: number;
   purchaseAmount: number;
@@ -57,6 +65,8 @@ interface DailyTripContextType {
   deleteTrip: (id: string) => void;
   getTripsByDriver: (driverId: string) => DailyTrip[];
   getTripsByDateRange: (startDate: Date, endDate: Date) => DailyTrip[];
+  getTripByDriverAndDate: (driverId: string, date: Date) => DailyTrip | undefined;
+  canAddTripForDriver: (driverId: string, date: Date) => boolean;
 }
 
 const DailyTripContext = React.createContext<DailyTripContextType | undefined>(undefined);
@@ -65,28 +75,36 @@ const DailyTripContext = React.createContext<DailyTripContextType | undefined>(u
 const initialTrips: DailyTrip[] = [
   {
     id: 'TRP-001',
-    driverId: 'EMP-004', // Rahul Kumar
-    driverName: 'Rahul Kumar',
-    date: dayjs().subtract(1, 'day').utc().toDate(),
+    driverId: 'EMP-006', // David Wilson
+    driverName: 'David Wilson',
+    date: dayjs().utc().toDate(), // Today's date
+    products: [
+      // Bakery items
+      { productId: 'PRD-019', productName: 'Sourdough Bread', category: 'bakery', quantity: 5, unitPrice: 12.5 },
+      { productId: 'PRD-020', productName: 'Blueberry Muffin', category: 'bakery', quantity: 8, unitPrice: 8 },
+      { productId: 'PRD-021', productName: 'Croissant', category: 'bakery', quantity: 6, unitPrice: 6.5 },
+      // Fresh items
+      { productId: 'PRD-001', productName: 'Fresh Apples', category: 'fresh', quantity: 10, unitPrice: 15 },
+      { productId: 'PRD-002', productName: 'Bananas', category: 'fresh', quantity: 8, unitPrice: 8.5 },
+      { productId: 'PRD-003', productName: 'Orange Juice', category: 'fresh', quantity: 6, unitPrice: 12 },
+    ],
     transfer: {
-      type: 'no_transfer',
-      products: [
-        // Bakery items
-        { productId: 'PRD-019', productName: 'Sourdough Bread', category: 'bakery', quantity: 5, unitPrice: 12.5 },
-        { productId: 'PRD-020', productName: 'Blueberry Muffin', category: 'bakery', quantity: 8, unitPrice: 8 },
-        { productId: 'PRD-021', productName: 'Croissant', category: 'bakery', quantity: 6, unitPrice: 6.5 },
-        { productId: 'PRD-022', productName: 'Whole Wheat Loaf', category: 'bakery', quantity: 4, unitPrice: 10.75 },
-        { productId: 'PRD-023', productName: 'Chocolate Chip Cookie', category: 'bakery', quantity: 12, unitPrice: 3.25 },
-        { productId: 'PRD-024', productName: 'Cinnamon Roll', category: 'bakery', quantity: 6, unitPrice: 7.5 },
-        // Fresh items
-        { productId: 'PRD-001', productName: 'Fresh Apples', category: 'fresh', quantity: 10, unitPrice: 15 },
-        { productId: 'PRD-002', productName: 'Bananas', category: 'fresh', quantity: 8, unitPrice: 8.5 },
-        { productId: 'PRD-003', productName: 'Orange Juice', category: 'fresh', quantity: 6, unitPrice: 12 },
-        { productId: 'PRD-004', productName: 'Strawberries', category: 'fresh', quantity: 4, unitPrice: 18.75 },
-        { productId: 'PRD-005', productName: 'Grapes', category: 'fresh', quantity: 5, unitPrice: 14.25 },
-        { productId: 'PRD-006', productName: 'Mango', category: 'fresh', quantity: 3, unitPrice: 22.5 },
+      isProductTransferred: true,
+      transferredProducts: [
+        {
+          productId: 'PRD-022',
+          productName: 'Whole Wheat Loaf',
+          category: 'bakery',
+          quantity: 3,
+          unitPrice: 10.75,
+          receivingDriverId: 'EMP-004',
+          receivingDriverName: 'Rahul Kumar',
+          transferredFromDriverId: 'EMP-006',
+          transferredFromDriverName: 'David Wilson',
+        },
       ],
     },
+    acceptedProducts: [],
     collectionAmount: 850.5,
     purchaseAmount: 720.25,
     expiry: 25.5,
@@ -94,33 +112,47 @@ const initialTrips: DailyTrip[] = [
     totalAmount: 850.5,
     netTotal: 720.25,
     grandTotal: 756.26,
-    createdAt: dayjs().subtract(1, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(1, 'day').utc().toDate(),
+    createdAt: dayjs().utc().toDate(),
+    updatedAt: dayjs().utc().toDate(),
     createdBy: 'EMP-002',
     updatedBy: 'EMP-002',
   },
   {
     id: 'TRP-002',
-    driverId: 'EMP-005', // Ali Ahmed
-    driverName: 'Ali Ahmed',
-    date: dayjs().subtract(2, 'day').utc().toDate(),
+    driverId: 'EMP-004', // Rahul Kumar
+    driverName: 'Rahul Kumar',
+    date: dayjs().utc().toDate(), // Today's date - same as David Wilson
+    products: [
+      { productId: 'PRD-024', productName: 'Cinnamon Roll', category: 'bakery', quantity: 6, unitPrice: 7.5 },
+      { productId: 'PRD-004', productName: 'Strawberries', category: 'fresh', quantity: 4, unitPrice: 18.75 },
+      { productId: 'PRD-005', productName: 'Grapes', category: 'fresh', quantity: 5, unitPrice: 14.25 },
+    ],
     transfer: {
-      type: 'product_transferred',
-      fromDriverId: 'EMP-006', // David Wilson
-      toDriverId: 'EMP-005', // Ali Ahmed
-      products: [
-        // Bakery items transferred
-        { productId: 'PRD-025', productName: 'Bagel', category: 'bakery', quantity: 10, unitPrice: 4 },
-        { productId: 'PRD-026', productName: 'Danish Pastry', category: 'bakery', quantity: 8, unitPrice: 5.75 },
-        { productId: 'PRD-027', productName: 'Pretzel', category: 'bakery', quantity: 15, unitPrice: 3.5 },
-        { productId: 'PRD-028', productName: 'Donut', category: 'bakery', quantity: 20, unitPrice: 2.75 },
-        // Fresh items transferred
-        { productId: 'PRD-007', productName: 'Pineapple', category: 'fresh', quantity: 3, unitPrice: 16 },
-        { productId: 'PRD-008', productName: 'Watermelon', category: 'fresh', quantity: 2, unitPrice: 25 },
-        { productId: 'PRD-009', productName: 'Lettuce', category: 'fresh', quantity: 8, unitPrice: 6.5 },
-        { productId: 'PRD-010', productName: 'Tomatoes', category: 'fresh', quantity: 6, unitPrice: 9.75 },
-      ],
+      isProductTransferred: false,
+      transferredProducts: [],
     },
+    acceptedProducts: [
+      // Product accepted from David Wilson
+      { 
+        productId: 'PRD-022', 
+        productName: 'Whole Wheat Loaf', 
+        category: 'bakery', 
+        quantity: 3, 
+        unitPrice: 10.75,
+        transferredFromDriverId: 'EMP-006',
+        transferredFromDriverName: 'David Wilson',
+      },
+      // Product accepted from Ali Ahmed
+      { 
+        productId: 'PRD-001', 
+        productName: 'Fresh Apples', 
+        category: 'fresh', 
+        quantity: 5, 
+        unitPrice: 15,
+        transferredFromDriverId: 'EMP-005',
+        transferredFromDriverName: 'Ali Ahmed',
+      },
+    ],
     collectionAmount: 420.75,
     purchaseAmount: 380.5,
     expiry: 15.25,
@@ -128,20 +160,66 @@ const initialTrips: DailyTrip[] = [
     totalAmount: 420.75,
     netTotal: 380.5,
     grandTotal: 392.52,
-    createdAt: dayjs().subtract(2, 'day').utc().toDate(),
-    updatedAt: dayjs().subtract(2, 'day').utc().toDate(),
+    createdAt: dayjs().utc().toDate(),
+    updatedAt: dayjs().utc().toDate(),
     createdBy: 'EMP-003',
     updatedBy: 'EMP-003',
   },
+  {
+    id: 'TRP-003',
+    driverId: 'EMP-005', // Ali Ahmed
+    driverName: 'Ali Ahmed',
+    date: dayjs().utc().toDate(), // Today's date - same as others
+    products: [
+      { productId: 'PRD-006', productName: 'Mango', category: 'fresh', quantity: 3, unitPrice: 22.5 },
+      { productId: 'PRD-007', productName: 'Pineapple', category: 'fresh', quantity: 3, unitPrice: 16 },
+      { productId: 'PRD-008', productName: 'Watermelon', category: 'fresh', quantity: 2, unitPrice: 25 },
+    ],
+    transfer: {
+      isProductTransferred: true,
+      transferredProducts: [
+        {
+          productId: 'PRD-001',
+          productName: 'Fresh Apples',
+          category: 'fresh',
+          quantity: 5,
+          unitPrice: 15,
+          receivingDriverId: 'EMP-004',
+          receivingDriverName: 'Rahul Kumar',
+          transferredFromDriverId: 'EMP-005',
+          transferredFromDriverName: 'Ali Ahmed',
+        },
+      ],
+    },
+    acceptedProducts: [],
+    collectionAmount: 320.5,
+    purchaseAmount: 280.25,
+    expiry: 15.5,
+    discount: 22.75,
+    totalAmount: 320.5,
+    netTotal: 280.25,
+    grandTotal: 294.26,
+    createdAt: dayjs().utc().toDate(),
+    updatedAt: dayjs().utc().toDate(),
+    createdBy: 'EMP-002',
+    updatedBy: 'EMP-002',
+  },
 ];
 
-// Helper function to calculate totals (moved from daily-trip page)
-const calculateTotals = (products: TripProduct[]) => {
-  const freshProducts = products.filter(p => p.category === 'fresh');
-  const bakeryProducts = products.filter(p => p.category === 'bakery');
+// Helper function to calculate totals including transferred products
+const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[] = [], transferredProducts: TransferredProduct[] = []) => {
+  // Combine regular products and accepted products
+  const allProducts = [...products, ...acceptedProducts];
+  
+  // Calculate totals for regular products (including accepted)
+  const freshProducts = allProducts.filter(p => p.category === 'fresh');
+  const bakeryProducts = allProducts.filter(p => p.category === 'bakery');
 
   const freshTotal = freshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const bakeryTotal = bakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+
+  // Calculate transferred products totals (to subtract from sender)
+  const transferredTotal = transferredProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
 
   const freshNetTotal = freshTotal * (1 - 0.115); // 11.5% reduction
   const bakeryNetTotal = bakeryTotal * (1 - 0.16); // 16% reduction
@@ -152,10 +230,11 @@ const calculateTotals = (products: TripProduct[]) => {
   return {
     fresh: { total: freshTotal, netTotal: freshNetTotal, grandTotal: freshGrandTotal },
     bakery: { total: bakeryTotal, netTotal: bakeryNetTotal, grandTotal: bakeryGrandTotal },
+    transferred: { total: transferredTotal },
     overall: { 
-      total: freshTotal + bakeryTotal, 
-      netTotal: freshNetTotal + bakeryNetTotal, 
-      grandTotal: freshGrandTotal + bakeryGrandTotal 
+      total: freshTotal + bakeryTotal - transferredTotal, 
+      netTotal: freshNetTotal + bakeryNetTotal - (transferredTotal * 0.84), // Apply average reduction
+      grandTotal: freshGrandTotal + bakeryGrandTotal - (transferredTotal * 0.84 * 1.05) // Apply average reduction and addition
     },
   };
 };
@@ -168,8 +247,12 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
   }, [trips]);
 
   const addTrip = React.useCallback((tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => {
-    // Calculate totals based on products
-    const totals = calculateTotals(tripData.transfer.products);
+    // Calculate totals based on products, accepted products, and transferred products
+    const totals = calculateTotals(
+      tripData.products, 
+      tripData.acceptedProducts, 
+      tripData.transfer.transferredProducts
+    );
     
     const newTrip: DailyTrip = {
       ...tripData,
@@ -180,7 +263,67 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setTrips(prev => [...prev, newTrip]);
+
+    setTrips(prev => {
+      const updatedTrips = [...prev, newTrip];
+      
+      // Handle product transfers - add accepted products to receiving drivers
+      if (tripData.transfer.isProductTransferred && tripData.transfer.transferredProducts.length > 0) {
+        // Group transferred products by receiving driver
+        const productsByDriver = tripData.transfer.transferredProducts.reduce((acc, product) => {
+          if (!acc[product.receivingDriverId]) {
+            acc[product.receivingDriverId] = [];
+          }
+          acc[product.receivingDriverId].push({
+            productId: product.productId,
+            productName: product.productName,
+            category: product.category,
+            quantity: product.quantity,
+            unitPrice: product.unitPrice,
+          });
+          return acc;
+        }, {} as Record<string, TripProduct[]>);
+
+        // Add accepted products to each receiving driver's trip for the same date
+        for (const [driverId, acceptedProducts] of Object.entries(productsByDriver)) {
+          const driverTrip = updatedTrips.find(trip => 
+            trip.driverId === driverId && 
+            dayjs(trip.date).format('YYYY-MM-DD') === dayjs(newTrip.date).format('YYYY-MM-DD')
+          );
+          
+          if (driverTrip) {
+            // Add transfer source information to accepted products
+            const enrichedAcceptedProducts = acceptedProducts.map(product => ({
+              ...product,
+              transferredFromDriverId: newTrip.driverId,
+              transferredFromDriverName: newTrip.driverName,
+            }));
+            
+            const updatedDriverTrip = {
+              ...driverTrip,
+              acceptedProducts: [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts],
+            };
+            
+            // Recalculate totals for the receiving driver
+            const driverTotals = calculateTotals(
+              updatedDriverTrip.products,
+              updatedDriverTrip.acceptedProducts,
+              updatedDriverTrip.transfer.transferredProducts
+            );
+            
+            updatedDriverTrip.totalAmount = driverTotals.overall.total;
+            updatedDriverTrip.netTotal = driverTotals.overall.netTotal;
+            updatedDriverTrip.grandTotal = driverTotals.overall.grandTotal;
+            updatedDriverTrip.updatedAt = new Date();
+            
+            const driverTripIndex = updatedTrips.findIndex(trip => trip.id === driverTrip.id);
+            updatedTrips[driverTripIndex] = updatedDriverTrip;
+          }
+        }
+      }
+
+      return updatedTrips;
+    });
   }, [trips.length]);
 
   const updateTrip = React.useCallback((id: string, updates: Partial<DailyTrip>) => {
@@ -188,13 +331,19 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       prev.map(trip => {
         if (trip.id === id) {
           const updatedTrip = { ...trip, ...updates, updatedAt: new Date() };
-          // Recalculate totals if products changed
-          if (updates.transfer?.products) {
-            const totals = calculateTotals(updates.transfer.products);
+          
+          // Recalculate totals if products, accepted products, or transferred products changed
+          if (updates.products || updates.acceptedProducts || updates.transfer) {
+            const totals = calculateTotals(
+              updatedTrip.products,
+              updatedTrip.acceptedProducts,
+              updatedTrip.transfer.transferredProducts
+            );
             updatedTrip.totalAmount = totals.overall.total;
             updatedTrip.netTotal = totals.overall.netTotal;
             updatedTrip.grandTotal = totals.overall.grandTotal;
           }
+          
           return updatedTrip;
         }
         return trip;
@@ -217,6 +366,18 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     });
   }, [trips]);
 
+  const getTripByDriverAndDate = React.useCallback((driverId: string, date: Date): DailyTrip | undefined => {
+    return trips.find(trip => 
+      trip.driverId === driverId && 
+      dayjs(trip.date).format('YYYY-MM-DD') === dayjs(date).format('YYYY-MM-DD')
+    );
+  }, [trips]);
+
+  const canAddTripForDriver = React.useCallback((driverId: string, date: Date): boolean => {
+    const existingTrip = getTripByDriverAndDate(driverId, date);
+    return !existingTrip;
+  }, [getTripByDriverAndDate]);
+
   const value: DailyTripContextType = {
     trips,
     getTripById,
@@ -225,6 +386,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     deleteTrip,
     getTripsByDriver,
     getTripsByDateRange,
+    getTripByDriverAndDate,
+    canAddTripForDriver,
   };
 
   return (
