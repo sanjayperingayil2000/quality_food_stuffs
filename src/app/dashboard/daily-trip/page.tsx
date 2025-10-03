@@ -34,58 +34,18 @@ import timezone from 'dayjs/plugin/timezone';
 
 import { useProducts } from '@/contexts/product-context';
 import { useEmployees } from '@/contexts/employee-context';
-import { useDailyTrips } from '@/contexts/daily-trip-context';
+import { useDailyTrips, ProductTransfer } from '@/contexts/daily-trip-context';
+import type { DailyTrip, TripProduct } from '@/contexts/daily-trip-context';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-type Category = 'bakery' | 'fresh';
-type TransferType = 'no_transfer' | 'product_transferred' | 'product_accepted';
-
-interface TripProduct {
-  productId: string;
-  productName: string;
-  category: Category;
-  quantity: number;
-  unitPrice: number;
-}
-
-interface ProductTransfer {
-  type: TransferType;
-  fromDriverId?: string;
-  toDriverId?: string;
-  products: TripProduct[];
-}
-
-interface DailyTrip {
-  id: string;
-  driverId: string;
-  driverName: string;
-  date: Date;
-  transfer: ProductTransfer;
-  // Financial fields
-  collectionAmount: number;
-  purchaseAmount: number;
-  expiry: number; // Days until expiry
-  discount: number; // Discount percentage
-  // Calculated totals
-  totalAmount: number;
-  netTotal: number;
-  grandTotal: number;
-  // Metadata
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy?: string; // Employee ID who created this trip
-  updatedBy?: string; // Employee ID who last updated this trip
-}
+// type Category = 'bakery' | 'fresh'; // Removed as it's defined in context
 
 const tripSchema = zod.object({
   driverId: zod.string().min(1, 'Driver selection is required'),
   date: zod.date({ required_error: 'Date is required' }),
-  transferType: zod.enum(['no_transfer', 'product_transferred', 'product_accepted']),
-  fromDriverId: zod.string().optional(),
-  toDriverId: zod.string().optional(),
   selectedCategory: zod.enum(['bakery', 'fresh']).optional(),
   products: zod.array(zod.object({
     productId: zod.string(),
@@ -94,10 +54,23 @@ const tripSchema = zod.object({
     quantity: zod.number().min(0, 'Quantity must be non-negative'),
     unitPrice: zod.number().min(0, 'Unit price must be non-negative'),
   })),
-  collectionAmount: zod.number().min(0, 'Collection amount must be non-negative'),
-  purchaseAmount: zod.number().min(0, 'Purchase amount must be non-negative'),
-  expiry: zod.number().min(0, 'Expiry amount must be non-negative'),
-  discount: zod.number().min(0, 'Discount amount must be non-negative'),
+  // Product transfer fields
+  isProductTransferred: zod.boolean(),
+  transferredProducts: zod.array(zod.object({
+    productId: zod.string(),
+    productName: zod.string(),
+    category: zod.enum(['bakery', 'fresh']),
+    quantity: zod.number().min(1, 'Quantity must be at least 1'),
+    unitPrice: zod.number().min(0, 'Unit price must be non-negative'),
+    receivingDriverId: zod.string().min(1, 'Receiving driver is required'),
+    receivingDriverName: zod.string(),
+    transferredFromDriverId: zod.string(),
+    transferredFromDriverName: zod.string(),
+  })),
+  collectionAmount: zod.coerce.number().min(0, 'Collection amount must be non-negative'),
+  purchaseAmount: zod.coerce.number().min(0, 'Purchase amount must be non-negative'),
+  expiry: zod.coerce.number().min(0, 'Expiry amount must be non-negative'),
+  discount: zod.coerce.number().min(0, 'Discount amount must be non-negative'),
 });
 
 type TripFormData = zod.infer<typeof tripSchema>;
@@ -132,7 +105,7 @@ function _generateTripId(): string {
 export default function Page(): React.JSX.Element {
   const { products } = useProducts();
   const { drivers } = useEmployees();
-  const { trips, addTrip, updateTrip, deleteTrip } = useDailyTrips();
+  const { trips, addTrip, updateTrip, deleteTrip, canAddTripForDriver } = useDailyTrips();
   const [open, setOpen] = React.useState(false);
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
   const [filteredTrips, setFilteredTrips] = React.useState<DailyTrip[]>([]);
@@ -141,6 +114,17 @@ export default function Page(): React.JSX.Element {
   const [dateTo, setDateTo] = React.useState<string>('');
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
+  
+  // Transfer product form state
+  const [transferForm, setTransferForm] = React.useState({
+    productId: '',
+    quantity: 1,
+    receivingDriverId: '',
+  });
+  
+  // Product search state
+  const [productSearch, setProductSearch] = React.useState('');
+  const [filteredProducts, setFilteredProducts] = React.useState(products);
 
   // Initialize state after component mounts to avoid hydration issues
   React.useEffect(() => {
@@ -160,11 +144,10 @@ export default function Page(): React.JSX.Element {
     defaultValues: {
       driverId: '',
       date: dayjs().toDate(),
-      transferType: 'no_transfer',
-      fromDriverId: '',
-      toDriverId: '',
       selectedCategory: 'bakery',
       products: [],
+      isProductTransferred: false,
+      transferredProducts: [],
       collectionAmount: 0,
       purchaseAmount: 0,
       expiry: 0,
@@ -174,31 +157,57 @@ export default function Page(): React.JSX.Element {
   });
 
   const watchedProducts = watch('products');
-  const watchedTransferType = watch('transferType');
-  const watchedSelectedCategory = watch('selectedCategory');
-  
-  // Use watched transfer type instead of separate state
-  const transferType = watchedTransferType || 'no_transfer';
+  const watchedIsProductTransferred = watch('isProductTransferred');
+  const watchedTransferredProducts = watch('transferredProducts');
+  const watchedDate = watch('date');
 
-  // Debug logging
+  // Debug logging for drivers
+  const currentDriverId = watch('driverId');
   React.useEffect(() => {
-    console.log('Current transfer type:', watchedTransferType);
-    console.log('Current selected category:', watchedSelectedCategory);
-  }, [watchedTransferType, watchedSelectedCategory]);
+    console.log('=== DRIVER DEBUG INFO ===');
+    console.log('Available drivers:', drivers);
+    console.log('Drivers length:', drivers.length);
+    console.log('Current driver ID:', currentDriverId);
+    console.log('Current driver ID type:', typeof currentDriverId);
+    console.log('Filtered drivers for transfer:', drivers.filter(d => d.id !== currentDriverId));
+    console.log('Filtered drivers count:', drivers.filter(d => d.id !== currentDriverId).length);
+    console.log('Transfer form receiving driver ID:', transferForm.receivingDriverId);
+    console.log('========================');
+  }, [drivers, currentDriverId, transferForm.receivingDriverId]);
+
+  // Filter products based on search
+  React.useEffect(() => {
+    if (productSearch.trim() === '') {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(product => 
+        product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+        product.id.toLowerCase().includes(productSearch.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [productSearch, products]);
+
+  // Get available drivers (excluding those who already have trips for the selected date)
+  const getAvailableDrivers = React.useCallback(() => {
+    if (!watchedDate) return drivers;
+    
+    return drivers.filter(driver => canAddTripForDriver(driver.id, watchedDate));
+  }, [drivers, watchedDate, canAddTripForDriver]);
 
   // Calculation functions
 
   const handleOpen = () => {
     setEditingTrip(null);
     setSelectedDriverId('');
+    setProductSearch('');
     reset({
       driverId: '',
       date: dayjs().toDate(),
-      transferType: 'no_transfer',
-      fromDriverId: '',
-      toDriverId: '',
       selectedCategory: 'bakery',
       products: [],
+      isProductTransferred: false,
+      transferredProducts: [],
       collectionAmount: 0,
       purchaseAmount: 0,
       expiry: 0,
@@ -210,14 +219,14 @@ export default function Page(): React.JSX.Element {
   const handleEdit = (trip: DailyTrip) => {
     setEditingTrip(trip);
     setSelectedDriverId(trip.driverId);
+    setProductSearch('');
     reset({
       driverId: trip.driverId,
       date: trip.date,
-      transferType: trip.transfer.type,
-      fromDriverId: trip.transfer.fromDriverId || '',
-      toDriverId: trip.transfer.toDriverId || '',
+      isProductTransferred: trip.transfer.isProductTransferred,
+      transferredProducts: trip.transfer.transferredProducts,
       selectedCategory: 'bakery',
-      products: trip.transfer.products,
+      products: trip.products,
       collectionAmount: trip.collectionAmount,
       purchaseAmount: trip.purchaseAmount,
       expiry: trip.expiry,
@@ -295,22 +304,71 @@ export default function Page(): React.JSX.Element {
     }
   };
 
+  const addTransferredProduct = (productId: string, quantity: number, receivingDriverId: string) => {
+    const product = products.find(p => p.id === productId);
+    const receivingDriver = drivers.find(d => d.id === receivingDriverId);
+    const currentDriver = drivers.find(d => d.id === watch('driverId'));
+    
+    if (product && receivingDriver && currentDriver) {
+      const currentTransferredProducts = watchedTransferredProducts || [];
+      const newTransferredProduct = {
+        productId: product.id,
+        productName: product.name,
+        category: product.category,
+        quantity,
+        unitPrice: product.price,
+        receivingDriverId,
+        receivingDriverName: receivingDriver.name,
+        transferredFromDriverId: currentDriver.id,
+        transferredFromDriverName: currentDriver.name,
+      };
+      
+      setValue('transferredProducts', [...currentTransferredProducts, newTransferredProduct]);
+    }
+  };
+
+  const removeTransferredProduct = (index: number) => {
+    const currentTransferredProducts = watchedTransferredProducts || [];
+    const updatedProducts = currentTransferredProducts.filter((_, i) => i !== index);
+    setValue('transferredProducts', updatedProducts);
+  };
+
+  const handleAddTransferredProduct = () => {
+    if (transferForm.productId && transferForm.quantity > 0 && transferForm.receivingDriverId) {
+      addTransferredProduct(transferForm.productId, transferForm.quantity, transferForm.receivingDriverId);
+      // Reset form
+      setTransferForm({
+        productId: '',
+        quantity: 1,
+        receivingDriverId: '',
+      });
+      setProductSearch('');
+    }
+  };
+
   const onSubmit = (data: TripFormData) => {
+    // Check if this is a new trip and if driver already has a trip for this date
+    if (!editingTrip && !canAddTripForDriver(data.driverId, data.date)) {
+      alert(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
+      return;
+    }
+
     const driver = drivers.find(d => d.id === data.driverId);
     const filteredProducts = data.products.filter(p => p.quantity > 0);
+    const filteredTransferredProducts = data.transferredProducts.filter(p => p.quantity > 0);
 
     const transfer: ProductTransfer = {
-      type: data.transferType,
-      fromDriverId: data.fromDriverId,
-      toDriverId: data.toDriverId,
-      products: filteredProducts,
+      isProductTransferred: data.isProductTransferred,
+      transferredProducts: filteredTransferredProducts,
     };
 
     const tripData = {
       driverId: data.driverId,
       driverName: driver?.name || '',
       date: data.date,
+      products: filteredProducts,
       transfer,
+      acceptedProducts: [], // Will be populated by context when products are transferred to this driver
       collectionAmount: data.collectionAmount,
       purchaseAmount: data.purchaseAmount,
       expiry: data.expiry,
@@ -407,29 +465,55 @@ export default function Page(): React.JSX.Element {
               </Stack>
             </Stack>
             <Stack spacing={2}>
-              {trip.transfer.type !== 'no_transfer' && (
+              {trip.transfer.isProductTransferred && trip.transfer.transferredProducts.length > 0 && (
                 <>
                   <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Transfer Type: {trip.transfer.type === 'product_transferred' ? 'Product Transferred' : 'Product Accepted'}
+                    Products Transferred
                   </Typography>
                   
-                  <Stack direction="row" spacing={2}>
-                    {trip.transfer.fromDriverId && (
-                      <Typography variant="body2">
-                        From: {drivers.find(d => d.id === trip.transfer.fromDriverId)?.name}
-                      </Typography>
-                    )}
-                    {trip.transfer.toDriverId && (
-                      <Typography variant="body2">
-                        To: {drivers.find(d => d.id === trip.transfer.toDriverId)?.name}
-                      </Typography>
-                    )}
+                  <Stack spacing={1}>
+                    {trip.transfer.transferredProducts.map((transferredProduct, index) => (
+                      <Box key={index} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}>
+                        <Typography variant="body2">
+                          {transferredProduct.productName} (Qty: {transferredProduct.quantity}) - Transfer to: {transferredProduct.receivingDriverName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          AED {transferredProduct.unitPrice} × {transferredProduct.quantity} = AED {transferredProduct.unitPrice * transferredProduct.quantity}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </>
+              )}
+
+              {trip.acceptedProducts && trip.acceptedProducts.length > 0 && (
+                <>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                    Products Accepted from Other Drivers
+                  </Typography>
+                  
+                  <Stack spacing={1}>
+                    {trip.acceptedProducts.map((acceptedProduct, index) => (
+                      <Box key={index} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}>
+                        <Typography variant="body2">
+                          {acceptedProduct.productName} (Qty: {acceptedProduct.quantity})
+                          {acceptedProduct.transferredFromDriverName && (
+                            <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
+                              {' '}- From: {acceptedProduct.transferredFromDriverName}
+                            </span>
+                          )}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          AED {acceptedProduct.unitPrice} × {acceptedProduct.quantity} = AED {acceptedProduct.unitPrice * acceptedProduct.quantity}
+                        </Typography>
+                      </Box>
+                    ))}
                   </Stack>
                 </>
               )}
 
               <Grid container spacing={2}>
-                {trip.transfer.products.map((product) => (
+                {trip.products.map((product) => (
                   <Grid
                     key={product.productId}
                     size={{
@@ -482,11 +566,11 @@ export default function Page(): React.JSX.Element {
                 </Grid>
               </Paper>
 
-              {trip.transfer.products.length > 0 && (
+              {trip.products.length > 0 && (
                 <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>Product Calculations</Typography>
                   {(() => {
-                    const totals = calculateTotals(trip.transfer.products);
+                    const totals = calculateTotals(trip.products);
                     return (
                       <Grid container spacing={2}>
                         <Grid size={{ xs: 12, md: 6 }}>
@@ -611,39 +695,56 @@ export default function Page(): React.JSX.Element {
                     Available Drivers:
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {drivers.map((driver) => (
-                      <Box 
-                        key={driver.id} 
-                        sx={{ 
-                          p: 2, 
-                          cursor: 'pointer', 
-                          border: selectedDriverId === driver.id ? '2px solid #1976d2' : '1px solid #e0e0e0',
-                          borderRadius: 1,
-                          bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'white',
-                          '&:hover': { 
-                            bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'rgba(0,0,0,0.04)',
-                            borderColor: selectedDriverId === driver.id ? '#1976d2' : '#bdbdbd'
-                          },
-                          transition: 'all 0.2s ease',
-                          minWidth: '200px'
-                        }}
-                        onClick={() => {
-                          setSelectedDriverId(driver.id);
-                          setValue('driverId', driver.id);
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                          {driver.name}
+                    {getAvailableDrivers().length > 0 ? (
+                      getAvailableDrivers().map((driver) => (
+                        <Box 
+                          key={driver.id} 
+                          sx={{ 
+                            p: 2, 
+                            cursor: 'pointer', 
+                            border: selectedDriverId === driver.id ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                            borderRadius: 1,
+                            bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'white',
+                            '&:hover': { 
+                              bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'rgba(0,0,0,0.04)',
+                              borderColor: selectedDriverId === driver.id ? '#1976d2' : '#bdbdbd'
+                            },
+                            transition: 'all 0.2s ease',
+                            minWidth: '200px'
+                          }}
+                          onClick={() => {
+                            setSelectedDriverId(driver.id);
+                            setValue('driverId', driver.id);
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                            {driver.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {driver.routeName}
+                          </Typography>
+                          <br />
+                          <Typography variant="caption" color="text.secondary">
+                            {driver.location}
+                          </Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      <Box sx={{ 
+                        p: 2, 
+                        border: '1px dashed #ccc', 
+                        borderRadius: 1, 
+                        bgcolor: 'grey.50',
+                        minWidth: '200px'
+                      }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No drivers available for this date
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {driver.routeName}
-                        </Typography>
-                        <br />
-                        <Typography variant="caption" color="text.secondary">
-                          {driver.location}
+                          All drivers already have trips for {watchedDate ? dayjs(watchedDate).format('MMM D, YYYY') : 'this date'}
                         </Typography>
                       </Box>
-                    ))}
+                    )}
                   </Box>
                 </Box>
                 
@@ -678,224 +779,374 @@ export default function Page(): React.JSX.Element {
                   />
                 </LocalizationProvider>
 
-              {/* Transfer Type Selection */}
+              {/* Product Transfer Checkbox */}
               <Controller
                 control={control}
-                name="transferType"
+                name="isProductTransferred"
                 render={({ field }) => (
-                  <FormControl fullWidth error={Boolean(errors.transferType)}>
-                    <InputLabel>Transfer Type</InputLabel>
-                    <Select
-                      {...field}
-                      label="Transfer Type"
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <input
+                      type="checkbox"
+                      checked={field.value}
                       onChange={(e) => {
-                        console.log('Transfer type changed to:', e.target.value);
-                        field.onChange(e.target.value);
-                        // Reset dependent fields when transfer type changes
-                        setValue('fromDriverId', '');
-                        setValue('toDriverId', '');
-                        setValue('selectedCategory', 'bakery');
-                        setValue('products', []);
-                        setValue('collectionAmount', 0);
-                        setValue('purchaseAmount', 0);
-                        setValue('expiry', 0);
-                        setValue('discount', 0);
+                        field.onChange(e.target.checked);
+                        if (!e.target.checked) {
+                          setValue('transferredProducts', []);
+                        }
                       }}
-                    >
-                      <MenuItem value="no_transfer">No Product Transferred</MenuItem>
-                      <MenuItem value="product_transferred">Product Transferred</MenuItem>
-                      <MenuItem value="product_accepted">Product Accepted</MenuItem>
-                    </Select>
-                    {errors.transferType && (
-                      <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                        {errors.transferType.message}
-                      </Typography>
-                    )}
-                  </FormControl>
+                    />
+                    <Typography variant="body1">Product Transferred</Typography>
+                  </Box>
                 )}
               />
 
-              {/* Driver Selection for Transfer/Acceptance */}
-              {transferType !== 'no_transfer' && (
-                <FormControl fullWidth error={Boolean(errors.fromDriverId || errors.toDriverId)}>
-                  <InputLabel>
-                    {transferType === 'product_transferred' ? 'Transfer To Driver' : 'Accept From Driver'}
-                  </InputLabel>
-                  <Select
-                    value={transferType === 'product_transferred' ? watch('toDriverId') || '' : watch('fromDriverId') || ''}
-                    label={transferType === 'product_transferred' ? 'Transfer To Driver' : 'Accept From Driver'}
-                    onChange={(e) => {
-                      if (transferType === 'product_transferred') {
-                        setValue('toDriverId', e.target.value);
-                      } else {
-                        setValue('fromDriverId', e.target.value);
-                      }
-                    }}
-                  >
-                    {drivers.map((driver) => (
-                      <MenuItem key={driver.id} value={driver.id}>
-                        {driver.name} - {driver.routeName}
-                      </MenuItem>
+              {/* Product Selection */}
+              <Typography variant="h6">Select Products</Typography>
+              
+              <Grid container spacing={3}>
+                <Grid
+                  size={{
+                    xs: 12,
+                    md: 6,
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                    Bakery Items ({bakeryProducts.length})
+                  </Typography>
+                  <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
+                    <Stack spacing={2}>
+                      {bakeryProducts.map((product) => (
+                        <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {product.id}
+                            </Typography>
+                            <Typography variant="body1">
+                              {product.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              AED {product.price} per unit
+                            </Typography>
+                          </Box>
+                          <TextField
+                            type="number"
+                            label="Quantity"
+                            size="small"
+                            sx={{ 
+                              width: 120,
+                              '& .MuiInputBase-input': {
+                                cursor: 'text',
+                                pointerEvents: 'auto',
+                              }
+                            }}
+                            inputProps={{ 
+                              min: 0,
+                              style: { textAlign: 'center', fontWeight: 'bold' }
+                            }}
+                            value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
+                            onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
+                            onClick={(e) => {
+                              console.log('Quantity field clicked for product:', product.id);
+                              (e.target as HTMLInputElement).focus();
+                            }}
+                          />
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+                </Grid>
+                
+                <Grid
+                  size={{
+                    xs: 12,
+                    md: 6,
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                    Fresh Items ({freshProducts.length})
+                  </Typography>
+                  <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
+                    <Stack spacing={2}>
+                      {freshProducts.map((product) => (
+                        <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {product.id}
+                            </Typography>
+                            <Typography variant="body1">
+                              {product.name}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              AED {product.price} per unit
+                            </Typography>
+                          </Box>
+                          <TextField
+                            type="number"
+                            label="Quantity"
+                            size="small"
+                            sx={{ 
+                              width: 120,
+                              '& .MuiInputBase-input': {
+                                cursor: 'text',
+                                pointerEvents: 'auto',
+                              }
+                            }}
+                            inputProps={{ 
+                              min: 0,
+                              style: { textAlign: 'center', fontWeight: 'bold' }
+                            }}
+                            value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
+                            onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
+                            onClick={(e) => {
+                              console.log('Quantity field clicked for product:', product.id);
+                              (e.target as HTMLInputElement).focus();
+                            }}
+                          />
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              {/* Accepted Products View (Read-only in edit mode) */}
+              {editingTrip && editingTrip.acceptedProducts && editingTrip.acceptedProducts.length > 0 && (
+                <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
+                    Products Accepted from Other Drivers (Read-only)
+                  </Typography>
+                  <Stack spacing={1}>
+                    {editingTrip.acceptedProducts.map((acceptedProduct, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          p: 1,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 1,
+                          bgcolor: 'grey.50'
+                        }}
+                      >
+                        <Typography variant="body2">
+                          {acceptedProduct.productName} (Qty: {acceptedProduct.quantity})
+                          {acceptedProduct.transferredFromDriverName && (
+                            <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
+                              {' '}- From: {acceptedProduct.transferredFromDriverName}
+                            </span>
+                          )}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          AED {acceptedProduct.unitPrice} × {acceptedProduct.quantity} = AED {acceptedProduct.unitPrice * acceptedProduct.quantity}
+                        </Typography>
+                      </Box>
                     ))}
-                  </Select>
-                  {(errors.fromDriverId || errors.toDriverId) && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                      {(errors.fromDriverId || errors.toDriverId)?.message}
-                    </Typography>
-                  )}
-                </FormControl>
+                  </Stack>
+                </Box>
               )}
 
-              {/* Product Selection - Different based on transfer type */}
-              {transferType === 'no_transfer' ? (
-                // Normal product selection for no transfer
-                <>
-                  <Typography variant="h6">Select Products</Typography>
+              {/* Product Transfer Section */}
+              {watchedIsProductTransferred && (
+                <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Transfer Products
+                  </Typography>
                   
-                  <Grid container spacing={3}>
-                    <Grid
-                      size={{
-                        xs: 12,
-                        md: 6,
-                      }}
-                    >
-                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                        Bakery Items ({bakeryProducts.length})
-                      </Typography>
-                      <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
-                        <Stack spacing={2}>
-                          {bakeryProducts.map((product) => (
-                            <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  {product.id}
-                                </Typography>
-                                <Typography variant="body1">
-                                  {product.name}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  AED {product.price} per unit
-                                </Typography>
-                              </Box>
-                              <TextField
-                                type="number"
-                                label="Qty"
-                                size="small"
-                                sx={{ width: 80 }}
-                                inputProps={{ min: 0 }}
-                                value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                                onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
-                              />
-                            </Box>
-                          ))}
-                        </Stack>
-                      </Box>
-                    </Grid>
-                    
-                    <Grid
-                      size={{
-                        xs: 12,
-                        md: 6,
-                      }}
-                    >
-                      <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                        Fresh Items ({freshProducts.length})
-                      </Typography>
-                      <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
-                        <Stack spacing={2}>
-                          {freshProducts.map((product) => (
-                            <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  {product.id}
-                                </Typography>
-                                <Typography variant="body1">
-                                  {product.name}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  AED {product.price} per unit
-                                </Typography>
-                              </Box>
-                              <TextField
-                                type="number"
-                                label="Qty"
-                                size="small"
-                                sx={{ width: 80 }}
-                                inputProps={{ min: 0 }}
-                                value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                                onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
-                              />
-                            </Box>
-                          ))}
-                        </Stack>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </>
-              ) : (
-                // Transfer-specific product selection
-                <Stack spacing={3}>
-                  {/* Category Selection for Transfer */}
-                  <FormControl fullWidth error={Boolean(errors.selectedCategory)}>
-                    <InputLabel>Product Category</InputLabel>
-                    <Select
-                      value={watchedSelectedCategory || 'bakery'}
-                      label="Product Category"
-                      onChange={(e) => {
-                        setValue('selectedCategory', e.target.value as 'bakery' | 'fresh');
-                        // Reset products when category changes
-                        setValue('products', []);
-                      }}
-                    >
-                      <MenuItem value="bakery">Bakery</MenuItem>
-                      <MenuItem value="fresh">Fresh</MenuItem>
-                    </Select>
-                    {errors.selectedCategory && (
-                      <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                        {errors.selectedCategory.message}
-                      </Typography>
-                    )}
-                  </FormControl>
 
-                  {/* Product Selection based on category */}
-                  {watchedSelectedCategory && (
-                    <Box>
-                      <Typography variant="h6" sx={{ mb: 2 }}>
-                        Select Products - {watchedSelectedCategory === 'bakery' ? 'Bakery' : 'Fresh'} Items
-                      </Typography>
-                      <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
-                        <Stack spacing={2}>
-                          {products
-                            .filter(p => p.category === watchedSelectedCategory)
-                            .map((product) => (
-                              <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ flex: 1 }}>
-                                  <Typography variant="body2" color="text.secondary">
-                                    {product.id}
-                                  </Typography>
-                                  <Typography variant="body1">
-                                    {product.name}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary">
-                                    AED {product.price} per unit
-                                  </Typography>
-                                </Box>
-                                <TextField
-                                  type="number"
-                                  label="Qty"
-                                  size="small"
-                                  sx={{ width: 100 }}
-                                  inputProps={{ min: 0 }}
-                                  value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                                  onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
-                                />
+                  {/* Debug Info */}
+                  <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1, mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Debug: Total drivers: {drivers.length}, Current driver: {watch('driverId')}, 
+                      Available for transfer: {drivers.filter(d => d.id !== watch('driverId')).length}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                      All driver names: {drivers.map(d => d.name).join(', ')}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                      Transfer form driver ID: {transferForm.receivingDriverId}
+                    </Typography>
+                  </Box>
+
+                  {/* Transfer Product Form */}
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'end', mb: 2 }}>
+                    <FormControl sx={{ flex: 1 }}>
+                      <TextField
+                        label="Search Product (Name or ID)"
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        placeholder="Type product name or ID..."
+                      />
+                      {productSearch && filteredProducts.length > 0 && (
+                        <Paper sx={{ mt: 1, maxHeight: 200, overflow: 'auto', position: 'absolute', zIndex: 1000, width: '100%' }}>
+                          <Stack>
+                            {filteredProducts.map((product) => (
+                              <Box
+                                key={product.id}
+                                sx={{
+                                  p: 1,
+                                  cursor: 'pointer',
+                                  '&:hover': { bgcolor: 'action.hover' },
+                                  borderBottom: '1px solid',
+                                  borderColor: 'divider'
+                                }}
+                                onClick={() => {
+                                  setTransferForm(prev => ({ ...prev, productId: product.id }));
+                                  setProductSearch(`${product.id} - ${product.name} (AED ${product.price})`);
+                                }}
+                              >
+                                <Typography variant="body2" fontWeight={600}>
+                                  {product.id} - {product.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  AED {product.price} per unit
+                                </Typography>
                               </Box>
                             ))}
-                        </Stack>
-                      </Box>
+                          </Stack>
+                        </Paper>
+                      )}
+                    </FormControl>
+                    
+                    <TextField
+                      label="Transfer Quantity"
+                      type="number"
+                      size="small"
+                      sx={{ 
+                        width: 140,
+                        '& .MuiInputBase-input': {
+                          cursor: 'text',
+                          pointerEvents: 'auto',
+                        }
+                      }}
+                      inputProps={{ 
+                        min: 1,
+                        style: { textAlign: 'center', fontWeight: 'bold' }
+                      }}
+                      value={transferForm.quantity}
+                      onChange={(e) => {
+                        setTransferForm(prev => ({ ...prev, quantity: Number.parseInt(e.target.value) || 1 }));
+                      }}
+                      onClick={(e) => {
+                        console.log('Transfer quantity field clicked');
+                        (e.target as HTMLInputElement).focus();
+                      }}
+                    />
+                    
+                    <Box sx={{ flex: 1 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'text.secondary',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                          mb: 0.5,
+                          ml: 1.5
+                        }}
+                      >
+                        Transfer To Driver
+                      </Typography>
+                      <select 
+                        value={transferForm.receivingDriverId} 
+                        onChange={(e) => {
+                          console.log('Driver selected:', e.target.value);
+                          setTransferForm(prev => ({ ...prev, receivingDriverId: e.target.value }));
+                        }}
+                        style={{ 
+                          width: '100%', 
+                          padding: '16.5px 14px', 
+                          border: '1px solid #c4c4c4', 
+                          borderRadius: '4px',
+                          fontSize: '16px',
+                          backgroundColor: '#fff',
+                          cursor: 'pointer',
+                          outline: 'none',
+                          fontFamily: 'inherit'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#1976d2';
+                          e.target.style.borderWidth = '2px';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#c4c4c4';
+                          e.target.style.borderWidth = '1px';
+                        }}
+                      >
+                        <option value="">Select a driver</option>
+                        {drivers.some(d => d.id !== watch('driverId')) ? (
+                          drivers.filter(d => d.id !== watch('driverId')).map((driver) => (
+                            <option key={driver.id} value={driver.id}>
+                              {driver.name} - {driver.routeName || 'No Route'}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="" disabled>
+                            No drivers available for transfer
+                          </option>
+                        )}
+                      </select>
+                    </Box>
+                    
+                    <Button
+                      variant="contained"
+                      startIcon={<PlusIcon />}
+                      onClick={handleAddTransferredProduct}
+                      disabled={!transferForm.productId || !transferForm.receivingDriverId || transferForm.quantity < 1}
+                      sx={{
+                        backgroundColor: (!transferForm.productId || !transferForm.receivingDriverId || transferForm.quantity < 1) 
+                          ? 'action.disabled' 
+                          : 'success.main',
+                        '&:hover': {
+                          backgroundColor: (!transferForm.productId || !transferForm.receivingDriverId || transferForm.quantity < 1) 
+                            ? 'action.disabled' 
+                            : 'success.dark',
+                        }
+                      }}
+                    >
+                      Add Transfer
+                    </Button>
+                  </Box>
+
+                  {/* Transferred Products List */}
+                  {watchedTransferredProducts && watchedTransferredProducts.length > 0 && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                        Transferred Products:
+                      </Typography>
+                      <Stack spacing={1}>
+                        {watchedTransferredProducts.map((product, index) => (
+                          <Box
+                            key={index}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              p: 1,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              borderRadius: 1,
+                              bgcolor: 'grey.100',
+                            }}
+                          >
+                            <Box>
+                              <Typography variant="body2">
+                                {product.productName} (Qty: {product.quantity}) - Transfer to: {product.receivingDriverName}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                AED {product.unitPrice} × {product.quantity} = AED {product.unitPrice * product.quantity}
+                              </Typography>
+                            </Box>
+                            <IconButton
+                              size="small"
+                              onClick={() => removeTransferredProduct(index)}
+                              color="error"
+                            >
+                              <TrashIcon />
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Stack>
                     </Box>
                   )}
-                </Stack>
+                </Box>
               )}
 
               {/* Financial Information */}
@@ -914,6 +1165,8 @@ export default function Page(): React.JSX.Element {
                         error={Boolean(errors.collectionAmount)}
                         helperText={errors.collectionAmount?.message}
                         inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        value={field.value || ''}
                       />
                     )}
                   />
@@ -931,6 +1184,8 @@ export default function Page(): React.JSX.Element {
                         error={Boolean(errors.purchaseAmount)}
                         helperText={errors.purchaseAmount?.message}
                         inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        value={field.value || ''}
                       />
                     )}
                   />
@@ -947,7 +1202,9 @@ export default function Page(): React.JSX.Element {
                         fullWidth
                         error={Boolean(errors.expiry)}
                         helperText={errors.expiry?.message}
-                        inputProps={{ min: 0, step: 1 }}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        value={field.value || ''}
                       />
                     )}
                   />
@@ -965,6 +1222,8 @@ export default function Page(): React.JSX.Element {
                         error={Boolean(errors.discount)}
                         helperText={errors.discount?.message}
                         inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        value={field.value || ''}
                       />
                     )}
                   />
