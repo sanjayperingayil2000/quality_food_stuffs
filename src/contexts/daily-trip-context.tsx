@@ -46,10 +46,17 @@ export interface DailyTrip {
   purchaseAmount: number;
   expiry: number; // Expiry amount in AED
   discount: number; // Discount amount in AED
+  petrol: number; // Petrol amount in AED
+  balance: number; // Balance amount in AED (auto-calculated or set)
   // Calculated totals
   totalAmount: number;
   netTotal: number;
   grandTotal: number;
+  // New calculated fields
+  expiryAfterTax: number; // ((expiry + 5%) - 13%)
+  amountToBe: number; // Purchase amount - Expiry after tax
+  salesDifference: number; // Collection amount - Purchase amount
+  profit: number; // (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
   // Metadata
   createdAt: Date;
   updatedAt: Date;
@@ -71,141 +78,6 @@ interface DailyTripContextType {
 
 const DailyTripContext = React.createContext<DailyTripContextType | undefined>(undefined);
 
-// Sample data - 2 daily trips with different drivers
-const initialTrips: DailyTrip[] = [
-  {
-    id: 'TRP-001',
-    driverId: 'EMP-006', // David Wilson
-    driverName: 'David Wilson',
-    date: dayjs().utc().toDate(), // Today's date
-    products: [
-      // Bakery items
-      { productId: 'PRD-019', productName: 'Sourdough Bread', category: 'bakery', quantity: 5, unitPrice: 12.5 },
-      { productId: 'PRD-020', productName: 'Blueberry Muffin', category: 'bakery', quantity: 8, unitPrice: 8 },
-      { productId: 'PRD-021', productName: 'Croissant', category: 'bakery', quantity: 6, unitPrice: 6.5 },
-      // Fresh items
-      { productId: 'PRD-001', productName: 'Fresh Apples', category: 'fresh', quantity: 10, unitPrice: 15 },
-      { productId: 'PRD-002', productName: 'Bananas', category: 'fresh', quantity: 8, unitPrice: 8.5 },
-      { productId: 'PRD-003', productName: 'Orange Juice', category: 'fresh', quantity: 6, unitPrice: 12 },
-    ],
-    transfer: {
-      isProductTransferred: true,
-      transferredProducts: [
-        {
-          productId: 'PRD-022',
-          productName: 'Whole Wheat Loaf',
-          category: 'bakery',
-          quantity: 3,
-          unitPrice: 10.75,
-          receivingDriverId: 'EMP-004',
-          receivingDriverName: 'Rahul Kumar',
-          transferredFromDriverId: 'EMP-006',
-          transferredFromDriverName: 'David Wilson',
-        },
-      ],
-    },
-    acceptedProducts: [],
-    collectionAmount: 850.5,
-    purchaseAmount: 720.25,
-    expiry: 25.5,
-    discount: 42.75,
-    totalAmount: 850.5,
-    netTotal: 720.25,
-    grandTotal: 756.26,
-    createdAt: dayjs().utc().toDate(),
-    updatedAt: dayjs().utc().toDate(),
-    createdBy: 'EMP-002',
-    updatedBy: 'EMP-002',
-  },
-  {
-    id: 'TRP-002',
-    driverId: 'EMP-004', // Rahul Kumar
-    driverName: 'Rahul Kumar',
-    date: dayjs().utc().toDate(), // Today's date - same as David Wilson
-    products: [
-      { productId: 'PRD-024', productName: 'Cinnamon Roll', category: 'bakery', quantity: 6, unitPrice: 7.5 },
-      { productId: 'PRD-004', productName: 'Strawberries', category: 'fresh', quantity: 4, unitPrice: 18.75 },
-      { productId: 'PRD-005', productName: 'Grapes', category: 'fresh', quantity: 5, unitPrice: 14.25 },
-    ],
-    transfer: {
-      isProductTransferred: false,
-      transferredProducts: [],
-    },
-    acceptedProducts: [
-      // Product accepted from David Wilson
-      { 
-        productId: 'PRD-022', 
-        productName: 'Whole Wheat Loaf', 
-        category: 'bakery', 
-        quantity: 3, 
-        unitPrice: 10.75,
-        transferredFromDriverId: 'EMP-006',
-        transferredFromDriverName: 'David Wilson',
-      },
-      // Product accepted from Ali Ahmed
-      { 
-        productId: 'PRD-001', 
-        productName: 'Fresh Apples', 
-        category: 'fresh', 
-        quantity: 5, 
-        unitPrice: 15,
-        transferredFromDriverId: 'EMP-005',
-        transferredFromDriverName: 'Ali Ahmed',
-      },
-    ],
-    collectionAmount: 420.75,
-    purchaseAmount: 380.5,
-    expiry: 15.25,
-    discount: 18.5,
-    totalAmount: 420.75,
-    netTotal: 380.5,
-    grandTotal: 392.52,
-    createdAt: dayjs().utc().toDate(),
-    updatedAt: dayjs().utc().toDate(),
-    createdBy: 'EMP-003',
-    updatedBy: 'EMP-003',
-  },
-  {
-    id: 'TRP-003',
-    driverId: 'EMP-005', // Ali Ahmed
-    driverName: 'Ali Ahmed',
-    date: dayjs().utc().toDate(), // Today's date - same as others
-    products: [
-      { productId: 'PRD-006', productName: 'Mango', category: 'fresh', quantity: 3, unitPrice: 22.5 },
-      { productId: 'PRD-007', productName: 'Pineapple', category: 'fresh', quantity: 3, unitPrice: 16 },
-      { productId: 'PRD-008', productName: 'Watermelon', category: 'fresh', quantity: 2, unitPrice: 25 },
-    ],
-    transfer: {
-      isProductTransferred: true,
-      transferredProducts: [
-        {
-          productId: 'PRD-001',
-          productName: 'Fresh Apples',
-          category: 'fresh',
-          quantity: 5,
-          unitPrice: 15,
-          receivingDriverId: 'EMP-004',
-          receivingDriverName: 'Rahul Kumar',
-          transferredFromDriverId: 'EMP-005',
-          transferredFromDriverName: 'Ali Ahmed',
-        },
-      ],
-    },
-    acceptedProducts: [],
-    collectionAmount: 320.5,
-    purchaseAmount: 280.25,
-    expiry: 15.5,
-    discount: 22.75,
-    totalAmount: 320.5,
-    netTotal: 280.25,
-    grandTotal: 294.26,
-    createdAt: dayjs().utc().toDate(),
-    updatedAt: dayjs().utc().toDate(),
-    createdBy: 'EMP-002',
-    updatedBy: 'EMP-002',
-  },
-];
-
 // Helper function to calculate totals including transferred products
 const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[] = [], transferredProducts: TransferredProduct[] = []) => {
   // Combine regular products and accepted products
@@ -218,54 +90,727 @@ const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[
   const freshTotal = freshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const bakeryTotal = bakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
 
-  // Calculate transferred products totals (to subtract from sender)
-  const transferredTotal = transferredProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  // Calculate accepted products totals by category
+  const acceptedFreshProducts = acceptedProducts.filter(p => p.category === 'fresh');
+  const acceptedBakeryProducts = acceptedProducts.filter(p => p.category === 'bakery');
+  const acceptedFreshTotal = acceptedFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  const acceptedBakeryTotal = acceptedBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
 
-  const freshNetTotal = freshTotal * (1 - 0.115); // 11.5% reduction
-  const bakeryNetTotal = bakeryTotal * (1 - 0.16); // 16% reduction
+  // Calculate transferred products totals by category (to subtract from sender)
+  const transferredFreshProducts = transferredProducts.filter(p => p.category === 'fresh');
+  const transferredBakeryProducts = transferredProducts.filter(p => p.category === 'bakery');
+  
+  const transferredFreshTotal = transferredFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  const transferredBakeryTotal = transferredBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  const transferredTotal = transferredFreshTotal + transferredBakeryTotal;
+
+  // Calculate net totals after subtracting transferred products by category
+  const freshNetTotal = (freshTotal - transferredFreshTotal) * (1 - 0.115); // 11.5% reduction
+  const bakeryNetTotal = (bakeryTotal - transferredBakeryTotal) * (1 - 0.16); // 16% reduction
 
   const freshGrandTotal = freshNetTotal * 1.05; // 5% addition
   const bakeryGrandTotal = bakeryNetTotal * 1.05; // 5% addition
 
   return {
-    fresh: { total: freshTotal, netTotal: freshNetTotal, grandTotal: freshGrandTotal },
-    bakery: { total: bakeryTotal, netTotal: bakeryNetTotal, grandTotal: bakeryGrandTotal },
-    transferred: { total: transferredTotal },
+    fresh: { 
+      total: freshTotal, 
+      accepted: acceptedFreshTotal,
+      transferred: transferredFreshTotal,
+      netTotal: freshNetTotal, 
+      grandTotal: freshGrandTotal 
+    },
+    bakery: { 
+      total: bakeryTotal, 
+      accepted: acceptedBakeryTotal,
+      transferred: transferredBakeryTotal,
+      netTotal: bakeryNetTotal, 
+      grandTotal: bakeryGrandTotal 
+    },
+    transferred: { 
+      total: transferredTotal,
+      fresh: transferredFreshTotal,
+      bakery: transferredBakeryTotal
+    },
     overall: { 
       total: freshTotal + bakeryTotal - transferredTotal, 
-      netTotal: freshNetTotal + bakeryNetTotal - (transferredTotal * 0.84), // Apply average reduction
-      grandTotal: freshGrandTotal + bakeryGrandTotal - (transferredTotal * 0.84 * 1.05) // Apply average reduction and addition
+      netTotal: freshNetTotal + bakeryNetTotal,
+      grandTotal: freshGrandTotal + bakeryGrandTotal
     },
   };
 };
 
+// Helper function to calculate all financial metrics for a trip
+interface CalculatedMetrics {
+  expiryAfterTax: number;
+  amountToBe: number;
+  salesDifference: number;
+  profit: number;
+  balance: number;
+}
+
+const calculateFinancialMetrics = (
+  expiry: number,
+  purchaseAmount: number,
+  collectionAmount: number,
+  discount: number,
+  freshNetTotal: number,
+  bakeryNetTotal: number,
+  previousBalance: number
+): CalculatedMetrics => {
+  // 1. Expiry after tax = ((expiry + 5%) - 13%)
+  const expiryAfterTax = expiry * 1.05 * 0.87;
+  
+  // 2. Amount to be = Purchase amount - Expiry after tax
+  const amountToBe = purchaseAmount - expiryAfterTax;
+  
+  // 3. Sales Difference = Collection amount - Purchase amount
+  const salesDifference = collectionAmount - purchaseAmount;
+  
+  // 4. Profit = (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
+  const freshProfit = (freshNetTotal - expiryAfterTax) * 0.135;
+  const bakeryProfit = bakeryNetTotal * 0.195;
+  const profit = freshProfit + bakeryProfit - discount;
+  
+  // 5. Balance = previous balance + current profit - current sales difference
+  const balance = previousBalance + profit - salesDifference;
+  
+  return {
+    expiryAfterTax,
+    amountToBe,
+    salesDifference,
+    profit,
+    balance
+  };
+};
+
+// Generate comprehensive daily trip data for last 10 days
+const generateDailyTrips = (): DailyTrip[] => {
+  const trips: DailyTrip[] = [];
+  let tripId = 1;
+
+  // Generate trips for last 10 days
+  for (let dayOffset = 9; dayOffset >= 0; dayOffset--) {
+    const currentDate = dayjs().subtract(dayOffset, 'day').utc().toDate();
+    
+    // Day-specific scenarios
+    // eslint-disable-next-line unicorn/prefer-switch
+    if (dayOffset === 0) {
+      // Today - Multiple transfers to Rahul
+      // eslint-disable-next-line unicorn/prefer-single-call
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-006',
+        driverName: 'David Wilson',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-019', productName: 'Sourdough Bread', category: 'bakery', quantity: 5, unitPrice: 12.5 },
+          { productId: 'PRD-020', productName: 'Blueberry Muffin', category: 'bakery', quantity: 8, unitPrice: 8 },
+          { productId: 'PRD-001', productName: 'Fresh Apples', category: 'fresh', quantity: 10, unitPrice: 15 },
+        ],
+        transfer: {
+          isProductTransferred: true,
+          transferredProducts: [
+            {
+              productId: 'PRD-022',
+              productName: 'Whole Wheat Loaf',
+              category: 'bakery',
+              quantity: 3,
+              unitPrice: 10.75,
+              receivingDriverId: 'EMP-004',
+              receivingDriverName: 'Rahul Kumar',
+              transferredFromDriverId: 'EMP-006',
+              transferredFromDriverName: 'David Wilson',
+            },
+          ],
+        },
+        acceptedProducts: [],
+        collectionAmount: 650.5,
+        purchaseAmount: 580.25,
+        expiry: 20.5,
+        discount: 35.75,
+        petrol: 150,
+        balance: 100,
+        totalAmount: 650.5,
+        netTotal: 580.25,
+        grandTotal: 609.26,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-002',
+        updatedBy: 'EMP-002',
+      });
+
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-005',
+        driverName: 'Ali Ahmed',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-006', productName: 'Mango', category: 'fresh', quantity: 3, unitPrice: 22.5 },
+          { productId: 'PRD-007', productName: 'Pineapple', category: 'fresh', quantity: 3, unitPrice: 16 },
+        ],
+        transfer: {
+          isProductTransferred: true,
+          transferredProducts: [
+            {
+              productId: 'PRD-001',
+              productName: 'Fresh Apples',
+              category: 'fresh',
+              quantity: 5,
+              unitPrice: 15,
+              receivingDriverId: 'EMP-004',
+              receivingDriverName: 'Rahul Kumar',
+              transferredFromDriverId: 'EMP-005',
+              transferredFromDriverName: 'Ali Ahmed',
+            },
+          ],
+        },
+        acceptedProducts: [],
+        collectionAmount: 280.5,
+        purchaseAmount: 250.25,
+        expiry: 12.5,
+        discount: 18.75,
+        petrol: 120,
+        balance: 80,
+        totalAmount: 280.5,
+        netTotal: 250.25,
+        grandTotal: 262.76,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-002',
+        updatedBy: 'EMP-002',
+      });
+
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-004',
+        driverName: 'Rahul Kumar',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-024', productName: 'Cinnamon Roll', category: 'bakery', quantity: 6, unitPrice: 7.5 },
+          { productId: 'PRD-004', productName: 'Strawberries', category: 'fresh', quantity: 4, unitPrice: 18.75 },
+        ],
+        transfer: {
+          isProductTransferred: false,
+          transferredProducts: [],
+        },
+        acceptedProducts: [
+          { 
+            productId: 'PRD-022', 
+            productName: 'Whole Wheat Loaf', 
+            category: 'bakery', 
+            quantity: 3, 
+            unitPrice: 10.75,
+            transferredFromDriverId: 'EMP-006',
+            transferredFromDriverName: 'David Wilson',
+          },
+          { 
+            productId: 'PRD-001', 
+            productName: 'Fresh Apples', 
+            category: 'fresh', 
+            quantity: 5, 
+            unitPrice: 15,
+            transferredFromDriverId: 'EMP-005',
+            transferredFromDriverName: 'Ali Ahmed',
+          },
+        ],
+        collectionAmount: 320.75,
+        purchaseAmount: 290.5,
+        expiry: 12.25,
+        discount: 18.5,
+        petrol: 130,
+        balance: 90,
+        totalAmount: 320.75,
+        netTotal: 290.5,
+        grandTotal: 305.03,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-003',
+        updatedBy: 'EMP-003',
+      });
+
+    } else if (dayOffset === 1) {
+      // Yesterday - Fatima transfers to James, James accepts
+      // eslint-disable-next-line unicorn/prefer-single-call
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-007',
+        driverName: 'Fatima Al-Zahra',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-011', productName: 'Bread Loaf', category: 'bakery', quantity: 8, unitPrice: 6.5 },
+          { productId: 'PRD-012', productName: 'Fresh Oranges', category: 'fresh', quantity: 12, unitPrice: 9.25 },
+        ],
+        transfer: {
+          isProductTransferred: true,
+          transferredProducts: [
+            {
+              productId: 'PRD-025',
+              productName: 'Bagel',
+              category: 'bakery',
+              quantity: 10,
+              unitPrice: 4,
+              receivingDriverId: 'EMP-008',
+              receivingDriverName: 'James Brown',
+              transferredFromDriverId: 'EMP-007',
+              transferredFromDriverName: 'Fatima Al-Zahra',
+            },
+          ],
+        },
+        acceptedProducts: [],
+        collectionAmount: 380.5,
+        purchaseAmount: 340.25,
+        expiry: 15.25,
+        discount: 25.5,
+        petrol: 140,
+        balance: 95,
+        totalAmount: 380.5,
+        netTotal: 340.25,
+        grandTotal: 357.26,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-003',
+        updatedBy: 'EMP-003',
+      });
+
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-008',
+        driverName: 'James Brown',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-009', productName: 'Lettuce', category: 'fresh', quantity: 6, unitPrice: 6.5 },
+          { productId: 'PRD-010', productName: 'Tomatoes', category: 'fresh', quantity: 8, unitPrice: 9.75 },
+        ],
+        transfer: {
+          isProductTransferred: false,
+          transferredProducts: [],
+        },
+        acceptedProducts: [
+          { 
+            productId: 'PRD-025', 
+            productName: 'Bagel', 
+            category: 'bakery', 
+            quantity: 10, 
+            unitPrice: 4,
+            transferredFromDriverId: 'EMP-007',
+            transferredFromDriverName: 'Fatima Al-Zahra',
+          },
+        ],
+        collectionAmount: 290.5,
+        purchaseAmount: 260.25,
+        expiry: 10.25,
+        discount: 20.5,
+        petrol: 125,
+        balance: 85,
+        totalAmount: 290.5,
+        netTotal: 260.25,
+        grandTotal: 273.26,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-002',
+        updatedBy: 'EMP-002',
+      });
+
+    } else if (dayOffset === 2) {
+      // 2 days ago - Multiple drivers, no transfers
+      // eslint-disable-next-line unicorn/prefer-single-call
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-006',
+        driverName: 'David Wilson',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-013', productName: 'Bell Peppers', category: 'fresh', quantity: 5, unitPrice: 11.5 },
+          { productId: 'PRD-014', productName: 'Spinach', category: 'fresh', quantity: 4, unitPrice: 8.25 },
+        ],
+        transfer: {
+          isProductTransferred: false,
+          transferredProducts: [],
+        },
+        acceptedProducts: [],
+        collectionAmount: 280.5,
+        purchaseAmount: 250.25,
+        expiry: 12.5,
+        discount: 18.75,
+        petrol: 118,
+        balance: 78,
+        totalAmount: 280.5,
+        netTotal: 250.25,
+        grandTotal: 262.76,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-002',
+        updatedBy: 'EMP-002',
+      });
+
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-004',
+        driverName: 'Rahul Kumar',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-015', productName: 'Avocado', category: 'fresh', quantity: 3, unitPrice: 19.5 },
+          { productId: 'PRD-016', productName: 'Lemons', category: 'fresh', quantity: 4, unitPrice: 6.75 },
+        ],
+        transfer: {
+          isProductTransferred: false,
+          transferredProducts: [],
+        },
+        acceptedProducts: [],
+        collectionAmount: 320.25,
+        purchaseAmount: 290.5,
+        expiry: 15.75,
+        discount: 14.5,
+        petrol: 135,
+        balance: 92,
+        totalAmount: 320.25,
+        netTotal: 290.5,
+        grandTotal: 305.03,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-003',
+        updatedBy: 'EMP-003',
+      });
+
+    } else if (dayOffset === 3) {
+      // 3 days ago - Rahul transfers to David and Ali
+      // eslint-disable-next-line unicorn/prefer-single-call
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-004',
+        driverName: 'Rahul Kumar',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-017', productName: 'Ginger', category: 'fresh', quantity: 2, unitPrice: 12.5 },
+          { productId: 'PRD-018', productName: 'Garlic', category: 'fresh', quantity: 3, unitPrice: 9.25 },
+        ],
+        transfer: {
+          isProductTransferred: true,
+          transferredProducts: [
+            {
+              productId: 'PRD-026',
+              productName: 'Danish Pastry',
+              category: 'bakery',
+              quantity: 8,
+              unitPrice: 5.75,
+              receivingDriverId: 'EMP-006',
+              receivingDriverName: 'David Wilson',
+              transferredFromDriverId: 'EMP-004',
+              transferredFromDriverName: 'Rahul Kumar',
+            },
+            {
+              productId: 'PRD-027',
+              productName: 'Pretzel',
+              category: 'bakery',
+              quantity: 12,
+              unitPrice: 3.5,
+              receivingDriverId: 'EMP-005',
+              receivingDriverName: 'Ali Ahmed',
+              transferredFromDriverId: 'EMP-004',
+              transferredFromDriverName: 'Rahul Kumar',
+            },
+          ],
+        },
+        acceptedProducts: [],
+        collectionAmount: 220.5,
+        purchaseAmount: 200.25,
+        expiry: 8.5,
+        discount: 12.75,
+        petrol: 110,
+        balance: 70,
+        totalAmount: 220.5,
+        netTotal: 200.25,
+        grandTotal: 210.26,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-003',
+        updatedBy: 'EMP-003',
+      });
+
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-006',
+        driverName: 'David Wilson',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-028', productName: 'Donut', category: 'bakery', quantity: 15, unitPrice: 2.75 },
+        ],
+        transfer: {
+          isProductTransferred: false,
+          transferredProducts: [],
+        },
+        acceptedProducts: [
+          { 
+            productId: 'PRD-026', 
+            productName: 'Danish Pastry', 
+            category: 'bakery', 
+            quantity: 8, 
+            unitPrice: 5.75,
+            transferredFromDriverId: 'EMP-004',
+            transferredFromDriverName: 'Rahul Kumar',
+          },
+        ],
+        collectionAmount: 180.25,
+        purchaseAmount: 160.5,
+        expiry: 8.25,
+        discount: 11.75,
+        petrol: 105,
+        balance: 65,
+        totalAmount: 180.25,
+        netTotal: 160.5,
+        grandTotal: 168.53,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-002',
+        updatedBy: 'EMP-002',
+      });
+
+      trips.push({
+        id: `TRP-${String(tripId++).padStart(3, '0')}`,
+        driverId: 'EMP-005',
+        driverName: 'Ali Ahmed',
+        date: currentDate,
+        products: [
+          { productId: 'PRD-029', productName: 'Baguette', category: 'bakery', quantity: 4, unitPrice: 9.25 },
+        ],
+        transfer: {
+          isProductTransferred: false,
+          transferredProducts: [],
+        },
+        acceptedProducts: [
+          { 
+            productId: 'PRD-027', 
+            productName: 'Pretzel', 
+            category: 'bakery', 
+            quantity: 12, 
+            unitPrice: 3.5,
+            transferredFromDriverId: 'EMP-004',
+            transferredFromDriverName: 'Rahul Kumar',
+          },
+        ],
+        collectionAmount: 160.25,
+        purchaseAmount: 140.5,
+        expiry: 8.75,
+        discount: 11.5,
+        petrol: 100,
+        balance: 60,
+        totalAmount: 160.25,
+        netTotal: 140.5,
+        grandTotal: 147.53,
+        createdAt: currentDate,
+        updatedAt: currentDate,
+        createdBy: 'EMP-002',
+        updatedBy: 'EMP-002',
+      });
+
+    } else {
+      // Other days - Various scenarios
+      const drivers = ['EMP-004', 'EMP-005', 'EMP-006', 'EMP-007', 'EMP-008'];
+      const driverNames = ['Rahul Kumar', 'Ali Ahmed', 'David Wilson', 'Fatima Al-Zahra', 'James Brown'];
+      
+      // Randomly select 2-3 drivers for each day
+      const numDrivers = Math.floor(Math.random() * 2) + 2; // 2-3 drivers
+      const selectedDrivers = drivers.slice(0, numDrivers);
+      const selectedNames = driverNames.slice(0, numDrivers);
+      
+      for (const [index, driverId] of selectedDrivers.entries()) {
+        const hasTransfer = Math.random() > 0.7; // 30% chance of transfer
+        const receivingDriverIndex = Math.floor(Math.random() * selectedDrivers.length);
+        
+        trips.push({
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId,
+          driverName: selectedNames[index],
+          date: currentDate,
+          products: [
+            { productId: `PRD-${String(dayOffset * 10 + index * 2 + 1).padStart(3, '0')}`, productName: `Product ${dayOffset}-${index}-1`, category: 'bakery', quantity: Math.floor(Math.random() * 10) + 1, unitPrice: Math.floor(Math.random() * 20) + 5 },
+            { productId: `PRD-${String(dayOffset * 10 + index * 2 + 2).padStart(3, '0')}`, productName: `Product ${dayOffset}-${index}-2`, category: 'fresh', quantity: Math.floor(Math.random() * 8) + 1, unitPrice: Math.floor(Math.random() * 25) + 8 },
+          ],
+          transfer: {
+            isProductTransferred: hasTransfer,
+            transferredProducts: hasTransfer ? [
+              {
+                productId: `PRD-${String(dayOffset * 10 + index * 2 + 3).padStart(3, '0')}`,
+                productName: `Transfer Product ${dayOffset}-${index}`,
+                category: 'bakery',
+                quantity: Math.floor(Math.random() * 5) + 1,
+                unitPrice: Math.floor(Math.random() * 15) + 5,
+                receivingDriverId: selectedDrivers[receivingDriverIndex],
+                receivingDriverName: selectedNames[receivingDriverIndex],
+                transferredFromDriverId: driverId,
+                transferredFromDriverName: selectedNames[index],
+              },
+            ] : [],
+          },
+          acceptedProducts: [],
+          collectionAmount: Math.floor(Math.random() * 500) + 200,
+          purchaseAmount: Math.floor(Math.random() * 400) + 150,
+          expiry: Math.floor(Math.random() * 50) + 10,
+          discount: Math.floor(Math.random() * 30) + 5,
+          petrol: Math.floor(Math.random() * 100) + 80,
+          balance: Math.floor(Math.random() * 80) + 40,
+          totalAmount: 0,
+          netTotal: 0,
+          grandTotal: 0,
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-002',
+          updatedBy: 'EMP-002',
+        });
+      }
+    }
+  }
+
+  // Post-process all trips to calculate financial metrics
+  // Sort trips by date (oldest first) to ensure balance calculations are sequential
+  trips.sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf());
+  
+  // Track previous balances for each driver
+  const driverBalances: Record<string, number> = {};
+  
+  for (const trip of trips) {
+    // Calculate totals for this trip
+    const totals = calculateTotals(
+      trip.products,
+      trip.acceptedProducts || [],
+      trip.transfer?.transferredProducts || []
+    );
+    
+    // Get or initialize previous balance for this driver
+    let previousBalance = driverBalances[trip.driverId];
+    if (previousBalance === undefined) {
+      // First trip for this driver, assign random balance between 100-200
+      previousBalance = Math.floor(Math.random() * 101) + 100;
+    }
+    
+    // Calculate financial metrics
+    const financialMetrics = calculateFinancialMetrics(
+      trip.expiry,
+      trip.purchaseAmount,
+      trip.collectionAmount,
+      trip.discount,
+      totals.fresh.netTotal,
+      totals.bakery.netTotal,
+      previousBalance
+    );
+    
+    // Update trip with calculated fields
+    trip.expiryAfterTax = financialMetrics.expiryAfterTax;
+    trip.amountToBe = financialMetrics.amountToBe;
+    trip.salesDifference = financialMetrics.salesDifference;
+    trip.profit = financialMetrics.profit;
+    trip.balance = financialMetrics.balance;
+    
+    // Store the balance for this driver for next trip
+    driverBalances[trip.driverId] = financialMetrics.balance;
+  }
+
+  return trips;
+};
+
+const initialTrips: DailyTrip[] = generateDailyTrips();
+
 export function DailyTripProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [trips, setTrips] = React.useState<DailyTrip[]>(initialTrips);
+  const [pendingTransfers, setPendingTransfers] = React.useState<Array<{
+    id: string;
+    date: string;
+    receivingDriverId: string;
+    products: TripProduct[];
+    transferredFromDriverId: string;
+    transferredFromDriverName: string;
+  }>>([]);
+
+  // Helper to get previous balance for a driver
+  const getPreviousBalance = React.useCallback((driverId: string, currentDate: Date, allTrips: DailyTrip[]): number => {
+    // Get all trips for this driver before the current date, sorted by date descending
+    const previousTrips = allTrips
+      .filter(trip => 
+        trip.driverId === driverId && 
+        dayjs(trip.date).isBefore(dayjs(currentDate), 'day')
+      )
+      .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf());
+    
+    // If there are previous trips, return the balance from the most recent one
+    if (previousTrips.length > 0) {
+      return previousTrips[0].balance;
+    }
+    
+    // For first trip, return a random balance between 100 and 200
+    return Math.floor(Math.random() * 101) + 100; // 100 to 200
+  }, []);
 
   const getTripById = React.useCallback((id: string): DailyTrip | undefined => {
     return trips.find(trip => trip.id === id);
   }, [trips]);
 
   const addTrip = React.useCallback((tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // Check for pending transfers for this driver and date
+    const tripDate = dayjs(tripData.date).format('YYYY-MM-DD');
+    const pendingForThisDriver = pendingTransfers.filter(
+      transfer => transfer.receivingDriverId === tripData.driverId && transfer.date === tripDate
+    );
+    
+    // Add pending transfers to accepted products
+    const allAcceptedProducts = [
+      ...(tripData.acceptedProducts || []),
+      ...pendingForThisDriver.flatMap(transfer => 
+        transfer.products.map(product => ({
+          ...product,
+          transferredFromDriverId: transfer.transferredFromDriverId,
+          transferredFromDriverName: transfer.transferredFromDriverName,
+        }))
+      )
+    ];
+    
     // Calculate totals based on products, accepted products, and transferred products
     const totals = calculateTotals(
       tripData.products, 
-      tripData.acceptedProducts, 
+      allAcceptedProducts, 
       tripData.transfer.transferredProducts
+    );
+    
+    // Get previous balance for this driver
+    const previousBalance = getPreviousBalance(tripData.driverId, tripData.date, trips);
+    
+    // Calculate all financial metrics
+    const financialMetrics = calculateFinancialMetrics(
+      tripData.expiry,
+      tripData.purchaseAmount,
+      tripData.collectionAmount,
+      tripData.discount,
+      totals.fresh.netTotal,
+      totals.bakery.netTotal,
+      previousBalance
     );
     
     const newTrip: DailyTrip = {
       ...tripData,
+      acceptedProducts: allAcceptedProducts,
       id: `TRP-${String(trips.length + 1).padStart(3, '0')}`,
       totalAmount: totals.overall.total,
       netTotal: totals.overall.netTotal,
       grandTotal: totals.overall.grandTotal,
+      expiryAfterTax: financialMetrics.expiryAfterTax,
+      amountToBe: financialMetrics.amountToBe,
+      salesDifference: financialMetrics.salesDifference,
+      profit: financialMetrics.profit,
+      balance: financialMetrics.balance,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     setTrips(prev => {
       const updatedTrips = [...prev, newTrip];
+      
+      // Remove applied pending transfers
+      if (pendingForThisDriver.length > 0) {
+        setPendingTransfers(prev => 
+          prev.filter(transfer => 
+            !(transfer.receivingDriverId === tripData.driverId && transfer.date === tripDate)
+          )
+        );
+      }
       
       // Handle product transfers - add accepted products to receiving drivers
       if (tripData.transfer.isProductTransferred && tripData.transfer.transferredProducts.length > 0) {
@@ -311,20 +856,58 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
               updatedDriverTrip.transfer.transferredProducts
             );
             
+            // Get previous balance for the receiving driver
+            const driverPreviousBalance = getPreviousBalance(driverId, updatedDriverTrip.date, updatedTrips);
+            
+            // Recalculate financial metrics for the receiving driver
+            const driverFinancialMetrics = calculateFinancialMetrics(
+              updatedDriverTrip.expiry,
+              updatedDriverTrip.purchaseAmount,
+              updatedDriverTrip.collectionAmount,
+              updatedDriverTrip.discount,
+              driverTotals.fresh.netTotal,
+              driverTotals.bakery.netTotal,
+              driverPreviousBalance
+            );
+            
             updatedDriverTrip.totalAmount = driverTotals.overall.total;
             updatedDriverTrip.netTotal = driverTotals.overall.netTotal;
             updatedDriverTrip.grandTotal = driverTotals.overall.grandTotal;
+            updatedDriverTrip.expiryAfterTax = driverFinancialMetrics.expiryAfterTax;
+            updatedDriverTrip.amountToBe = driverFinancialMetrics.amountToBe;
+            updatedDriverTrip.salesDifference = driverFinancialMetrics.salesDifference;
+            updatedDriverTrip.profit = driverFinancialMetrics.profit;
+            updatedDriverTrip.balance = driverFinancialMetrics.balance;
             updatedDriverTrip.updatedAt = new Date();
             
             const driverTripIndex = updatedTrips.findIndex(trip => trip.id === driverTrip.id);
             updatedTrips[driverTripIndex] = updatedDriverTrip;
+          } else {
+            // Store as pending transfer if receiving driver doesn't have a trip yet
+            const enrichedAcceptedProducts = acceptedProducts.map(product => ({
+              ...product,
+              transferredFromDriverId: newTrip.driverId,
+              transferredFromDriverName: newTrip.driverName,
+            }));
+            
+            setPendingTransfers(prev => [
+              ...prev,
+              {
+                id: `PENDING-${Date.now()}-${Math.random()}`,
+                date: tripDate,
+                receivingDriverId: driverId,
+                products: enrichedAcceptedProducts,
+                transferredFromDriverId: newTrip.driverId,
+                transferredFromDriverName: newTrip.driverName,
+              }
+            ]);
           }
         }
       }
 
       return updatedTrips;
     });
-  }, [trips.length]);
+  }, [trips.length, pendingTransfers, getPreviousBalance]);
 
   const updateTrip = React.useCallback((id: string, updates: Partial<DailyTrip>) => {
     setTrips(prev => 
@@ -342,6 +925,52 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             updatedTrip.totalAmount = totals.overall.total;
             updatedTrip.netTotal = totals.overall.netTotal;
             updatedTrip.grandTotal = totals.overall.grandTotal;
+            
+            // Get previous balance for this driver
+            const previousBalance = getPreviousBalance(updatedTrip.driverId, updatedTrip.date, prev);
+            
+            // Recalculate financial metrics
+            const financialMetrics = calculateFinancialMetrics(
+              updatedTrip.expiry,
+              updatedTrip.purchaseAmount,
+              updatedTrip.collectionAmount,
+              updatedTrip.discount,
+              totals.fresh.netTotal,
+              totals.bakery.netTotal,
+              previousBalance
+            );
+            
+            updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
+            updatedTrip.amountToBe = financialMetrics.amountToBe;
+            updatedTrip.salesDifference = financialMetrics.salesDifference;
+            updatedTrip.profit = financialMetrics.profit;
+            updatedTrip.balance = financialMetrics.balance;
+          } else if (updates.collectionAmount !== undefined || updates.purchaseAmount !== undefined || 
+                     updates.expiry !== undefined || updates.discount !== undefined) {
+            // Recalculate financial metrics if any financial field changed
+            const totals = calculateTotals(
+              updatedTrip.products,
+              updatedTrip.acceptedProducts,
+              updatedTrip.transfer.transferredProducts
+            );
+            
+            const previousBalance = getPreviousBalance(updatedTrip.driverId, updatedTrip.date, prev);
+            
+            const financialMetrics = calculateFinancialMetrics(
+              updatedTrip.expiry,
+              updatedTrip.purchaseAmount,
+              updatedTrip.collectionAmount,
+              updatedTrip.discount,
+              totals.fresh.netTotal,
+              totals.bakery.netTotal,
+              previousBalance
+            );
+            
+            updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
+            updatedTrip.amountToBe = financialMetrics.amountToBe;
+            updatedTrip.salesDifference = financialMetrics.salesDifference;
+            updatedTrip.profit = financialMetrics.profit;
+            updatedTrip.balance = financialMetrics.balance;
           }
           
           return updatedTrip;
@@ -349,7 +978,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
         return trip;
       })
     );
-  }, []);
+  }, [getPreviousBalance]);
 
   const deleteTrip = React.useCallback((id: string) => {
     setTrips(prev => prev.filter(trip => trip.id !== id));
