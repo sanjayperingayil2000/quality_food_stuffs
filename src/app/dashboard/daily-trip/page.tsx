@@ -71,27 +71,65 @@ const tripSchema = zod.object({
   purchaseAmount: zod.coerce.number().min(0, 'Purchase amount must be non-negative'),
   expiry: zod.coerce.number().min(0, 'Expiry amount must be non-negative'),
   discount: zod.coerce.number().min(0, 'Discount amount must be non-negative'),
+  petrol: zod.coerce.number().min(0, 'Petrol amount must be non-negative'),
+  balance: zod.coerce.number().min(0, 'Balance amount must be non-negative'),
 });
 
 type TripFormData = zod.infer<typeof tripSchema>;
 
 // Calculation functions
-const calculateTotals = (products: TripProduct[]) => {
-  const freshProducts = products.filter(p => p.category === 'fresh');
-  const bakeryProducts = products.filter(p => p.category === 'bakery');
+const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[] = [], transferredProducts: TripProduct[] = []) => {
+  // Combine regular products and accepted products
+  const allProducts = [...products, ...acceptedProducts];
+  
+  // Calculate totals for regular products (including accepted)
+  const freshProducts = allProducts.filter(p => p.category === 'fresh');
+  const bakeryProducts = allProducts.filter(p => p.category === 'bakery');
+  
+  // Calculate accepted products totals by category
+  const acceptedFreshProducts = acceptedProducts.filter(p => p.category === 'fresh');
+  const acceptedBakeryProducts = acceptedProducts.filter(p => p.category === 'bakery');
 
   const freshTotal = freshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const bakeryTotal = bakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  
+  const acceptedFreshTotal = acceptedFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  const acceptedBakeryTotal = acceptedBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
 
-  const freshNetTotal = freshTotal * (1 - 0.115); // 11.5% reduction
-  const bakeryNetTotal = bakeryTotal * (1 - 0.16); // 16% reduction
+  // Calculate transferred products totals (to subtract from sender)
+  const transferredFreshProducts = transferredProducts.filter(p => p.category === 'fresh');
+  const transferredBakeryProducts = transferredProducts.filter(p => p.category === 'bakery');
+  
+  const transferredFreshTotal = transferredFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  const transferredBakeryTotal = transferredBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+
+  // Calculate net totals after subtracting transferred products
+  const freshNetTotal = (freshTotal - transferredFreshTotal) * (1 - 0.115); // 11.5% reduction
+  const bakeryNetTotal = (bakeryTotal - transferredBakeryTotal) * (1 - 0.16); // 16% reduction
 
   const freshGrandTotal = freshNetTotal * 1.05; // 5% addition
   const bakeryGrandTotal = bakeryNetTotal * 1.05; // 5% addition
 
   return {
-    fresh: { total: freshTotal, netTotal: freshNetTotal, grandTotal: freshGrandTotal },
-    bakery: { total: bakeryTotal, netTotal: bakeryNetTotal, grandTotal: bakeryGrandTotal },
+    fresh: { 
+      total: freshTotal, 
+      accepted: acceptedFreshTotal,
+      transferred: transferredFreshTotal,
+      netTotal: freshNetTotal, 
+      grandTotal: freshGrandTotal 
+    },
+    bakery: { 
+      total: bakeryTotal, 
+      accepted: acceptedBakeryTotal,
+      transferred: transferredBakeryTotal,
+      netTotal: bakeryNetTotal, 
+      grandTotal: bakeryGrandTotal 
+    },
+    overall: {
+      total: freshTotal + bakeryTotal - transferredFreshTotal - transferredBakeryTotal,
+      netTotal: freshNetTotal + bakeryNetTotal,
+      grandTotal: freshGrandTotal + bakeryGrandTotal
+    }
   };
 };
 
@@ -110,8 +148,8 @@ export default function Page(): React.JSX.Element {
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
   const [filteredTrips, setFilteredTrips] = React.useState<DailyTrip[]>([]);
   const [driverFilter, setDriverFilter] = React.useState<string>('');
-  const [dateFrom, setDateFrom] = React.useState<string>('');
-  const [dateTo, setDateTo] = React.useState<string>('');
+  const [dateFrom, setDateFrom] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
+  const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
   
@@ -152,6 +190,8 @@ export default function Page(): React.JSX.Element {
       purchaseAmount: 0,
       expiry: 0,
       discount: 0,
+      petrol: 0,
+      balance: 0,
     },
     mode: 'onChange',
   });
@@ -212,6 +252,8 @@ export default function Page(): React.JSX.Element {
       purchaseAmount: 0,
       expiry: 0,
       discount: 0,
+      petrol: 0,
+      balance: 0,
     });
     setOpen(true);
   };
@@ -231,6 +273,8 @@ export default function Page(): React.JSX.Element {
       purchaseAmount: trip.purchaseAmount,
       expiry: trip.expiry,
       discount: trip.discount,
+      petrol: trip.petrol,
+      balance: trip.balance,
     });
     setOpen(true);
   };
@@ -362,7 +406,7 @@ export default function Page(): React.JSX.Element {
       transferredProducts: filteredTransferredProducts,
     };
 
-    const tripData = {
+    const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
       driverName: driver?.name || '',
       date: data.date,
@@ -373,9 +417,15 @@ export default function Page(): React.JSX.Element {
       purchaseAmount: data.purchaseAmount,
       expiry: data.expiry,
       discount: data.discount,
+      petrol: data.petrol,
+      balance: data.balance,
       totalAmount: 0, // Will be calculated in context
       netTotal: 0, // Will be calculated in context
       grandTotal: 0, // Will be calculated in context
+      expiryAfterTax: 0, // Will be calculated in context
+      amountToBe: 0, // Will be calculated in context
+      salesDifference: 0, // Will be calculated in context
+      profit: 0, // Will be calculated in context
     };
 
     if (editingTrip) {
@@ -449,8 +499,13 @@ export default function Page(): React.JSX.Element {
         </Stack>
 
       <Stack spacing={2}>
-        {filteredTrips.map((trip) => (
-          <Card key={trip.id} sx={{ p: 2 }}>
+        {filteredTrips.map((trip, index) => (
+          <Card key={trip.id} sx={{ 
+            p: 2, 
+            bgcolor: index % 2 === 0 ? 'blue.50' : 'white',
+            border: '1px solid',
+            borderColor: 'blue.100'
+          }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
               <Typography variant="h6">
                 {trip.driverName} - {dayjs(trip.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST
@@ -563,6 +618,52 @@ export default function Page(): React.JSX.Element {
                     <Typography variant="body2" color="text.secondary">Discount Amount</Typography>
                     <Typography variant="h6" color="warning.main">AED {trip.discount.toFixed(2)}</Typography>
                   </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Typography variant="body2" color="text.secondary">Petrol</Typography>
+                    <Typography variant="h6" color="error.main">AED {trip.petrol.toFixed(2)}</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                    <Typography variant="body2" color="text.secondary">Balance</Typography>
+                    <Typography variant="h6" color="info.main">AED {trip.balance.toFixed(2)}</Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Calculated Financial Metrics */}
+              <Paper sx={{ p: 2, bgcolor: 'primary.50', border: 2, borderColor: 'primary.main' }}>
+                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Calculated Financial Metrics</Typography>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
+                    <Typography variant="h6" color="warning.dark">AED {trip.expiryAfterTax.toFixed(2)}</Typography>
+                    <Typography variant="caption" color="text.secondary">((Expiry + 5%) - 13%)</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <Typography variant="body2" color="text.secondary">Amount To Be</Typography>
+                    <Typography variant="h6" color="info.dark">AED {trip.amountToBe.toFixed(2)}</Typography>
+                    <Typography variant="caption" color="text.secondary">(Purchase - Expiry After Tax)</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
+                    <Typography variant="h6" color={trip.salesDifference >= 0 ? 'success.dark' : 'error.dark'}>
+                      AED {trip.salesDifference.toFixed(2)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">(Collection - Purchase)</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <Typography variant="body2" color="text.secondary">Profit</Typography>
+                    <Typography variant="h6" color={trip.profit >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
+                      AED {trip.profit.toFixed(2)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">(Calculated from Fresh & Bakery)</Typography>
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                    <Typography variant="body2" color="text.secondary">Calculated Balance</Typography>
+                    <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
+                      AED {trip.balance.toFixed(2)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">(Prev Balance + Profit - Sales Diff)</Typography>
+                  </Grid>
                 </Grid>
               </Paper>
 
@@ -570,18 +671,42 @@ export default function Page(): React.JSX.Element {
                 <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>Product Calculations</Typography>
                   {(() => {
-                    const totals = calculateTotals(trip.products);
+                    const totals = calculateTotals(
+                      trip.products, 
+                      trip.acceptedProducts || [], 
+                      trip.transfer?.transferredProducts || []
+                    );
                     return (
                       <Grid container spacing={2}>
                         <Grid size={{ xs: 12, md: 6 }}>
                           <Typography variant="subtitle2" color="success.main" sx={{ mb: 1 }}>Fresh Items</Typography>
                           <Typography variant="body2">Total: AED {totals.fresh.total.toFixed(2)}</Typography>
+                          {totals.fresh.accepted > 0 && (
+                            <Typography variant="body2" color="success.main">
+                              Accepted: +AED {totals.fresh.accepted.toFixed(2)}
+                            </Typography>
+                          )}
+                          {totals.fresh.transferred > 0 && (
+                            <Typography variant="body2" color="warning.main">
+                              Transferred: -AED {totals.fresh.transferred.toFixed(2)}
+                            </Typography>
+                          )}
                           <Typography variant="body2">Net Total: AED {totals.fresh.netTotal.toFixed(2)}</Typography>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.fresh.grandTotal.toFixed(2)}</Typography>
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                           <Typography variant="subtitle2" color="primary.main" sx={{ mb: 1 }}>Bakery Items</Typography>
                           <Typography variant="body2">Total: AED {totals.bakery.total.toFixed(2)}</Typography>
+                          {totals.bakery.accepted > 0 && (
+                            <Typography variant="body2" color="success.main">
+                              Accepted: +AED {totals.bakery.accepted.toFixed(2)}
+                            </Typography>
+                          )}
+                          {totals.bakery.transferred > 0 && (
+                            <Typography variant="body2" color="warning.main">
+                              Transferred: -AED {totals.bakery.transferred.toFixed(2)}
+                            </Typography>
+                          )}
                           <Typography variant="body2">Net Total: AED {totals.bakery.netTotal.toFixed(2)}</Typography>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.bakery.grandTotal.toFixed(2)}</Typography>
                         </Grid>
@@ -811,11 +936,11 @@ export default function Page(): React.JSX.Element {
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                    Bakery Items ({bakeryProducts.length})
+                    Fresh Items ({freshProducts.length})
                   </Typography>
                   <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
                     <Stack spacing={2}>
-                      {bakeryProducts.map((product) => (
+                      {freshProducts.map((product) => (
                         <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" color="text.secondary">
@@ -863,11 +988,11 @@ export default function Page(): React.JSX.Element {
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                    Fresh Items ({freshProducts.length})
+                    Bakery Items ({bakeryProducts.length})
                   </Typography>
                   <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
                     <Stack spacing={2}>
-                      {freshProducts.map((product) => (
+                      {bakeryProducts.map((product) => (
                         <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" color="text.secondary">
@@ -1228,6 +1353,45 @@ export default function Page(): React.JSX.Element {
                     )}
                   />
                 </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Controller
+                    control={control}
+                    name="petrol"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Petrol (AED)"
+                        type="number"
+                        fullWidth
+                        error={Boolean(errors.petrol)}
+                        helperText={errors.petrol?.message}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        value={field.value || ''}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Controller
+                    control={control}
+                    name="balance"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Balance (AED)"
+                        type="number"
+                        fullWidth
+                        disabled
+                        error={Boolean(errors.balance)}
+                        helperText={errors.balance?.message || 'Read-only field'}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        value={field.value || ''}
+                      />
+                    )}
+                  />
+                </Grid>
               </Grid>
 
               {/* Display Calculations */}
@@ -1235,20 +1399,50 @@ export default function Page(): React.JSX.Element {
                 <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                   <Typography variant="h6" sx={{ mb: 2 }}>Calculations</Typography>
                   {(() => {
-                    const totals = calculateTotals(watchedProducts);
+                    const totals = calculateTotals(
+                      watchedProducts, 
+                      [], 
+                      watchedTransferredProducts || []
+                    );
                     return (
                       <Grid container spacing={2}>
                         <Grid size={{ xs: 12, md: 6 }}>
                           <Typography variant="subtitle2" color="success.main" sx={{ mb: 1 }}>Fresh Items</Typography>
                           <Typography variant="body2">Total: AED {totals.fresh.total.toFixed(2)}</Typography>
+                          {totals.fresh.accepted > 0 && (
+                            <Typography variant="body2" color="success.main">
+                              Accepted: +AED {totals.fresh.accepted.toFixed(2)}
+                            </Typography>
+                          )}
+                          {totals.fresh.transferred > 0 && (
+                            <Typography variant="body2" color="warning.main">
+                              Transferred: -AED {totals.fresh.transferred.toFixed(2)}
+                            </Typography>
+                          )}
                           <Typography variant="body2">Net Total: AED {totals.fresh.netTotal.toFixed(2)}</Typography>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.fresh.grandTotal.toFixed(2)}</Typography>
                         </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                           <Typography variant="subtitle2" color="primary.main" sx={{ mb: 1 }}>Bakery Items</Typography>
                           <Typography variant="body2">Total: AED {totals.bakery.total.toFixed(2)}</Typography>
+                          {totals.bakery.accepted > 0 && (
+                            <Typography variant="body2" color="success.main">
+                              Accepted: +AED {totals.bakery.accepted.toFixed(2)}
+                            </Typography>
+                          )}
+                          {totals.bakery.transferred > 0 && (
+                            <Typography variant="body2" color="warning.main">
+                              Transferred: -AED {totals.bakery.transferred.toFixed(2)}
+                            </Typography>
+                          )}
                           <Typography variant="body2">Net Total: AED {totals.bakery.netTotal.toFixed(2)}</Typography>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.bakery.grandTotal.toFixed(2)}</Typography>
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                          <Typography variant="subtitle2" color="text.primary" sx={{ mb: 1, borderTop: 1, borderColor: 'divider', pt: 1 }}>Overall Totals</Typography>
+                          <Typography variant="body2">Total: AED {totals.overall.total.toFixed(2)}</Typography>
+                          <Typography variant="body2">Net Total: AED {totals.overall.netTotal.toFixed(2)}</Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>Grand Total: AED {totals.overall.grandTotal.toFixed(2)}</Typography>
                         </Grid>
                       </Grid>
                     );

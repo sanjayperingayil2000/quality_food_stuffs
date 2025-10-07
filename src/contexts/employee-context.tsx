@@ -9,7 +9,7 @@ import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export type EmployeeDesignation = 'driver' | 'manager' | 'ceo';
+export type EmployeeDesignation = 'driver' | 'staff' | 'ceo';
 
 export interface Employee {
   id: string;
@@ -20,7 +20,7 @@ export interface Employee {
   address: string;
   routeName?: string; // For drivers
   location?: string; // For drivers
-  salary?: number; // For managers and CEO
+  salary?: number; // For staff and CEO
   hireDate: Date;
   isActive: boolean;
   createdAt: Date;
@@ -32,7 +32,7 @@ export interface Employee {
 interface EmployeeContextType {
   employees: Employee[];
   drivers: Employee[];
-  managers: Employee[];
+  staff: Employee[];
   ceo: Employee[];
   getEmployeeById: (id: string) => Employee | undefined;
   addEmployee: (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -59,13 +59,13 @@ const initialEmployees: Employee[] = [
     updatedAt: dayjs().subtract(1, 'month').toDate(),
   },
   
-  // Managers
+  // Staff
   {
     id: 'EMP-002',
     name: 'Sarah Johnson',
-    designation: 'manager',
+    designation: 'staff',
     phoneNumber: '+971 50 123 4568',
-    email: 'sarah.manager@company.com',
+    email: 'sarah.staff@company.com',
     address: 'Jumeirah, Dubai, UAE',
     salary: 25_000,
     hireDate: dayjs().subtract(18, 'month').toDate(),
@@ -78,9 +78,9 @@ const initialEmployees: Employee[] = [
   {
     id: 'EMP-003',
     name: 'Mohammed Hassan',
-    designation: 'manager',
+    designation: 'staff',
     phoneNumber: '+971 50 123 4569',
-    email: 'mohammed.manager@company.com',
+    email: 'mohammed.staff@company.com',
     address: 'Downtown Dubai, UAE',
     salary: 25_000,
     hireDate: dayjs().subtract(15, 'month').toDate(),
@@ -182,8 +182,8 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     [employees]
   );
 
-  const managers = React.useMemo(() => 
-    employees.filter(emp => emp.designation === 'manager' && emp.isActive), 
+  const staff = React.useMemo(() => 
+    employees.filter(emp => emp.designation === 'staff' && emp.isActive), 
     [employees]
   );
 
@@ -223,7 +223,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
   const value: EmployeeContextType = {
     employees,
     drivers,
-    managers,
+    staff,
     ceo,
     getEmployeeById,
     addEmployee,

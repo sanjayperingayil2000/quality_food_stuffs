@@ -88,8 +88,8 @@ export default function Page(): React.JSX.Element {
 
     if (!formData.phoneNumber.trim()) {
       errors.phoneNumber = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(formData.phoneNumber)) {
-      errors.phoneNumber = 'Phone number must be 10 digits';
+    } else if (!/^\d{9}$/.test(formData.phoneNumber)) {
+      errors.phoneNumber = 'Phone number must be 9 digits';
     }
 
     if (!formData.location.trim()) {
