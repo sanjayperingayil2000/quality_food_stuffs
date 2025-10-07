@@ -196,412 +196,450 @@ const generateDailyTrips = (): DailyTrip[] => {
     // eslint-disable-next-line unicorn/prefer-switch
     if (dayOffset === 0) {
       // Today - Multiple transfers to Rahul
-      // eslint-disable-next-line unicorn/prefer-single-call
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-006',
-        driverName: 'David Wilson',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-019', productName: 'Sourdough Bread', category: 'bakery', quantity: 5, unitPrice: 12.5 },
-          { productId: 'PRD-020', productName: 'Blueberry Muffin', category: 'bakery', quantity: 8, unitPrice: 8 },
-          { productId: 'PRD-001', productName: 'Fresh Apples', category: 'fresh', quantity: 10, unitPrice: 15 },
-        ],
-        transfer: {
-          isProductTransferred: true,
-          transferredProducts: [
-            {
-              productId: 'PRD-022',
-              productName: 'Whole Wheat Loaf',
-              category: 'bakery',
-              quantity: 3,
+      trips.push(
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-006',
+          driverName: 'David Wilson',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-019', productName: 'Sourdough Bread', category: 'bakery', quantity: 5, unitPrice: 12.5 },
+            { productId: 'PRD-020', productName: 'Blueberry Muffin', category: 'bakery', quantity: 8, unitPrice: 8 },
+            { productId: 'PRD-001', productName: 'Fresh Apples', category: 'fresh', quantity: 10, unitPrice: 15 },
+          ],
+          transfer: {
+            isProductTransferred: true,
+            transferredProducts: [
+              {
+                productId: 'PRD-022',
+                productName: 'Whole Wheat Loaf',
+                category: 'bakery',
+                quantity: 3,
+                unitPrice: 10.75,
+                receivingDriverId: 'EMP-004',
+                receivingDriverName: 'Rahul Kumar',
+                transferredFromDriverId: 'EMP-006',
+                transferredFromDriverName: 'David Wilson',
+              },
+            ],
+          },
+          acceptedProducts: [],
+          collectionAmount: 650.5,
+          purchaseAmount: 580.25,
+          expiry: 20.5,
+          discount: 35.75,
+          petrol: 150,
+          balance: 100,
+          totalAmount: 650.5,
+          netTotal: 580.25,
+          grandTotal: 609.26,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-002',
+          updatedBy: 'EMP-002',
+        },
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-005',
+          driverName: 'Ali Ahmed',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-006', productName: 'Mango', category: 'fresh', quantity: 3, unitPrice: 22.5 },
+            { productId: 'PRD-007', productName: 'Pineapple', category: 'fresh', quantity: 3, unitPrice: 16 },
+          ],
+          transfer: {
+            isProductTransferred: true,
+            transferredProducts: [
+              {
+                productId: 'PRD-001',
+                productName: 'Fresh Apples',
+                category: 'fresh',
+                quantity: 5,
+                unitPrice: 15,
+                receivingDriverId: 'EMP-004',
+                receivingDriverName: 'Rahul Kumar',
+                transferredFromDriverId: 'EMP-005',
+                transferredFromDriverName: 'Ali Ahmed',
+              },
+            ],
+          },
+          acceptedProducts: [],
+          collectionAmount: 280.5,
+          purchaseAmount: 250.25,
+          expiry: 12.5,
+          discount: 18.75,
+          petrol: 120,
+          balance: 80,
+          totalAmount: 280.5,
+          netTotal: 250.25,
+          grandTotal: 262.76,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-002',
+          updatedBy: 'EMP-002',
+        },
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-004',
+          driverName: 'Rahul Kumar',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-024', productName: 'Cinnamon Roll', category: 'bakery', quantity: 6, unitPrice: 7.5 },
+            { productId: 'PRD-004', productName: 'Strawberries', category: 'fresh', quantity: 4, unitPrice: 18.75 },
+          ],
+          transfer: {
+            isProductTransferred: false,
+            transferredProducts: [],
+          },
+          acceptedProducts: [
+            { 
+              productId: 'PRD-022', 
+              productName: 'Whole Wheat Loaf', 
+              category: 'bakery', 
+              quantity: 3, 
               unitPrice: 10.75,
-              receivingDriverId: 'EMP-004',
-              receivingDriverName: 'Rahul Kumar',
               transferredFromDriverId: 'EMP-006',
               transferredFromDriverName: 'David Wilson',
             },
-          ],
-        },
-        acceptedProducts: [],
-        collectionAmount: 650.5,
-        purchaseAmount: 580.25,
-        expiry: 20.5,
-        discount: 35.75,
-        petrol: 150,
-        balance: 100,
-        totalAmount: 650.5,
-        netTotal: 580.25,
-        grandTotal: 609.26,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-002',
-        updatedBy: 'EMP-002',
-      });
-
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-005',
-        driverName: 'Ali Ahmed',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-006', productName: 'Mango', category: 'fresh', quantity: 3, unitPrice: 22.5 },
-          { productId: 'PRD-007', productName: 'Pineapple', category: 'fresh', quantity: 3, unitPrice: 16 },
-        ],
-        transfer: {
-          isProductTransferred: true,
-          transferredProducts: [
-            {
-              productId: 'PRD-001',
-              productName: 'Fresh Apples',
-              category: 'fresh',
-              quantity: 5,
+            { 
+              productId: 'PRD-001', 
+              productName: 'Fresh Apples', 
+              category: 'fresh', 
+              quantity: 5, 
               unitPrice: 15,
-              receivingDriverId: 'EMP-004',
-              receivingDriverName: 'Rahul Kumar',
               transferredFromDriverId: 'EMP-005',
               transferredFromDriverName: 'Ali Ahmed',
             },
           ],
-        },
-        acceptedProducts: [],
-        collectionAmount: 280.5,
-        purchaseAmount: 250.25,
-        expiry: 12.5,
-        discount: 18.75,
-        petrol: 120,
-        balance: 80,
-        totalAmount: 280.5,
-        netTotal: 250.25,
-        grandTotal: 262.76,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-002',
-        updatedBy: 'EMP-002',
-      });
-
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-004',
-        driverName: 'Rahul Kumar',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-024', productName: 'Cinnamon Roll', category: 'bakery', quantity: 6, unitPrice: 7.5 },
-          { productId: 'PRD-004', productName: 'Strawberries', category: 'fresh', quantity: 4, unitPrice: 18.75 },
-        ],
-        transfer: {
-          isProductTransferred: false,
-          transferredProducts: [],
-        },
-        acceptedProducts: [
-          { 
-            productId: 'PRD-022', 
-            productName: 'Whole Wheat Loaf', 
-            category: 'bakery', 
-            quantity: 3, 
-            unitPrice: 10.75,
-            transferredFromDriverId: 'EMP-006',
-            transferredFromDriverName: 'David Wilson',
-          },
-          { 
-            productId: 'PRD-001', 
-            productName: 'Fresh Apples', 
-            category: 'fresh', 
-            quantity: 5, 
-            unitPrice: 15,
-            transferredFromDriverId: 'EMP-005',
-            transferredFromDriverName: 'Ali Ahmed',
-          },
-        ],
-        collectionAmount: 320.75,
-        purchaseAmount: 290.5,
-        expiry: 12.25,
-        discount: 18.5,
-        petrol: 130,
-        balance: 90,
-        totalAmount: 320.75,
-        netTotal: 290.5,
-        grandTotal: 305.03,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-003',
-        updatedBy: 'EMP-003',
-      });
+          collectionAmount: 320.75,
+          purchaseAmount: 290.5,
+          expiry: 12.25,
+          discount: 18.5,
+          petrol: 130,
+          balance: 90,
+          totalAmount: 320.75,
+          netTotal: 290.5,
+          grandTotal: 305.03,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-003',
+          updatedBy: 'EMP-003',
+        }
+      );
 
     } else if (dayOffset === 1) {
       // Yesterday - Fatima transfers to James, James accepts
-      // eslint-disable-next-line unicorn/prefer-single-call
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-007',
-        driverName: 'Fatima Al-Zahra',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-011', productName: 'Bread Loaf', category: 'bakery', quantity: 8, unitPrice: 6.5 },
-          { productId: 'PRD-012', productName: 'Fresh Oranges', category: 'fresh', quantity: 12, unitPrice: 9.25 },
-        ],
-        transfer: {
-          isProductTransferred: true,
-          transferredProducts: [
-            {
-              productId: 'PRD-025',
-              productName: 'Bagel',
-              category: 'bakery',
-              quantity: 10,
+      trips.push(
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-007',
+          driverName: 'Fatima Al-Zahra',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-011', productName: 'Bread Loaf', category: 'bakery', quantity: 8, unitPrice: 6.5 },
+            { productId: 'PRD-012', productName: 'Fresh Oranges', category: 'fresh', quantity: 12, unitPrice: 9.25 },
+          ],
+          transfer: {
+            isProductTransferred: true,
+            transferredProducts: [
+              {
+                productId: 'PRD-025',
+                productName: 'Bagel',
+                category: 'bakery',
+                quantity: 10,
+                unitPrice: 4,
+                receivingDriverId: 'EMP-008',
+                receivingDriverName: 'James Brown',
+                transferredFromDriverId: 'EMP-007',
+                transferredFromDriverName: 'Fatima Al-Zahra',
+              },
+            ],
+          },
+          acceptedProducts: [],
+          collectionAmount: 380.5,
+          purchaseAmount: 340.25,
+          expiry: 15.25,
+          discount: 25.5,
+          petrol: 140,
+          balance: 95,
+          totalAmount: 380.5,
+          netTotal: 340.25,
+          grandTotal: 357.26,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-003',
+          updatedBy: 'EMP-003',
+        },
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-008',
+          driverName: 'James Brown',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-009', productName: 'Lettuce', category: 'fresh', quantity: 6, unitPrice: 6.5 },
+            { productId: 'PRD-010', productName: 'Tomatoes', category: 'fresh', quantity: 8, unitPrice: 9.75 },
+          ],
+          transfer: {
+            isProductTransferred: false,
+            transferredProducts: [],
+          },
+          acceptedProducts: [
+            { 
+              productId: 'PRD-025', 
+              productName: 'Bagel', 
+              category: 'bakery', 
+              quantity: 10, 
               unitPrice: 4,
-              receivingDriverId: 'EMP-008',
-              receivingDriverName: 'James Brown',
               transferredFromDriverId: 'EMP-007',
               transferredFromDriverName: 'Fatima Al-Zahra',
             },
           ],
-        },
-        acceptedProducts: [],
-        collectionAmount: 380.5,
-        purchaseAmount: 340.25,
-        expiry: 15.25,
-        discount: 25.5,
-        petrol: 140,
-        balance: 95,
-        totalAmount: 380.5,
-        netTotal: 340.25,
-        grandTotal: 357.26,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-003',
-        updatedBy: 'EMP-003',
-      });
-
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-008',
-        driverName: 'James Brown',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-009', productName: 'Lettuce', category: 'fresh', quantity: 6, unitPrice: 6.5 },
-          { productId: 'PRD-010', productName: 'Tomatoes', category: 'fresh', quantity: 8, unitPrice: 9.75 },
-        ],
-        transfer: {
-          isProductTransferred: false,
-          transferredProducts: [],
-        },
-        acceptedProducts: [
-          { 
-            productId: 'PRD-025', 
-            productName: 'Bagel', 
-            category: 'bakery', 
-            quantity: 10, 
-            unitPrice: 4,
-            transferredFromDriverId: 'EMP-007',
-            transferredFromDriverName: 'Fatima Al-Zahra',
-          },
-        ],
-        collectionAmount: 290.5,
-        purchaseAmount: 260.25,
-        expiry: 10.25,
-        discount: 20.5,
-        petrol: 125,
-        balance: 85,
-        totalAmount: 290.5,
-        netTotal: 260.25,
-        grandTotal: 273.26,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-002',
-        updatedBy: 'EMP-002',
-      });
+          collectionAmount: 290.5,
+          purchaseAmount: 260.25,
+          expiry: 10.25,
+          discount: 20.5,
+          petrol: 125,
+          balance: 85,
+          totalAmount: 290.5,
+          netTotal: 260.25,
+          grandTotal: 273.26,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-002',
+          updatedBy: 'EMP-002',
+        }
+      );
 
     } else if (dayOffset === 2) {
       // 2 days ago - Multiple drivers, no transfers
-      // eslint-disable-next-line unicorn/prefer-single-call
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-006',
-        driverName: 'David Wilson',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-013', productName: 'Bell Peppers', category: 'fresh', quantity: 5, unitPrice: 11.5 },
-          { productId: 'PRD-014', productName: 'Spinach', category: 'fresh', quantity: 4, unitPrice: 8.25 },
-        ],
-        transfer: {
-          isProductTransferred: false,
-          transferredProducts: [],
+      trips.push(
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-006',
+          driverName: 'David Wilson',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-013', productName: 'Bell Peppers', category: 'fresh', quantity: 5, unitPrice: 11.5 },
+            { productId: 'PRD-014', productName: 'Spinach', category: 'fresh', quantity: 4, unitPrice: 8.25 },
+          ],
+          transfer: {
+            isProductTransferred: false,
+            transferredProducts: [],
+          },
+          acceptedProducts: [],
+          collectionAmount: 280.5,
+          purchaseAmount: 250.25,
+          expiry: 12.5,
+          discount: 18.75,
+          petrol: 118,
+          balance: 78,
+          totalAmount: 280.5,
+          netTotal: 250.25,
+          grandTotal: 262.76,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-002',
+          updatedBy: 'EMP-002',
         },
-        acceptedProducts: [],
-        collectionAmount: 280.5,
-        purchaseAmount: 250.25,
-        expiry: 12.5,
-        discount: 18.75,
-        petrol: 118,
-        balance: 78,
-        totalAmount: 280.5,
-        netTotal: 250.25,
-        grandTotal: 262.76,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-002',
-        updatedBy: 'EMP-002',
-      });
-
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-004',
-        driverName: 'Rahul Kumar',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-015', productName: 'Avocado', category: 'fresh', quantity: 3, unitPrice: 19.5 },
-          { productId: 'PRD-016', productName: 'Lemons', category: 'fresh', quantity: 4, unitPrice: 6.75 },
-        ],
-        transfer: {
-          isProductTransferred: false,
-          transferredProducts: [],
-        },
-        acceptedProducts: [],
-        collectionAmount: 320.25,
-        purchaseAmount: 290.5,
-        expiry: 15.75,
-        discount: 14.5,
-        petrol: 135,
-        balance: 92,
-        totalAmount: 320.25,
-        netTotal: 290.5,
-        grandTotal: 305.03,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-003',
-        updatedBy: 'EMP-003',
-      });
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-004',
+          driverName: 'Rahul Kumar',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-015', productName: 'Avocado', category: 'fresh', quantity: 3, unitPrice: 19.5 },
+            { productId: 'PRD-016', productName: 'Lemons', category: 'fresh', quantity: 4, unitPrice: 6.75 },
+          ],
+          transfer: {
+            isProductTransferred: false,
+            transferredProducts: [],
+          },
+          acceptedProducts: [],
+          collectionAmount: 320.25,
+          purchaseAmount: 290.5,
+          expiry: 15.75,
+          discount: 14.5,
+          petrol: 135,
+          balance: 92,
+          totalAmount: 320.25,
+          netTotal: 290.5,
+          grandTotal: 305.03,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-003',
+          updatedBy: 'EMP-003',
+        }
+      );
 
     } else if (dayOffset === 3) {
       // 3 days ago - Rahul transfers to David and Ali
-      // eslint-disable-next-line unicorn/prefer-single-call
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-004',
-        driverName: 'Rahul Kumar',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-017', productName: 'Ginger', category: 'fresh', quantity: 2, unitPrice: 12.5 },
-          { productId: 'PRD-018', productName: 'Garlic', category: 'fresh', quantity: 3, unitPrice: 9.25 },
-        ],
-        transfer: {
-          isProductTransferred: true,
-          transferredProducts: [
-            {
-              productId: 'PRD-026',
-              productName: 'Danish Pastry',
-              category: 'bakery',
-              quantity: 8,
+      trips.push(
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-004',
+          driverName: 'Rahul Kumar',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-017', productName: 'Ginger', category: 'fresh', quantity: 2, unitPrice: 12.5 },
+            { productId: 'PRD-018', productName: 'Garlic', category: 'fresh', quantity: 3, unitPrice: 9.25 },
+          ],
+          transfer: {
+            isProductTransferred: true,
+            transferredProducts: [
+              {
+                productId: 'PRD-026',
+                productName: 'Danish Pastry',
+                category: 'bakery',
+                quantity: 8,
+                unitPrice: 5.75,
+                receivingDriverId: 'EMP-006',
+                receivingDriverName: 'David Wilson',
+                transferredFromDriverId: 'EMP-004',
+                transferredFromDriverName: 'Rahul Kumar',
+              },
+              {
+                productId: 'PRD-027',
+                productName: 'Pretzel',
+                category: 'bakery',
+                quantity: 12,
+                unitPrice: 3.5,
+                receivingDriverId: 'EMP-005',
+                receivingDriverName: 'Ali Ahmed',
+                transferredFromDriverId: 'EMP-004',
+                transferredFromDriverName: 'Rahul Kumar',
+              },
+            ],
+          },
+          acceptedProducts: [],
+          collectionAmount: 220.5,
+          purchaseAmount: 200.25,
+          expiry: 8.5,
+          discount: 12.75,
+          petrol: 110,
+          balance: 70,
+          totalAmount: 220.5,
+          netTotal: 200.25,
+          grandTotal: 210.26,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-003',
+          updatedBy: 'EMP-003',
+        },
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-006',
+          driverName: 'David Wilson',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-028', productName: 'Donut', category: 'bakery', quantity: 15, unitPrice: 2.75 },
+          ],
+          transfer: {
+            isProductTransferred: false,
+            transferredProducts: [],
+          },
+          acceptedProducts: [
+            { 
+              productId: 'PRD-026', 
+              productName: 'Danish Pastry', 
+              category: 'bakery', 
+              quantity: 8, 
               unitPrice: 5.75,
-              receivingDriverId: 'EMP-006',
-              receivingDriverName: 'David Wilson',
-              transferredFromDriverId: 'EMP-004',
-              transferredFromDriverName: 'Rahul Kumar',
-            },
-            {
-              productId: 'PRD-027',
-              productName: 'Pretzel',
-              category: 'bakery',
-              quantity: 12,
-              unitPrice: 3.5,
-              receivingDriverId: 'EMP-005',
-              receivingDriverName: 'Ali Ahmed',
               transferredFromDriverId: 'EMP-004',
               transferredFromDriverName: 'Rahul Kumar',
             },
           ],
+          collectionAmount: 180.25,
+          purchaseAmount: 160.5,
+          expiry: 8.25,
+          discount: 11.75,
+          petrol: 105,
+          balance: 65,
+          totalAmount: 180.25,
+          netTotal: 160.5,
+          grandTotal: 168.53,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-002',
+          updatedBy: 'EMP-002',
         },
-        acceptedProducts: [],
-        collectionAmount: 220.5,
-        purchaseAmount: 200.25,
-        expiry: 8.5,
-        discount: 12.75,
-        petrol: 110,
-        balance: 70,
-        totalAmount: 220.5,
-        netTotal: 200.25,
-        grandTotal: 210.26,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-003',
-        updatedBy: 'EMP-003',
-      });
-
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-006',
-        driverName: 'David Wilson',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-028', productName: 'Donut', category: 'bakery', quantity: 15, unitPrice: 2.75 },
-        ],
-        transfer: {
-          isProductTransferred: false,
-          transferredProducts: [],
-        },
-        acceptedProducts: [
-          { 
-            productId: 'PRD-026', 
-            productName: 'Danish Pastry', 
-            category: 'bakery', 
-            quantity: 8, 
-            unitPrice: 5.75,
-            transferredFromDriverId: 'EMP-004',
-            transferredFromDriverName: 'Rahul Kumar',
+        {
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId: 'EMP-005',
+          driverName: 'Ali Ahmed',
+          date: currentDate,
+          products: [
+            { productId: 'PRD-029', productName: 'Baguette', category: 'bakery', quantity: 4, unitPrice: 9.25 },
+          ],
+          transfer: {
+            isProductTransferred: false,
+            transferredProducts: [],
           },
-        ],
-        collectionAmount: 180.25,
-        purchaseAmount: 160.5,
-        expiry: 8.25,
-        discount: 11.75,
-        petrol: 105,
-        balance: 65,
-        totalAmount: 180.25,
-        netTotal: 160.5,
-        grandTotal: 168.53,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-002',
-        updatedBy: 'EMP-002',
-      });
-
-      trips.push({
-        id: `TRP-${String(tripId++).padStart(3, '0')}`,
-        driverId: 'EMP-005',
-        driverName: 'Ali Ahmed',
-        date: currentDate,
-        products: [
-          { productId: 'PRD-029', productName: 'Baguette', category: 'bakery', quantity: 4, unitPrice: 9.25 },
-        ],
-        transfer: {
-          isProductTransferred: false,
-          transferredProducts: [],
-        },
-        acceptedProducts: [
-          { 
-            productId: 'PRD-027', 
-            productName: 'Pretzel', 
-            category: 'bakery', 
-            quantity: 12, 
-            unitPrice: 3.5,
-            transferredFromDriverId: 'EMP-004',
-            transferredFromDriverName: 'Rahul Kumar',
-          },
-        ],
-        collectionAmount: 160.25,
-        purchaseAmount: 140.5,
-        expiry: 8.75,
-        discount: 11.5,
-        petrol: 100,
-        balance: 60,
-        totalAmount: 160.25,
-        netTotal: 140.5,
-        grandTotal: 147.53,
-        createdAt: currentDate,
-        updatedAt: currentDate,
-        createdBy: 'EMP-002',
-        updatedBy: 'EMP-002',
-      });
+          acceptedProducts: [
+            { 
+              productId: 'PRD-027', 
+              productName: 'Pretzel', 
+              category: 'bakery', 
+              quantity: 12, 
+              unitPrice: 3.5,
+              transferredFromDriverId: 'EMP-004',
+              transferredFromDriverName: 'Rahul Kumar',
+            },
+          ],
+          collectionAmount: 160.25,
+          purchaseAmount: 140.5,
+          expiry: 8.75,
+          discount: 11.5,
+          petrol: 100,
+          balance: 60,
+          totalAmount: 160.25,
+          netTotal: 140.5,
+          grandTotal: 147.53,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-002',
+          updatedBy: 'EMP-002',
+        }
+      );
 
     } else {
       // Other days - Various scenarios
@@ -652,6 +690,10 @@ const generateDailyTrips = (): DailyTrip[] => {
           totalAmount: 0,
           netTotal: 0,
           grandTotal: 0,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
           createdAt: currentDate,
           updatedAt: currentDate,
           createdBy: 'EMP-002',
@@ -907,7 +949,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
 
       return updatedTrips;
     });
-  }, [trips.length, pendingTransfers, getPreviousBalance]);
+  }, [trips, pendingTransfers, getPreviousBalance]);
 
   const updateTrip = React.useCallback((id: string, updates: Partial<DailyTrip>) => {
     setTrips(prev => 

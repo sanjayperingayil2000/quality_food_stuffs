@@ -21,7 +21,7 @@ export interface AdditionalExpense {
   date: Date;
   driverId?: string; // Optional - if expense is related to a specific driver
   driverName?: string;
-  designation: 'driver' | 'manager' | 'ceo'; // Role of the person who created the expense
+  designation: 'driver' | 'manager' | 'ceo' | 'staff'; // Role of the person who created the expense
   receiptNumber?: string;
   vendor?: string;
   isReimbursable: boolean;

@@ -18,6 +18,7 @@ import IconButton from '@mui/material/IconButton';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
@@ -83,7 +84,7 @@ export default function Page(): React.JSX.Element {
     setFormData(prev => ({ ...prev, [field]: event.target.value }));
   };
 
-  const handleRoleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRoleChange = (event: SelectChangeEvent) => {
     const newRole = event.target.value as 'driver' | 'staff';
     setFormData(prev => ({ 
       ...prev, 
