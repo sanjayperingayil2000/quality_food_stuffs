@@ -4,8 +4,8 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { freshProducts } from './data/freshProducts';
-import { bakeryProducts } from './data/bakeryProducts';
+import { freshProducts } from './data/fresh-products';
+import { bakeryProducts } from './data/bakery-products';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -52,7 +52,7 @@ interface ProductContextType {
 
 const ProductContext = React.createContext<ProductContextType | undefined>(undefined);
 
-export const initialProducts: Product[] = [...freshProducts,...bakeryProducts];
+const initialProducts: Product[] = [...freshProducts,...bakeryProducts];
 
 export function ProductProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [products, setProducts] = React.useState<Product[]>(initialProducts);

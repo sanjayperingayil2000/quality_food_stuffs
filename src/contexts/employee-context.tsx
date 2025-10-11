@@ -4,7 +4,7 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { initialEmployees } from './data/employeeList';
+import { initialEmployees } from './data/employee-list';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
