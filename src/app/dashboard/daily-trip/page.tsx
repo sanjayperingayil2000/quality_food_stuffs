@@ -648,7 +648,7 @@ export default function Page(): React.JSX.Element {
                     <Typography variant="h6" color={trip.salesDifference >= 0 ? 'success.dark' : 'error.dark'}>
                       AED {trip.salesDifference.toFixed(2)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">(Collection - Purchase)</Typography>
+                    <Typography variant="caption" color="text.secondary">(Collection - Amount to be)</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Profit</Typography>
@@ -709,12 +709,6 @@ export default function Page(): React.JSX.Element {
                           )}
                           <Typography variant="body2">Net Total: AED {totals.bakery.netTotal.toFixed(2)}</Typography>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.bakery.grandTotal.toFixed(2)}</Typography>
-                        </Grid>
-                        <Grid size={{ xs: 12 }}>
-                          <Typography variant="subtitle2" color="text.primary" sx={{ mb: 1, borderTop: 1, borderColor: 'divider', pt: 1 }}>Overall Totals</Typography>
-                          <Typography variant="body2">Total Amount: AED {trip.totalAmount.toFixed(2)}</Typography>
-                          <Typography variant="body2">Net Total: AED {trip.netTotal.toFixed(2)}</Typography>
-                          <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>Grand Total: AED {trip.grandTotal.toFixed(2)}</Typography>
                         </Grid>
                       </Grid>
                     );
@@ -1437,12 +1431,6 @@ export default function Page(): React.JSX.Element {
                           )}
                           <Typography variant="body2">Net Total: AED {totals.bakery.netTotal.toFixed(2)}</Typography>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.bakery.grandTotal.toFixed(2)}</Typography>
-                        </Grid>
-                        <Grid size={{ xs: 12 }}>
-                          <Typography variant="subtitle2" color="text.primary" sx={{ mb: 1, borderTop: 1, borderColor: 'divider', pt: 1 }}>Overall Totals</Typography>
-                          <Typography variant="body2">Total: AED {totals.overall.total.toFixed(2)}</Typography>
-                          <Typography variant="body2">Net Total: AED {totals.overall.netTotal.toFixed(2)}</Typography>
-                          <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>Grand Total: AED {totals.overall.grandTotal.toFixed(2)}</Typography>
                         </Grid>
                       </Grid>
                     );
