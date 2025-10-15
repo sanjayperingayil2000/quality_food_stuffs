@@ -498,9 +498,6 @@ export default function Page(): React.JSX.Element {
             InputLabelProps={{ shrink: true }}
             size="small"
           />
-          <Button variant="outlined" onClick={handleApplyFilter}>
-            Apply
-          </Button>
         </Stack>
 
       <Stack spacing={2}>
@@ -1015,82 +1012,27 @@ export default function Page(): React.JSX.Element {
                       >
                         Transfer To Driver
                       </Typography>
-                      <Box sx={{ 
-                        border: '1px solid #c4c4c4',
-                        borderRadius: 1,
-                        p: 1,
-                        minHeight: '40px',
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: 1,
-                        alignItems: 'center'
-                      }}>
-                        {transferForm.receivingDriverId ? (
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 1,
-                            bgcolor: 'primary.main',
-                            color: 'white',
-                            px: 2,
-                            py: 1,
-                            borderRadius: 1,
-                            fontSize: '0.875rem'
-                          }}>
-                            <span>
-                              {drivers.find(d => d.id === transferForm.receivingDriverId)?.name}
-                            </span>
-                            <Button
-                              size="small"
-                              onClick={() => setTransferForm(prev => ({ ...prev, receivingDriverId: '' }))}
-                              sx={{ 
-                                minWidth: 'auto', 
-                                p: 0.5, 
-                                color: 'white',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
-                              }}
-                            >
-                              ✕
-                            </Button>
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            Click on a driver below to select
-                          </Typography>
-                        )}
-                      </Box>
-                      
-                      {/* Driver selection */}
-                      <Box sx={{ mt: 1 }}>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      <FormControl fullWidth>
+                        <InputLabel>Select Receiving Driver</InputLabel>
+                        <Select
+                          value={transferForm.receivingDriverId}
+                          onChange={(e) => setTransferForm(prev => ({ ...prev, receivingDriverId: e.target.value }))}
+                          label="Select Receiving Driver"
+                        >
                           {drivers.filter(d => d.id !== watch('driverId')).map((driver) => (
-                            <Box 
-                              key={driver.id} 
-                              sx={{ 
-                                p: 1.5, 
-                                cursor: 'pointer', 
-                                border: transferForm.receivingDriverId === driver.id ? '2px solid #1976d2' : '1px solid #e0e0e0',
-                                borderRadius: 1,
-                                bgcolor: transferForm.receivingDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'white',
-                                '&:hover': { 
-                                  bgcolor: transferForm.receivingDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'rgba(0,0,0,0.04)',
-                                  borderColor: transferForm.receivingDriverId === driver.id ? '#1976d2' : '#bdbdbd'
-                                },
-                                transition: 'all 0.2s ease',
-                                minWidth: '120px'
-                              }}
-                              onClick={() => setTransferForm(prev => ({ ...prev, receivingDriverId: driver.id }))}
-                            >
-                              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                {driver.name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {driver.routeName}
-                              </Typography>
-                            </Box>
+                            <MenuItem key={driver.id} value={driver.id}>
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                  {driver.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {driver.routeName}
+                                </Typography>
+                              </Box>
+                            </MenuItem>
                           ))}
-                        </Box>
-                      </Box>
+                        </Select>
+                      </FormControl>
                     </Box>
                     
                     <Button
