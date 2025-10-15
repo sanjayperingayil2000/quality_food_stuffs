@@ -569,41 +569,43 @@ export default function Page(): React.JSX.Element {
                 </>
               )}
 
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Product Name</TableCell>
-                    <TableCell>Type</TableCell>
-                    <TableCell>Quantity</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {trip.products.map((product) => (
-                    <TableRow key={product.productId}>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                          {product.productId}
-                        </Typography>
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                          {product.productName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={product.category === 'bakery' ? 'Bakery' : 'Fresh'}
-                          size="small"
-                          color={product.category === 'bakery' ? 'primary' : 'success'}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {product.quantity}
-                        </Typography>
-                      </TableCell>
+              <Box sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Product Name</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Quantity</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {trip.products.map((product) => (
+                      <TableRow key={product.productId}>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                            {product.productId}
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {product.productName}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={product.category === 'bakery' ? 'Bakery' : 'Fresh'}
+                            size="small"
+                            color={product.category === 'bakery' ? 'primary' : 'success'}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {product.quantity}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
 
               {/* Financial Information Display */}
               <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
@@ -898,7 +900,8 @@ export default function Page(): React.JSX.Element {
                           textField: {
                             fullWidth: true,
                             error: Boolean(errors.date),
-                            helperText: errors.date?.message || 'Select a date (past dates only)',
+                            helperText: errors.date?.message || 'Click to select a date (past dates only)',
+                            readOnly: false,
                           },
                         }}
                       />
@@ -972,6 +975,13 @@ export default function Page(): React.JSX.Element {
                           </Stack>
                         </Paper>
                       )}
+                      {productSearch && filteredProducts.length === 0 && (
+                        <Paper sx={{ mt: 1, p: 2, position: 'absolute', zIndex: 1000, width: '100%' }}>
+                          <Typography variant="body2" color="text.secondary">
+                            No products found matching &quot;{productSearch}&quot;
+                          </Typography>
+                        </Paper>
+                      )}
                     </FormControl>
                     
                     <TextField
@@ -1018,8 +1028,12 @@ export default function Page(): React.JSX.Element {
                           value={transferForm.receivingDriverId}
                           onChange={(e) => setTransferForm(prev => ({ ...prev, receivingDriverId: e.target.value }))}
                           label="Select Receiving Driver"
+                          displayEmpty
                         >
-                          {drivers.filter(d => d.id !== watch('driverId')).map((driver) => (
+                          <MenuItem value="">
+                            <em>Select a driver</em>
+                          </MenuItem>
+                          {drivers && drivers.length > 0 ? drivers.filter(d => d.id !== watch('driverId')).map((driver) => (
                             <MenuItem key={driver.id} value={driver.id}>
                               <Box>
                                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
@@ -1030,7 +1044,9 @@ export default function Page(): React.JSX.Element {
                                 </Typography>
                               </Box>
                             </MenuItem>
-                          ))}
+                          )) : (
+                            <MenuItem disabled>No drivers available</MenuItem>
+                          )}
                         </Select>
                       </FormControl>
                     </Box>
