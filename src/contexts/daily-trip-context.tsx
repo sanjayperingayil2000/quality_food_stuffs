@@ -161,8 +161,8 @@ const calculateFinancialMetrics = (
   // 1. Expiry after tax = ((expiry + 5%) - 13%)
   const expiryAfterTaxRaw = expiry * 1.05 * 0.87;
   
-  // Round expiry after tax: if decimal >= 0.5, round up; if < 0.5, round down
-  const expiryAfterTax = Math.round(expiryAfterTaxRaw);
+  // Floor expiry after tax: always round down (23.23 or 23.97 = 23)
+  const expiryAfterTax = Math.floor(expiryAfterTaxRaw);
   
   // 2. Amount to be = Purchase amount - Expiry after tax (using rounded value)
   const amountToBe = purchaseAmount - expiryAfterTax;
