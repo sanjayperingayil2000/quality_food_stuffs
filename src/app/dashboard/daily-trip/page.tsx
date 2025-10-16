@@ -585,8 +585,8 @@ export default function Page(): React.JSX.Element {
                     <TableRow>
                       <TableCell 
                         sx={{ 
-                          backgroundColor: '#2e7d32 !important', 
-                          color: 'white !important', 
+                          backgroundColor: 'rgba(76, 175, 80, 0.1) !important', 
+                          color: '#2e7d32 !important', 
                           fontWeight: 'bold',
                           textAlign: 'center',
                           borderRight: '1px solid #e0e0e0',
@@ -594,8 +594,8 @@ export default function Page(): React.JSX.Element {
                           top: 0,
                           zIndex: 1,
                           '&.MuiTableCell-root': {
-                            backgroundColor: '#2e7d32 !important',
-                            color: 'white !important'
+                            backgroundColor: 'rgba(76, 175, 80, 0.1) !important',
+                            color: '#2e7d32 !important'
                           }
                         }}
                       >
@@ -603,16 +603,16 @@ export default function Page(): React.JSX.Element {
                       </TableCell>
                       <TableCell 
                         sx={{ 
-                          backgroundColor: '#1565c0 !important', 
-                          color: 'white !important', 
+                          backgroundColor: 'rgba(33, 150, 243, 0.1) !important', 
+                          color: '#1565c0 !important', 
                           fontWeight: 'bold',
                           textAlign: 'center',
                           position: 'sticky',
                           top: 0,
                           zIndex: 1,
                           '&.MuiTableCell-root': {
-                            backgroundColor: '#1565c0 !important',
-                            color: 'white !important'
+                            backgroundColor: 'rgba(33, 150, 243, 0.1) !important',
+                            color: '#1565c0 !important'
                           }
                         }}
                       >
