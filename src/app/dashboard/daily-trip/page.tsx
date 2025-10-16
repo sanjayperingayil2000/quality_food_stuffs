@@ -4,7 +4,6 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
-import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -45,6 +44,11 @@ import type { DailyTrip, TripProduct } from '@/contexts/daily-trip-context';
 // Configure dayjs plugins
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+// Utility function to round balance values
+const roundBalance = (value: number): number => {
+  return Math.round(value);
+};
 
 // type Category = 'bakery' | 'fresh'; // Removed as it's defined in context
 
@@ -423,7 +427,7 @@ export default function Page(): React.JSX.Element {
       expiry: data.expiry,
       discount: data.discount,
       petrol: data.petrol,
-      balance: data.balance,
+      balance: roundBalance(data.balance),
       totalAmount: 0, // Will be calculated in context
       netTotal: 0, // Will be calculated in context
       grandTotal: 0, // Will be calculated in context
@@ -569,40 +573,94 @@ export default function Page(): React.JSX.Element {
                 </>
               )}
 
-              <Box sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Box sx={{ 
+                border: '1px solid', 
+                borderColor: 'divider', 
+                borderRadius: 1,
+                maxHeight: '400px',
+                overflow: 'auto'
+              }}>
                 <Table stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Product Name</TableCell>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Quantity</TableCell>
+                      <TableCell 
+                        sx={{ 
+                          backgroundColor: '#2e7d32 !important', 
+                          color: 'white !important', 
+                          fontWeight: 'bold',
+                          textAlign: 'center',
+                          borderRight: '1px solid #e0e0e0',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1,
+                          '&.MuiTableCell-root': {
+                            backgroundColor: '#2e7d32 !important',
+                            color: 'white !important'
+                          }
+                        }}
+                      >
+                        Fresh Items
+                      </TableCell>
+                      <TableCell 
+                        sx={{ 
+                          backgroundColor: '#1565c0 !important', 
+                          color: 'white !important', 
+                          fontWeight: 'bold',
+                          textAlign: 'center',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 1,
+                          '&.MuiTableCell-root': {
+                            backgroundColor: '#1565c0 !important',
+                            color: 'white !important'
+                          }
+                        }}
+                      >
+                        Bakery Items
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {trip.products.map((product) => (
-                      <TableRow key={product.productId}>
-                        <TableCell>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {product.productId}
-                          </Typography>
-                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                            {product.productName}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={product.category === 'bakery' ? 'Bakery' : 'Fresh'}
-                            size="small"
-                            color={product.category === 'bakery' ? 'primary' : 'success'}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {product.quantity}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {(() => {
+                      const freshProducts = trip.products.filter(p => p.category === 'fresh');
+                      const bakeryProducts = trip.products.filter(p => p.category === 'bakery');
+                      const maxRows = Math.max(freshProducts.length, bakeryProducts.length);
+                      
+                      return Array.from({ length: maxRows }, (_, index) => (
+                        <TableRow key={index}>
+                          <TableCell sx={{ borderRight: '1px solid #e0e0e0', width: '50%' }}>
+                            {freshProducts[index] ? (
+                              <Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                  {freshProducts[index].productId}
+                                </Typography>
+                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                  {freshProducts[index].productName}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500, color: '#2e7d32' }}>
+                                  Qty: {freshProducts[index].quantity}
+                                </Typography>
+                              </Box>
+                            ) : null}
+                          </TableCell>
+                          <TableCell sx={{ width: '50%' }}>
+                            {bakeryProducts[index] ? (
+                              <Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                  {bakeryProducts[index].productId}
+                                </Typography>
+                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                  {bakeryProducts[index].productName}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 500, color: '#1565c0' }}>
+                                  Qty: {bakeryProducts[index].quantity}
+                                </Typography>
+                              </Box>
+                            ) : null}
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
                   </TableBody>
                 </Table>
               </Box>
@@ -633,7 +691,7 @@ export default function Page(): React.JSX.Element {
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Typography variant="body2" color="text.secondary">Balance</Typography>
-                    <Typography variant="h6" color="info.main">AED {trip.balance.toFixed(2)}</Typography>
+                    <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance)}</Typography>
                   </Grid>
                 </Grid>
               </Paper>
@@ -645,33 +703,28 @@ export default function Page(): React.JSX.Element {
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
                     <Typography variant="h6" color="warning.dark">AED {trip.expiryAfterTax.toFixed(2)}</Typography>
-                    <Typography variant="caption" color="text.secondary">((Expiry + 5%) - 13%)</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Amount To Be</Typography>
                     <Typography variant="h6" color="info.dark">AED {trip.amountToBe.toFixed(2)}</Typography>
-                    <Typography variant="caption" color="text.secondary">(Purchase - Expiry After Tax)</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
                     <Typography variant="h6" color={trip.salesDifference >= 0 ? 'success.dark' : 'error.dark'}>
                       AED {trip.salesDifference.toFixed(2)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">(Collection - Amount to be)</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Profit</Typography>
                     <Typography variant="h6" color={trip.profit >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
                       AED {trip.profit.toFixed(2)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">(Calculated from Fresh & Bakery)</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Calculated Balance</Typography>
                     <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
-                      AED {trip.balance.toFixed(2)}
+                      AED {roundBalance(trip.balance)}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">(Prev Balance + Profit - Sales Diff)</Typography>
                   </Grid>
                 </Grid>
               </Paper>
@@ -750,6 +803,13 @@ export default function Page(): React.JSX.Element {
             margin: 0,
           }
         }}
+        PaperProps={{
+          sx: {
+            '& .MuiSelect-select': {
+              zIndex: 'auto'
+            }
+          }
+        }}
       >
         <DialogTitle>{editingTrip ? 'Edit Trip' : 'Add Trip'}</DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -762,7 +822,8 @@ export default function Page(): React.JSX.Element {
                     color: errors.driverId ? 'error.main' : 'text.secondary',
                     mb: 1,
                     fontSize: '0.75rem',
-                    fontWeight: 500
+                    fontWeight: 500,
+                    lineHeight: 1.2
                   }}
                 >
                   Driver * (Select from list below)
@@ -812,7 +873,7 @@ export default function Page(): React.JSX.Element {
                     </Box>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
-                      Click on a driver below to select
+                      Select a driver from the list below
                     </Typography>
                   )}
                 </Box>
@@ -893,17 +954,24 @@ export default function Page(): React.JSX.Element {
                         {...field}
                         label="Date"
                         format="MMM D, YYYY"
-                        value={dayjs(field.value)}
-                        onChange={(newValue) => field.onChange(newValue?.toDate())}
-                        maxDate={dayjs()} // Prevent future dates
-                        slotProps={{
-                          textField: {
-                            fullWidth: true,
-                            error: Boolean(errors.date),
-                            helperText: errors.date?.message || 'Click to select a date (past dates only)',
-                            readOnly: false,
-                          },
+                        value={field.value ? dayjs(field.value) : null}
+                        onChange={(newValue) => {
+                          console.log('Date picker changed to:', newValue?.format('YYYY-MM-DD'));
+                          field.onChange(newValue?.toDate());
                         }}
+                        maxDate={dayjs()} // Prevent future dates
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              error: Boolean(errors.date),
+                              helperText: errors.date?.message || 'Click to select a date (past dates only)',
+                            },
+                            popper: {
+                              sx: {
+                                zIndex: 2000,
+                              },
+                            },
+                          }}
                       />
                     )}
                   />
@@ -938,16 +1006,27 @@ export default function Page(): React.JSX.Element {
                   </Typography>
 
                   {/* Transfer Product Form */}
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'end', mb: 2 }}>
-                    <FormControl sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 2, flexWrap: 'wrap' }}>
+                    <FormControl sx={{ flex: 1, minWidth: '200px' }}>
                       <TextField
                         label="Search Product (Name or ID)"
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
                         placeholder="Type product name or ID..."
+                        size="small"
                       />
                       {productSearch && filteredProducts.length > 0 && (
-                        <Paper sx={{ mt: 1, maxHeight: 200, overflow: 'auto', position: 'absolute', zIndex: 1000, width: '100%' }}>
+                        <Paper sx={{ 
+                          mt: 1, 
+                          maxHeight: 200, 
+                          overflow: 'auto', 
+                          position: 'absolute', 
+                          zIndex: 2000, 
+                          width: '100%',
+                          boxShadow: 3,
+                          border: '1px solid',
+                          borderColor: 'divider'
+                        }}>
                           <Stack>
                             {filteredProducts.map((product) => (
                               <Box
@@ -976,7 +1055,16 @@ export default function Page(): React.JSX.Element {
                         </Paper>
                       )}
                       {productSearch && filteredProducts.length === 0 && (
-                        <Paper sx={{ mt: 1, p: 2, position: 'absolute', zIndex: 1000, width: '100%' }}>
+                        <Paper sx={{ 
+                          mt: 1, 
+                          p: 2, 
+                          position: 'absolute', 
+                          zIndex: 2000, 
+                          width: '100%',
+                          boxShadow: 3,
+                          border: '1px solid',
+                          borderColor: 'divider'
+                        }}>
                           <Typography variant="body2" color="text.secondary">
                             No products found matching &quot;{productSearch}&quot;
                           </Typography>
@@ -1001,11 +1089,11 @@ export default function Page(): React.JSX.Element {
                       }}
                       value={transferForm.quantity}
                       onChange={(e) => {
-                        setTransferForm(prev => ({ ...prev, quantity: Number.parseInt(e.target.value) || 1 }));
+                        const value = e.target.value;
+                        setTransferForm(prev => ({ ...prev, quantity: value === '' ? 1 : Number.parseInt(value) || 1 }));
                       }}
-                      onClick={(e) => {
-                        console.log('Transfer quantity field clicked');
-                        (e.target as HTMLInputElement).focus();
+                      onFocus={(e) => {
+                        e.target.select();
                       }}
                     />
                     
@@ -1016,37 +1104,96 @@ export default function Page(): React.JSX.Element {
                           color: 'text.secondary',
                           fontSize: '0.75rem',
                           fontWeight: 500,
-                          mb: 0.5,
-                          ml: 1.5
+                          mb: 1,
+                          ml: 0,
+                          lineHeight: 1.2
                         }}
                       >
-                        Transfer To Driver
+                        Transfer To Driver *
                       </Typography>
-                      <FormControl fullWidth>
-                        <InputLabel>Select Receiving Driver</InputLabel>
+                      <FormControl fullWidth size="small" sx={{ minHeight: 56 }}>
+                        <InputLabel 
+                          sx={{ 
+                            fontSize: '0.875rem',
+                            '&.MuiInputLabel-shrink': {
+                              transform: 'translate(14px, -9px) scale(0.75)',
+                              transformOrigin: 'top left'
+                            }
+                          }}
+                        >
+                          Select Receiving Driver
+                        </InputLabel>
                         <Select
                           value={transferForm.receivingDriverId}
-                          onChange={(e) => setTransferForm(prev => ({ ...prev, receivingDriverId: e.target.value }))}
+                          onChange={(e) => {
+                            console.log('Transfer driver dropdown changed to:', e.target.value);
+                            setTransferForm(prev => ({ ...prev, receivingDriverId: e.target.value }));
+                          }}
                           label="Select Receiving Driver"
-                          displayEmpty
+                          MenuProps={{
+                            PaperProps: {
+                              sx: {
+                                maxHeight: 300,
+                                zIndex: 2000,
+                                boxShadow: 3,
+                                border: '1px solid',
+                                borderColor: 'divider'
+                              },
+                            },
+                            sx: {
+                              zIndex: 2000
+                            }
+                          }}
+                          onClick={() => {
+                            console.log('Transfer driver dropdown clicked');
+                            console.log('Current drivers state:', drivers);
+                            console.log('Current driver ID:', currentDriverId);
+                            console.log('Available drivers:', currentDriverId ? drivers.filter(d => d.id !== currentDriverId) : drivers);
+                          }}
+                          onOpen={() => {
+                            console.log('Transfer driver dropdown opened');
+                          }}
+                          onClose={() => {
+                            console.log('Transfer driver dropdown closed');
+                          }}
                         >
-                          <MenuItem value="">
-                            <em>Select a driver</em>
+                          <MenuItem value="TEST-DRIVER">
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                TEST DRIVER
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Test Route
+                              </Typography>
+                            </Box>
                           </MenuItem>
-                          {drivers && drivers.length > 0 ? drivers.filter(d => d.id !== watch('driverId')).map((driver) => (
-                            <MenuItem key={driver.id} value={driver.id}>
-                              <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                  {driver.name}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {driver.routeName}
-                                </Typography>
-                              </Box>
-                            </MenuItem>
-                          )) : (
-                            <MenuItem disabled>No drivers available</MenuItem>
-                          )}
+                          {(() => {
+                            if (!drivers || drivers.length === 0) {
+                              return <MenuItem disabled>No drivers available</MenuItem>;
+                            }
+                            
+                            const availableDrivers = currentDriverId 
+                              ? drivers.filter(d => d.id !== currentDriverId)
+                              : drivers;
+                            
+                            console.log('Rendering', availableDrivers.length, 'MenuItems for drivers');
+                            
+                            return availableDrivers.map((driver, index) => {
+                              console.log(`Rendering MenuItem ${index + 1}:`, driver.name);
+                              return (
+                                <MenuItem key={driver.id} value={driver.id}>
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                                      {driver.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {driver.routeName}
+                                    </Typography>
+                                  </Box>
+                                </MenuItem>
+                              );
+                            });
+                          })()}
                         </Select>
                       </FormControl>
                     </Box>
@@ -1142,10 +1289,12 @@ export default function Page(): React.JSX.Element {
                               style: { textAlign: 'center', fontWeight: 'bold' }
                             }}
                             value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                            onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
-                            onClick={(e) => {
-                              console.log('Quantity field clicked for product:', product.id);
-                              (e.target as HTMLInputElement).focus();
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              handleProductQuantityChange(product.id, value === '' ? 0 : Number.parseInt(value) || 0);
+                            }}
+                            onFocus={(e) => {
+                              e.target.select();
                             }}
                           />
                         </Box>
@@ -1194,10 +1343,12 @@ export default function Page(): React.JSX.Element {
                               style: { textAlign: 'center', fontWeight: 'bold' }
                             }}
                             value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                            onChange={(e) => handleProductQuantityChange(product.id, Number.parseInt(e.target.value) || 0)}
-                            onClick={(e) => {
-                              console.log('Quantity field clicked for product:', product.id);
-                              (e.target as HTMLInputElement).focus();
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              handleProductQuantityChange(product.id, value === '' ? 0 : Number.parseInt(value) || 0);
+                            }}
+                            onFocus={(e) => {
+                              e.target.select();
                             }}
                           />
                         </Box>

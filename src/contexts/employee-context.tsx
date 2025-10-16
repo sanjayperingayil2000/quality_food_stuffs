@@ -108,12 +108,13 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       prev.map(emp => {
         if (emp.id === driverId && emp.designation === 'driver') {
           const previousBalance = emp.balance || 0;
-          const changeAmount = newBalance - previousBalance;
+          const roundedNewBalance = Math.round(newBalance);
+          const changeAmount = roundedNewBalance - previousBalance;
           
           const newHistoryEntry: BalanceHistoryEntry = {
             id: `BAL-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
             previousBalance,
-            newBalance,
+            newBalance: roundedNewBalance,
             changeAmount,
             reason,
             date: new Date(),
@@ -124,7 +125,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
 
           return {
             ...emp,
-            balance: newBalance,
+            balance: roundedNewBalance,
             balanceHistory: updatedBalanceHistory,
             updatedAt: new Date(),
             updatedBy,

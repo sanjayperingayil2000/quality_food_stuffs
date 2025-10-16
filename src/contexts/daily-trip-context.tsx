@@ -176,7 +176,7 @@ const calculateFinancialMetrics = (
   const profit = freshProfit + bakeryProfit - discount;
   
   // 5. Balance = previous balance + current profit - current sales difference
-  const balance = previousBalance + profit - salesDifference;
+  const balance = Math.round(previousBalance + profit - salesDifference);
   
   return {
     expiryAfterTax,
@@ -726,7 +726,7 @@ const _generateDailyTrips = (): DailyTrip[] => {
     let previousBalance = driverBalances[trip.driverId];
     if (previousBalance === undefined) {
       // First trip for this driver, assign random balance between 100-200
-      previousBalance = Math.floor(Math.random() * 101) + 100;
+      previousBalance = Math.round(Math.floor(Math.random() * 101) + 100);
     }
     
     // Calculate financial metrics
@@ -792,7 +792,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     }
     
     // For first trip, return a random balance between 100 and 200
-    return Math.floor(Math.random() * 101) + 100; // 100 to 200
+    return Math.round(Math.floor(Math.random() * 101) + 100); // 100 to 200
   }, [getEmployeeById]);
 
   const getTripById = React.useCallback((id: string): DailyTrip | undefined => {
@@ -964,7 +964,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     });
 
     // Update the employee's balance after creating the trip
-    updateDriverBalance(tripData.driverId, financialMetrics.balance, 'trip_update', 'EMP-001');
+    updateDriverBalance(tripData.driverId, Math.round(financialMetrics.balance), 'trip_update', 'EMP-001');
 
     return newTrip;
   }, [trips, pendingTransfers, getPreviousBalance, updateDriverBalance]);
