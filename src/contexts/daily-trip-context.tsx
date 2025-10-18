@@ -4,6 +4,7 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { useEmployees } from './employee-context';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -55,7 +56,7 @@ export interface DailyTrip {
   // New calculated fields
   expiryAfterTax: number; // ((expiry + 5%) - 13%)
   amountToBe: number; // Purchase amount - Expiry after tax
-  salesDifference: number; // Collection amount - Purchase amount
+  salesDifference: number; // Collection amount - Amount to be
   profit: number; // (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
   // Metadata
   createdAt: Date;
@@ -158,13 +159,16 @@ const calculateFinancialMetrics = (
   previousBalance: number
 ): CalculatedMetrics => {
   // 1. Expiry after tax = ((expiry + 5%) - 13%)
-  const expiryAfterTax = expiry * 1.05 * 0.87;
+  const expiryAfterTaxRaw = expiry * 1.05 * 0.87;
   
-  // 2. Amount to be = Purchase amount - Expiry after tax
+  // Floor expiry after tax: always round down (23.23 or 23.97 = 23)
+  const expiryAfterTax = Math.floor(expiryAfterTaxRaw);
+  
+  // 2. Amount to be = Purchase amount - Expiry after tax (using rounded value)
   const amountToBe = purchaseAmount - expiryAfterTax;
   
-  // 3. Sales Difference = Collection amount - Purchase amount
-  const salesDifference = collectionAmount - purchaseAmount;
+  // 3. Sales Difference = Collection amount - Amount to be (fixed calculation)
+  const salesDifference = collectionAmount - amountToBe;
   
   // 4. Profit = (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
   const freshProfit = (freshNetTotal - expiryAfterTax) * 0.135;
@@ -172,7 +176,7 @@ const calculateFinancialMetrics = (
   const profit = freshProfit + bakeryProfit - discount;
   
   // 5. Balance = previous balance + current profit - current sales difference
-  const balance = previousBalance + profit - salesDifference;
+  const balance = Math.round(previousBalance + profit - salesDifference);
   
   return {
     expiryAfterTax,
@@ -184,7 +188,7 @@ const calculateFinancialMetrics = (
 };
 
 // Generate comprehensive daily trip data for last 10 days
-const generateDailyTrips = (): DailyTrip[] => {
+const _generateDailyTrips = (): DailyTrip[] => {
   const trips: DailyTrip[] = [];
   let tripId = 1;
 
@@ -722,7 +726,7 @@ const generateDailyTrips = (): DailyTrip[] => {
     let previousBalance = driverBalances[trip.driverId];
     if (previousBalance === undefined) {
       // First trip for this driver, assign random balance between 100-200
-      previousBalance = Math.floor(Math.random() * 101) + 100;
+      previousBalance = Math.round(Math.floor(Math.random() * 101) + 100);
     }
     
     // Calculate financial metrics
@@ -750,7 +754,7 @@ const generateDailyTrips = (): DailyTrip[] => {
   return trips;
 };
 
-const initialTrips: DailyTrip[] = generateDailyTrips();
+const initialTrips: DailyTrip[] = [];
 
 export function DailyTripProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [trips, setTrips] = React.useState<DailyTrip[]>(initialTrips);
@@ -763,9 +767,18 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     transferredFromDriverName: string;
   }>>([]);
 
+  // Get employee context to access driver balance
+  const { getEmployeeById, updateDriverBalance } = useEmployees();
+
   // Helper to get previous balance for a driver
   const getPreviousBalance = React.useCallback((driverId: string, currentDate: Date, allTrips: DailyTrip[]): number => {
-    // Get all trips for this driver before the current date, sorted by date descending
+    // First, try to get the current balance from employee data
+    const employee = getEmployeeById(driverId);
+    if (employee && employee.designation === 'driver' && employee.balance !== undefined) {
+      return employee.balance;
+    }
+
+    // Fallback: Get all trips for this driver before the current date, sorted by date descending
     const previousTrips = allTrips
       .filter(trip => 
         trip.driverId === driverId && 
@@ -779,8 +792,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     }
     
     // For first trip, return a random balance between 100 and 200
-    return Math.floor(Math.random() * 101) + 100; // 100 to 200
-  }, []);
+    return Math.round(Math.floor(Math.random() * 101) + 100); // 100 to 200
+  }, [getEmployeeById]);
 
   const getTripById = React.useCallback((id: string): DailyTrip | undefined => {
     return trips.find(trip => trip.id === id);
@@ -949,7 +962,12 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
 
       return updatedTrips;
     });
-  }, [trips, pendingTransfers, getPreviousBalance]);
+
+    // Update the employee's balance after creating the trip
+    updateDriverBalance(tripData.driverId, Math.round(financialMetrics.balance), 'trip_update', 'EMP-001');
+
+    return newTrip;
+  }, [trips, pendingTransfers, getPreviousBalance, updateDriverBalance]);
 
   const updateTrip = React.useCallback((id: string, updates: Partial<DailyTrip>) => {
     setTrips(prev => 
@@ -1015,12 +1033,17 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             updatedTrip.balance = financialMetrics.balance;
           }
           
+          // Update employee balance if it changed
+          if (updatedTrip.balance !== trip.balance) {
+            updateDriverBalance(updatedTrip.driverId, updatedTrip.balance, 'trip_update', 'EMP-001');
+          }
+          
           return updatedTrip;
         }
         return trip;
       })
     );
-  }, [getPreviousBalance]);
+  }, [getPreviousBalance, updateDriverBalance]);
 
   const deleteTrip = React.useCallback((id: string) => {
     setTrips(prev => prev.filter(trip => trip.id !== id));
