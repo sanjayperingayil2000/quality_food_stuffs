@@ -12,6 +12,16 @@ dayjs.extend(timezone);
 
 export type EmployeeDesignation = 'driver' | 'staff' | 'ceo';
 
+export interface BalanceHistoryEntry {
+  id: string;
+  previousBalance: number;
+  newBalance: number;
+  changeAmount: number;
+  reason: string; // 'initial', 'trip_update', 'manual_adjustment'
+  date: Date;
+  updatedBy?: string; // Employee ID who made the change
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -22,6 +32,8 @@ export interface Employee {
   routeName?: string; // For drivers
   location?: string; // For drivers
   salary?: number; // For staff and CEO
+  balance?: number; // For drivers only - current balance
+  balanceHistory?: BalanceHistoryEntry[]; // For drivers only - history of balance changes
   hireDate: Date;
   isActive: boolean;
   createdAt: Date;
@@ -39,6 +51,8 @@ interface EmployeeContextType {
   addEmployee: (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateEmployee: (id: string, updates: Partial<Employee>) => void;
   deleteEmployee: (id: string) => void;
+  updateDriverBalance: (driverId: string, newBalance: number, reason: string, updatedBy?: string) => void;
+  getDriverBalanceHistory: (driverId: string) => BalanceHistoryEntry[];
 }
 
 const EmployeeContext = React.createContext<EmployeeContextType | undefined>(undefined);
@@ -89,6 +103,44 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     setEmployees(prev => prev.filter(emp => emp.id !== id));
   }, []);
 
+  const updateDriverBalance = React.useCallback((driverId: string, newBalance: number, reason: string, updatedBy?: string) => {
+    setEmployees(prev =>
+      prev.map(emp => {
+        if (emp.id === driverId && emp.designation === 'driver') {
+          const previousBalance = emp.balance || 0;
+          const roundedNewBalance = Math.round(newBalance);
+          const changeAmount = roundedNewBalance - previousBalance;
+          
+          const newHistoryEntry: BalanceHistoryEntry = {
+            id: `BAL-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+            previousBalance,
+            newBalance: roundedNewBalance,
+            changeAmount,
+            reason,
+            date: new Date(),
+            updatedBy,
+          };
+
+          const updatedBalanceHistory = [...(emp.balanceHistory || []), newHistoryEntry];
+
+          return {
+            ...emp,
+            balance: roundedNewBalance,
+            balanceHistory: updatedBalanceHistory,
+            updatedAt: new Date(),
+            updatedBy,
+          };
+        }
+        return emp;
+      })
+    );
+  }, []);
+
+  const getDriverBalanceHistory = React.useCallback((driverId: string): BalanceHistoryEntry[] => {
+    const employee = employees.find(emp => emp.id === driverId && emp.designation === 'driver');
+    return employee?.balanceHistory || [];
+  }, [employees]);
+
   const value: EmployeeContextType = {
     employees,
     drivers,
@@ -98,6 +150,8 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     addEmployee,
     updateEmployee,
     deleteEmployee,
+    updateDriverBalance,
+    getDriverBalanceHistory,
   };
 
   return (

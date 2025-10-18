@@ -59,6 +59,18 @@ export const initialEmployees: Employee[] = [
     address: 'Deira, Dubai, UAE',
     routeName: 'Route A - Downtown',
     location: 'Downtown Dubai',
+    balance: 5845,
+    balanceHistory: [
+      {
+        id: 'BAL-001',
+        previousBalance: 0,
+        newBalance: 5845,
+        changeAmount: 5845,
+        reason: 'initial',
+        date: dayjs().subtract(12, 'month').toDate(),
+        updatedBy: 'EMP-002',
+      }
+    ],
     hireDate: dayjs().subtract(12, 'month').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(12, 'month').toDate(),
@@ -75,6 +87,18 @@ export const initialEmployees: Employee[] = [
     address: 'Bur Dubai, UAE',
     routeName: 'Route B - Marina',
     location: 'Dubai Marina',
+    balance: 4233,
+    balanceHistory: [
+      {
+        id: 'BAL-002',
+        previousBalance: 0,
+        newBalance: 4233,
+        changeAmount: 4233,
+        reason: 'initial',
+        date: dayjs().subtract(10, 'month').toDate(),
+        updatedBy: 'EMP-002',
+      }
+    ],
     hireDate: dayjs().subtract(10, 'month').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(10, 'month').toDate(),
@@ -91,6 +115,18 @@ export const initialEmployees: Employee[] = [
     address: 'Jumeirah, Dubai, UAE',
     routeName: 'Route C - JBR',
     location: 'Jumeirah Beach Residence',
+    balance: 3590,
+    balanceHistory: [
+      {
+        id: 'BAL-003',
+        previousBalance: 0,
+        newBalance: 3590,
+        changeAmount: 3590,
+        reason: 'initial',
+        date: dayjs().subtract(8, 'month').toDate(),
+        updatedBy: 'EMP-003',
+      }
+    ],
     hireDate: dayjs().subtract(8, 'month').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(8, 'month').toDate(),
@@ -107,6 +143,18 @@ export const initialEmployees: Employee[] = [
     address: 'Sharjah, UAE',
     routeName: 'Route D - Sharjah',
     location: 'Sharjah City',
+    balance: 6004,
+    balanceHistory: [
+      {
+        id: 'BAL-004',
+        previousBalance: 0,
+        newBalance: 6004,
+        changeAmount: 6004,
+        reason: 'initial',
+        date: dayjs().subtract(6, 'month').toDate(),
+        updatedBy: 'EMP-003',
+      }
+    ],
     hireDate: dayjs().subtract(6, 'month').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(6, 'month').toDate(),
@@ -123,6 +171,18 @@ export const initialEmployees: Employee[] = [
     address: 'Abu Dhabi, UAE',
     routeName: 'Route E - Abu Dhabi',
     location: 'Abu Dhabi City',
+    balance: 2996,
+    balanceHistory: [
+      {
+        id: 'BAL-005',
+        previousBalance: 0,
+        newBalance: 2996,
+        changeAmount: 2996,
+        reason: 'initial',
+        date: dayjs().subtract(4, 'month').toDate(),
+        updatedBy: 'EMP-002',
+      }
+    ],
     hireDate: dayjs().subtract(4, 'month').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(4, 'month').toDate(),
@@ -139,6 +199,18 @@ export const initialEmployees: Employee[] = [
     address: 'Al Quoz, Dubai, UAE',
     routeName: 'Route F - Industrial',
     location: 'Al Quoz Industrial Area',
+    balance: 2208,
+    balanceHistory: [
+      {
+        id: 'BAL-006',
+        previousBalance: 0,
+        newBalance: 2208,
+        changeAmount: 2208,
+        reason: 'initial',
+        date: dayjs().subtract(3, 'month').toDate(),
+        updatedBy: 'EMP-002',
+      }
+    ],
     hireDate: dayjs().subtract(3, 'month').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(3, 'month').toDate(),
@@ -148,13 +220,25 @@ export const initialEmployees: Employee[] = [
   },
   {
     id: 'EMP-010',
-    name: 'RUAS',
+    name: 'RIJAS',
     designation: 'driver',
     phoneNumber: '+971 50 123 4576',
-    email: 'ruas.driver@company.com',
+    email: 'rijas.driver@company.com',
     address: 'Discovery Gardens, Dubai, UAE',
     routeName: 'Route G - Gardens',
     location: 'Discovery Gardens',
+    balance: 12_049,
+    balanceHistory: [
+      {
+        id: 'BAL-007',
+        previousBalance: 0,
+        newBalance: 12_049,
+        changeAmount: 12_049,
+        reason: 'initial',
+        date: dayjs().subtract(2, 'month').toDate(),
+        updatedBy: 'EMP-003',
+      }
+    ],
     hireDate: dayjs().subtract(2, 'month').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(2, 'month').toDate(),
@@ -171,6 +255,18 @@ export const initialEmployees: Employee[] = [
     address: 'International City, Dubai, UAE',
     routeName: 'Route H - International',
     location: 'International City',
+    balance: 6687,
+    balanceHistory: [
+      {
+        id: 'BAL-008',
+        previousBalance: 0,
+        newBalance: 6687,
+        changeAmount: 6687,
+        reason: 'initial',
+        date: dayjs().subtract(1, 'month').toDate(),
+        updatedBy: 'EMP-002',
+      }
+    ],
     hireDate: dayjs().subtract(1, 'month').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(1, 'month').toDate(),
@@ -187,6 +283,18 @@ export const initialEmployees: Employee[] = [
     address: 'Silicon Oasis, Dubai, UAE',
     routeName: 'Route I - Oasis',
     location: 'Dubai Silicon Oasis',
+    balance: 18_468,
+    balanceHistory: [
+      {
+        id: 'BAL-009',
+        previousBalance: 0,
+        newBalance: 18_468,
+        changeAmount: 18_468,
+        reason: 'initial',
+        date: dayjs().subtract(3, 'week').toDate(),
+        updatedBy: 'EMP-003',
+      }
+    ],
     hireDate: dayjs().subtract(3, 'week').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(3, 'week').toDate(),
@@ -203,6 +311,18 @@ export const initialEmployees: Employee[] = [
     address: 'Sports City, Dubai, UAE',
     routeName: 'Route J - Sports',
     location: 'Dubai Sports City',
+    balance: 4175,
+    balanceHistory: [
+      {
+        id: 'BAL-010',
+        previousBalance: 0,
+        newBalance: 4175,
+        changeAmount: 4175,
+        reason: 'initial',
+        date: dayjs().subtract(2, 'week').toDate(),
+        updatedBy: 'EMP-002',
+      }
+    ],
     hireDate: dayjs().subtract(2, 'week').toDate(),
     isActive: true,
     createdAt: dayjs().subtract(2, 'week').toDate(),
