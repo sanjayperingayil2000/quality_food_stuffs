@@ -190,7 +190,7 @@ const calculateFinancialMetrics = (
 };
 
 // Helper function to generate products for each driver
-const generateDriverProducts = (driverIndex: number, dayOffset: number): TripProduct[] => {
+const generateDriverProducts = (driverIndex: number, _dayOffset: number): TripProduct[] => {
   const products: TripProduct[] = [];
   
   // Add 35 fresh products
