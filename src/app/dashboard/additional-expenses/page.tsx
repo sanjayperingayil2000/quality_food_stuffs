@@ -464,7 +464,7 @@ export default function Page(): React.JSX.Element {
             <MenuItem value="allEmployees">All Employees</MenuItem>
             {employees.map((employee) => (
               <MenuItem key={employee.id} value={employee.id}>
-                {employee.name} ({employee.designation.toUpperCase()})
+                {employee.name} ({employee.designation.charAt(0).toUpperCase() + employee.designation.slice(1).toLowerCase()})
               </MenuItem>
             ))}
           </Select>
@@ -501,7 +501,7 @@ export default function Page(): React.JSX.Element {
                   />
                 </TableCell>
                 <TableCell>{expense.driverName || '-'}</TableCell>
-                <TableCell>{expense.designation}</TableCell>
+                <TableCell>{expense.designation ? expense.designation.charAt(0).toUpperCase() + expense.designation.slice(1).toLowerCase() : '-'}</TableCell>
                 <TableCell>
                   {expense.description ||
                     (expense.category === 'maintenance' && expense.vendor) ||
@@ -592,7 +592,7 @@ export default function Page(): React.JSX.Element {
                       <Select {...field} label="Employee/Company">
                         {employees.map((employee) => (
                           <MenuItem key={employee.id} value={employee.id}>
-                            {employee.name} ({employee.designation.toUpperCase()})
+                            {employee.name} ({employee.designation.charAt(0).toUpperCase() + employee.designation.slice(1).toLowerCase()})
                           </MenuItem>
                         ))}
                       </Select>

@@ -1,9 +1,8 @@
-import * as React from 'react';
-import type { Metadata } from 'next';
-import Grid from '@mui/material/Grid';
-// import dayjs from 'dayjs';
+'use client';
 
-import { config } from '@/config';
+import * as React from 'react';
+import Grid from '@mui/material/Grid';
+import dayjs from 'dayjs';
 import { Budget } from '@/components/dashboard/overview/budget';
 // import { LatestOrders } from '@/components/dashboard/overview/latest-orders';
 // import { LatestProducts } from '@/components/dashboard/overview/latest-products';
@@ -13,10 +12,123 @@ import { Sales } from '@/components/dashboard/overview/sales';
 import { TotalProfit } from '@/components/dashboard/overview/total-profit';
 // import { Traffic } from '@/components/dashboard/overview/traffic';
 import { MainNavWrapper } from '@/components/dashboard/layout/main-nav';
-
-export const metadata = { title: `Overview | Dashboard | ${config.site.name}` } satisfies Metadata;
+import { useDailyTrips } from '@/contexts/daily-trip-context';
+import { useEmployees } from '@/contexts/employee-context';
 
 export default function Page(): React.JSX.Element {
+  const { trips } = useDailyTrips();
+  const { drivers } = useEmployees();
+
+  // Calculate overview metrics from trips and employee data
+  const overviewMetrics = React.useMemo(() => {
+    const today = dayjs().startOf('day');
+    const thisWeek = today.subtract(7, 'days');
+    const lastWeek = thisWeek.subtract(7, 'days');
+
+    // Filter trips for this week and last week
+    const thisWeekTrips = trips.filter(trip => 
+      dayjs(trip.date).isAfter(thisWeek) && dayjs(trip.date).isBefore(today.add(1, 'day'))
+    );
+    
+    const lastWeekTrips = trips.filter(trip => 
+      dayjs(trip.date).isAfter(lastWeek) && dayjs(trip.date).isBefore(thisWeek.add(1, 'day'))
+    );
+
+    // Calculate totals for this week
+    const thisWeekTotals = thisWeekTrips.reduce((acc, trip) => ({
+      collectionAmount: acc.collectionAmount + trip.collectionAmount,
+      purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
+      discount: acc.discount + trip.discount,
+      amountToBe: acc.amountToBe + trip.amountToBe,
+      petrol: acc.petrol + trip.petrol,
+      balance: acc.balance + trip.balance,
+      expiry: acc.expiry + trip.expiry,
+      profit: acc.profit + trip.profit,
+    }), {
+      collectionAmount: 0,
+      purchaseAmount: 0,
+      discount: 0,
+      amountToBe: 0,
+      petrol: 0,
+      balance: 0,
+      expiry: 0,
+      profit: 0,
+    });
+
+    // Calculate totals for last week
+    const lastWeekTotals = lastWeekTrips.reduce((acc, trip) => ({
+      collectionAmount: acc.collectionAmount + trip.collectionAmount,
+      purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
+      discount: acc.discount + trip.discount,
+      amountToBe: acc.amountToBe + trip.amountToBe,
+      petrol: acc.petrol + trip.petrol,
+      balance: acc.balance + trip.balance,
+      expiry: acc.expiry + trip.expiry,
+      profit: acc.profit + trip.profit,
+    }), {
+      collectionAmount: 0,
+      purchaseAmount: 0,
+      discount: 0,
+      amountToBe: 0,
+      petrol: 0,
+      balance: 0,
+      expiry: 0,
+      profit: 0,
+    });
+
+    // Calculate total driver balance from employee data
+    const totalDriverBalance = drivers.reduce((sum, driver) => sum + (driver.balance || 0), 0);
+
+    // Calculate percentage changes
+    const calculatePercentageChange = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return Math.round(((current - previous) / previous) * 100);
+    };
+
+    return {
+      collectionAmount: {
+        value: thisWeekTotals.collectionAmount,
+        diff: calculatePercentageChange(thisWeekTotals.collectionAmount, lastWeekTotals.collectionAmount),
+        trend: thisWeekTotals.collectionAmount >= lastWeekTotals.collectionAmount ? 'up' : 'down' as 'up' | 'down'
+      },
+      purchaseAmount: {
+        value: thisWeekTotals.purchaseAmount,
+        diff: calculatePercentageChange(thisWeekTotals.purchaseAmount, lastWeekTotals.purchaseAmount),
+        trend: thisWeekTotals.purchaseAmount >= lastWeekTotals.purchaseAmount ? 'up' : 'down' as 'up' | 'down'
+      },
+      discount: {
+        value: thisWeekTotals.discount,
+        diff: calculatePercentageChange(thisWeekTotals.discount, lastWeekTotals.discount),
+        trend: thisWeekTotals.discount >= lastWeekTotals.discount ? 'up' : 'down' as 'up' | 'down'
+      },
+      amountToBe: {
+        value: thisWeekTotals.amountToBe,
+        diff: calculatePercentageChange(thisWeekTotals.amountToBe, lastWeekTotals.amountToBe),
+        trend: thisWeekTotals.amountToBe >= lastWeekTotals.amountToBe ? 'up' : 'down' as 'up' | 'down'
+      },
+      petrol: {
+        value: thisWeekTotals.petrol,
+        diff: calculatePercentageChange(thisWeekTotals.petrol, lastWeekTotals.petrol),
+        trend: thisWeekTotals.petrol >= lastWeekTotals.petrol ? 'up' : 'down' as 'up' | 'down'
+      },
+      balance: {
+        value: totalDriverBalance,
+        diff: 0, // Balance is cumulative, so we don't show week-over-week change
+        trend: 'up' as 'up' | 'down'
+      },
+      expiry: {
+        value: thisWeekTotals.expiry,
+        diff: calculatePercentageChange(thisWeekTotals.expiry, lastWeekTotals.expiry),
+        trend: thisWeekTotals.expiry >= lastWeekTotals.expiry ? 'up' : 'down' as 'up' | 'down'
+      },
+      profit: {
+        value: thisWeekTotals.profit,
+        diff: calculatePercentageChange(thisWeekTotals.profit, lastWeekTotals.profit),
+        trend: thisWeekTotals.profit >= lastWeekTotals.profit ? 'up' : 'down' as 'up' | 'down'
+      }
+    };
+  }, [trips, drivers]);
+
   return (
     <> 
       <MainNavWrapper />
@@ -28,7 +140,13 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name="Cash Collection" />
+          <Budget 
+            diff={overviewMetrics.collectionAmount.diff} 
+            trend={overviewMetrics.collectionAmount.trend} 
+            sx={{ height: '100%' }} 
+            value={`AED ${overviewMetrics.collectionAmount.value.toFixed(0)}`} 
+            name="Cash Collection" 
+          />
         </Grid>
         <Grid
           size={{
@@ -37,7 +155,13 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name="Purchase Amount" />
+          <Budget 
+            diff={overviewMetrics.purchaseAmount.diff} 
+            trend={overviewMetrics.purchaseAmount.trend} 
+            sx={{ height: '100%' }} 
+            value={`AED ${overviewMetrics.purchaseAmount.value.toFixed(0)}`} 
+            name="Purchase Amount" 
+          />
         </Grid>
         {/* <Grid
         size={{
@@ -55,7 +179,13 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name="Discount" />
+          <Budget 
+            diff={overviewMetrics.discount.diff} 
+            trend={overviewMetrics.discount.trend} 
+            sx={{ height: '100%' }} 
+            value={`AED ${overviewMetrics.discount.value.toFixed(0)}`} 
+            name="Discount" 
+          />
         </Grid>
         {/* <Grid
         size={{
@@ -110,7 +240,13 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name='Amount to be' />
+          <Budget 
+            diff={overviewMetrics.amountToBe.diff} 
+            trend={overviewMetrics.amountToBe.trend} 
+            sx={{ height: '100%' }} 
+            value={`AED ${overviewMetrics.amountToBe.value.toFixed(0)}`} 
+            name='Amount to be' 
+          />
         </Grid>
         {/* <Grid
         size={{
@@ -128,7 +264,13 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name='Petrol' />
+          <Budget 
+            diff={overviewMetrics.petrol.diff} 
+            trend={overviewMetrics.petrol.trend} 
+            sx={{ height: '100%' }} 
+            value={`AED ${overviewMetrics.petrol.value.toFixed(0)}`} 
+            name='Petrol' 
+          />
         </Grid>
         {/* <Grid
         size={{
@@ -146,7 +288,13 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name='Balance' />
+          <Budget 
+            diff={overviewMetrics.balance.diff} 
+            trend={overviewMetrics.balance.trend} 
+            sx={{ height: '100%' }} 
+            value={`AED ${overviewMetrics.balance.value.toFixed(0)}`} 
+            name='Balance' 
+          />
         </Grid>
         {/* <Grid
         size={{
@@ -164,7 +312,13 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <Budget diff={12} trend="up" sx={{ height: '100%' }} value="AED 24k" name='Expiry' />
+          <Budget 
+            diff={overviewMetrics.expiry.diff} 
+            trend={overviewMetrics.expiry.trend} 
+            sx={{ height: '100%' }} 
+            value={`AED ${overviewMetrics.expiry.value.toFixed(0)}`} 
+            name='Expiry' 
+          />
         </Grid>
         <Grid
           size={{
@@ -173,7 +327,10 @@ export default function Page(): React.JSX.Element {
             xs: 12,
           }}
         >
-          <TotalProfit sx={{ height: '100%' }} value="AED 15k" />
+          <TotalProfit 
+            sx={{ height: '100%' }} 
+            value={`AED ${overviewMetrics.profit.value.toFixed(0)}`} 
+          />
         </Grid>
         <Grid
           size={{

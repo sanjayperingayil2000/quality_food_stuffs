@@ -28,12 +28,13 @@ import { useEmployees, Employee } from '@/contexts/employee-context';
 import { Tooltip } from '@mui/material';
 
 export default function Page(): React.JSX.Element {
-  const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
+  const { employees, addEmployee, updateEmployee, deleteEmployee, updateDriverBalance } = useEmployees();
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [balanceHistoryDialogOpen, setBalanceHistoryDialogOpen] = React.useState(false);
   const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | null>(null);
 
   // Form states
@@ -43,6 +44,7 @@ export default function Page(): React.JSX.Element {
     role: 'driver' as 'driver' | 'staff',
     location: '',
     routeName: '',
+    balance: '',
   });
 
   type FormErrors = {
@@ -51,13 +53,14 @@ export default function Page(): React.JSX.Element {
     role?: string;
     location?: string;
     routeName?: string;
+    balance?: string;
   };
 
   // Validation errors
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
 
   const handleAddClick = () => {
-    setFormData({ name: '', phoneNumber: '', role: 'driver', location: '', routeName: '' });
+    setFormData({ name: '', phoneNumber: '', role: 'driver', location: '', routeName: '', balance: '' });
     setFormErrors({});
     setAddDialogOpen(true);
   };
@@ -70,6 +73,7 @@ export default function Page(): React.JSX.Element {
       role: employee.designation === 'ceo' ? 'staff' : employee.designation,
       location: employee.location || '',
       routeName: employee.routeName || '',
+      balance: employee.balance?.toString() || '',
     });
     setFormErrors({});
     setEditDialogOpen(true);
@@ -78,6 +82,11 @@ export default function Page(): React.JSX.Element {
   const handleDeleteClick = (employee: Employee) => {
     setSelectedEmployee(employee);
     setDeleteDialogOpen(true);
+  };
+
+  const handleBalanceHistoryClick = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setBalanceHistoryDialogOpen(true);
   };
 
   const handleFormChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,9 +98,10 @@ export default function Page(): React.JSX.Element {
     setFormData(prev => ({ 
       ...prev, 
       role: newRole,
-      // Clear location and routeName if staff is selected
+      // Clear location, routeName, and balance if staff is selected
       location: newRole === 'staff' ? '' : prev.location,
       routeName: newRole === 'staff' ? '' : prev.routeName,
+      balance: newRole === 'staff' ? '' : prev.balance,
     }));
   };
 
@@ -111,7 +121,7 @@ export default function Page(): React.JSX.Element {
       errors.phoneNumber = 'Phone number must be exactly 9 digits';
     }
 
-    // Only validate location and routeName if role is driver
+    // Only validate location, routeName, and balance if role is driver
     if (formData.role === 'driver') {
       if (!formData.location.trim()) {
         errors.location = 'Location is required for drivers';
@@ -119,6 +129,14 @@ export default function Page(): React.JSX.Element {
 
       if (!formData.routeName.trim()) {
         errors.routeName = 'Route name is required for drivers';
+      }
+
+      if (!formData.balance.trim()) {
+        errors.balance = 'Balance is required for drivers';
+      } else if (Number.isNaN(Number(formData.balance))) {
+        errors.balance = 'Balance must be a valid number';
+      } else if (Number(formData.balance) < 0) {
+        errors.balance = 'Balance must be a positive number';
       }
     }
 
@@ -136,6 +154,18 @@ export default function Page(): React.JSX.Element {
         address: '',
         routeName: formData.role === 'driver' ? formData.routeName : undefined,
         location: formData.role === 'driver' ? formData.location : undefined,
+        balance: formData.role === 'driver' ? Number(formData.balance) : undefined,
+        balanceHistory: formData.role === 'driver' ? [
+          {
+            id: `BAL-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+            previousBalance: 0,
+            newBalance: Number(formData.balance),
+            changeAmount: Number(formData.balance),
+            reason: 'initial',
+            date: new Date(),
+            updatedBy: 'EMP-001', // Assuming CEO creates new employees
+          }
+        ] : undefined,
         hireDate: new Date(),
         isActive: true,
       };
@@ -146,13 +176,26 @@ export default function Page(): React.JSX.Element {
 
   const handleEditSubmit = () => {
     if (selectedEmployee && validateForm()) {
-      updateEmployee(selectedEmployee.id, {
+      const updates: Partial<Employee> = {
         name: formData.name,
         phoneNumber: `+971${formData.phoneNumber}`,
         designation: formData.role,
         location: formData.role === 'driver' ? formData.location : undefined,
         routeName: formData.role === 'driver' ? formData.routeName : undefined,
-      });
+      };
+
+      // Handle balance update for drivers
+      if (formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString()) {
+        const newBalance = Number(formData.balance);
+        const previousBalance = selectedEmployee.balance || 0;
+        
+        if (newBalance !== previousBalance) {
+          // Use the updateDriverBalance method to maintain history
+          updateDriverBalance(selectedEmployee.id, newBalance, 'manual_adjustment', 'EMP-001');
+        }
+      }
+
+      updateEmployee(selectedEmployee.id, updates);
       setEditDialogOpen(false);
       setSelectedEmployee(null);
     }
@@ -170,6 +213,7 @@ export default function Page(): React.JSX.Element {
     setAddDialogOpen(false);
     setEditDialogOpen(false);
     setDeleteDialogOpen(false);
+    setBalanceHistoryDialogOpen(false);
     setSelectedEmployee(null);
     setFormErrors({});
   };
@@ -207,6 +251,7 @@ export default function Page(): React.JSX.Element {
             <TableCell>Role</TableCell>
             <TableCell>Location</TableCell>
             <TableCell>Route name</TableCell>
+            <TableCell>Balance</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
@@ -221,6 +266,15 @@ export default function Page(): React.JSX.Element {
               <TableCell>{employee.location || '-'}</TableCell>
               <TableCell>{employee.routeName || '-'}</TableCell>
               <TableCell>
+                {employee.designation === 'driver' ? (
+                  <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>
+                    AED {employee.balance?.toFixed(2) || '0.00'}
+                  </Typography>
+                ) : (
+                  '-'
+                )}
+              </TableCell>
+              <TableCell>
                 <Stack direction="row" spacing={1.5}>
                   {employee.designation !== 'ceo' && (
                     <>
@@ -229,6 +283,14 @@ export default function Page(): React.JSX.Element {
                           <PencilIcon />
                         </IconButton>
                       </Tooltip>
+
+                      {employee.designation === 'driver' && (
+                        <Tooltip title="Balance History">
+                          <IconButton onClick={() => handleBalanceHistoryClick(employee)} size="small" color="info">
+                            💰
+                          </IconButton>
+                        </Tooltip>
+                      )}
 
                       <Tooltip title="Delete Employee">
                         <IconButton onClick={() => handleDeleteClick(employee)} size="small" color="error">
@@ -302,6 +364,17 @@ export default function Page(): React.JSX.Element {
                   error={!!formErrors.routeName}
                   helperText={formErrors.routeName}
                 />
+                <TextField
+                  label="Initial Balance (AED)"
+                  value={formData.balance}
+                  onChange={handleFormChange('balance')}
+                  fullWidth
+                  required
+                  type="number"
+                  error={!!formErrors.balance}
+                  helperText={formErrors.balance || 'Enter the initial balance for this driver'}
+                  placeholder="150"
+                />
               </>
             )}
           </Stack>
@@ -370,6 +443,16 @@ export default function Page(): React.JSX.Element {
                   error={!!formErrors.routeName}
                   helperText={formErrors.routeName}
                 />
+                <TextField
+                  label="Balance (AED)"
+                  value={formData.balance}
+                  onChange={handleFormChange('balance')}
+                  fullWidth
+                  required
+                  type="number"
+                  error={!!formErrors.balance}
+                  helperText={formErrors.balance || 'Current balance for this driver'}
+                />
               </>
             )}
           </Stack>
@@ -393,6 +476,73 @@ export default function Page(): React.JSX.Element {
           <Button onClick={handleDeleteConfirm} variant="contained" color="error">
             Delete
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Balance History Dialog */}
+      <Dialog open={balanceHistoryDialogOpen} onClose={handleCloseDialogs} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Balance History - {selectedEmployee?.name}
+        </DialogTitle>
+        <DialogContent>
+          {selectedEmployee && (
+            <Stack spacing={2}>
+              <Typography variant="h6" color="primary.main">
+                Current Balance: AED {selectedEmployee.balance?.toFixed(2) || '0.00'}
+              </Typography>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Previous Balance</TableCell>
+                    <TableCell>Change Amount</TableCell>
+                    <TableCell>New Balance</TableCell>
+                    <TableCell>Reason</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {selectedEmployee.balanceHistory && selectedEmployee.balanceHistory.length > 0 ? (
+                    selectedEmployee.balanceHistory
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell>
+                            {new Date(entry.date).toLocaleDateString()} {new Date(entry.date).toLocaleTimeString()}
+                          </TableCell>
+                          <TableCell>AED {entry.previousBalance.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Typography 
+                              variant="body2" 
+                              color={entry.changeAmount >= 0 ? 'success.main' : 'error.main'}
+                              sx={{ fontWeight: 600 }}
+                            >
+                              {entry.changeAmount >= 0 ? '+' : ''}AED {entry.changeAmount.toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>AED {entry.newBalance.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                              {entry.reason.replace('_', ' ')}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center">
+                        <Typography variant="body2" color="text.secondary">
+                          No balance history available
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialogs}>Close</Button>
         </DialogActions>
       </Dialog>
     </Stack>
