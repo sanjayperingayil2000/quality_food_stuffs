@@ -157,7 +157,7 @@ export default function Page(): React.JSX.Element {
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
   const [filteredTrips, setFilteredTrips] = React.useState<DailyTrip[]>([]);
   const [driverFilter, setDriverFilter] = React.useState<string>('');
-  const [dateFrom, setDateFrom] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
+  const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(9, 'day').format('YYYY-MM-DD'));
   const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
@@ -472,10 +472,10 @@ export default function Page(): React.JSX.Element {
 
         <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
           <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Driver</InputLabel>
+            <InputLabel>All Drivers</InputLabel>
             <Select
               value={driverFilter}
-              label="Driver"
+              label={driverFilter ? drivers.find(d => d.id === driverFilter)?.name || 'All Drivers' : 'All Drivers'}
               onChange={(e) => setDriverFilter(e.target.value)}
             >
               <MenuItem value="">All Drivers</MenuItem>

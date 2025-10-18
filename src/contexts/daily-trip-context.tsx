@@ -5,6 +5,8 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { useEmployees } from './employee-context';
+import { freshProducts } from './data/fresh-products';
+import { bakeryProducts } from './data/bakery-products';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -185,6 +187,39 @@ const calculateFinancialMetrics = (
     profit,
     balance
   };
+};
+
+// Helper function to generate products for each driver
+const generateDriverProducts = (driverIndex: number, _dayOffset: number): TripProduct[] => {
+  const products: TripProduct[] = [];
+  
+  // Add 35 fresh products
+  for (let i = 0; i < 35; i++) {
+    const productIndex = (driverIndex * 35 + i) % freshProducts.length;
+    const product = freshProducts[productIndex];
+    products.push({
+      productId: product.id,
+      productName: product.name,
+      category: 'fresh',
+      quantity: Math.floor(Math.random() * 10) + 1, // Random quantity between 1-10
+      unitPrice: product.price,
+    });
+  }
+  
+  // Add 15 bakery products
+  for (let i = 0; i < 15; i++) {
+    const productIndex = (driverIndex * 15 + i) % bakeryProducts.length;
+    const product = bakeryProducts[productIndex];
+    products.push({
+      productId: product.id,
+      productName: product.name,
+      category: 'bakery',
+      quantity: Math.floor(Math.random() * 8) + 1, // Random quantity between 1-8
+      unitPrice: product.price,
+    });
+  }
+  
+  return products;
 };
 
 // Generate comprehensive daily trip data for last 10 days
@@ -645,8 +680,60 @@ const _generateDailyTrips = (): DailyTrip[] => {
         }
       );
 
+    } else if (dayOffset >= 5) {
+      // Days 5-9 (older days) - Use the new product generation for all drivers
+      const drivers = ['EMP-004', 'EMP-005', 'EMP-006', 'EMP-007', 'EMP-008', 'EMP-009', 'EMP-010', 'EMP-011', 'EMP-012', 'EMP-013'];
+      const driverNames = ['IQBAL', 'SEBEH', 'RASHEED', 'SHINOOF', 'ABHIJITH', 'AFSAL', 'RIJAS', 'FAROOK', 'SADIQUE', 'AJMAL'];
+      
+      // All drivers for these days
+      for (const [index, driverId] of drivers.entries()) {
+        const hasTransfer = Math.random() > 0.7; // 30% chance of transfer
+        const receivingDriverIndex = Math.floor(Math.random() * drivers.length);
+        
+        trips.push({
+          id: `TRP-${String(tripId++).padStart(3, '0')}`,
+          driverId,
+          driverName: driverNames[index],
+          date: currentDate,
+          products: generateDriverProducts(index, dayOffset),
+          transfer: {
+            isProductTransferred: hasTransfer,
+            transferredProducts: hasTransfer ? [
+              {
+                productId: `PRD-${String(dayOffset * 10 + index * 2 + 3).padStart(3, '0')}`,
+                productName: `Transfer Product ${dayOffset}-${index}`,
+                category: 'bakery',
+                quantity: Math.floor(Math.random() * 5) + 1,
+                unitPrice: Math.floor(Math.random() * 15) + 5,
+                receivingDriverId: drivers[receivingDriverIndex],
+                receivingDriverName: driverNames[receivingDriverIndex],
+                transferredFromDriverId: driverId,
+                transferredFromDriverName: driverNames[index],
+              },
+            ] : [],
+          },
+          acceptedProducts: [],
+          collectionAmount: Math.floor(Math.random() * 500) + 200,
+          purchaseAmount: Math.floor(Math.random() * 400) + 150,
+          expiry: Math.floor(Math.random() * 50) + 10,
+          discount: Math.floor(Math.random() * 30) + 5,
+          petrol: Math.floor(Math.random() * 100) + 80,
+          balance: Math.floor(Math.random() * 80) + 40,
+          totalAmount: 0,
+          netTotal: 0,
+          grandTotal: 0,
+          expiryAfterTax: 0, // Will be calculated later
+          amountToBe: 0, // Will be calculated later
+          salesDifference: 0, // Will be calculated later
+          profit: 0, // Will be calculated later
+          createdAt: currentDate,
+          updatedAt: currentDate,
+          createdBy: 'EMP-002',
+          updatedBy: 'EMP-002',
+        });
+      }
     } else {
-      // Other days - Various scenarios
+      // Days 3-4 - Various scenarios (keep original logic)
       const drivers = ['EMP-004', 'EMP-005', 'EMP-006', 'EMP-007', 'EMP-008'];
       const driverNames = ['Rahul Kumar', 'Ali Ahmed', 'David Wilson', 'Fatima Al-Zahra', 'James Brown'];
       
@@ -754,7 +841,7 @@ const _generateDailyTrips = (): DailyTrip[] => {
   return trips;
 };
 
-const initialTrips: DailyTrip[] = [];
+const initialTrips: DailyTrip[] = _generateDailyTrips();
 
 export function DailyTripProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [trips, setTrips] = React.useState<DailyTrip[]>(initialTrips);
