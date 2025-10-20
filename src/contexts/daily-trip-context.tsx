@@ -5,8 +5,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { useEmployees } from './employee-context';
-import { freshProducts } from './data/fresh-products';
-import { bakeryProducts } from './data/bakery-products';
+import { apiClient } from '@/lib/api-client';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -69,14 +68,17 @@ export interface DailyTrip {
 
 interface DailyTripContextType {
   trips: DailyTrip[];
+  isLoading: boolean;
+  error: string | null;
   getTripById: (id: string) => DailyTrip | undefined;
-  addTrip: (trip: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateTrip: (id: string, updates: Partial<DailyTrip>) => void;
-  deleteTrip: (id: string) => void;
+  addTrip: (trip: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateTrip: (id: string, updates: Partial<DailyTrip>) => Promise<void>;
+  deleteTrip: (id: string) => Promise<void>;
   getTripsByDriver: (driverId: string) => DailyTrip[];
   getTripsByDateRange: (startDate: Date, endDate: Date) => DailyTrip[];
   getTripByDriverAndDate: (driverId: string, date: Date) => DailyTrip | undefined;
   canAddTripForDriver: (driverId: string, date: Date) => boolean;
+  refreshTrips: () => Promise<void>;
 }
 
 const DailyTripContext = React.createContext<DailyTripContextType | undefined>(undefined);
@@ -844,7 +846,9 @@ const _generateDailyTrips = (): DailyTrip[] => {
 const initialTrips: DailyTrip[] = _generateDailyTrips();
 
 export function DailyTripProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const [trips, setTrips] = React.useState<DailyTrip[]>(initialTrips);
+  const [trips, setTrips] = React.useState<DailyTrip[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [pendingTransfers, setPendingTransfers] = React.useState<Array<{
     id: string;
     date: string;
@@ -853,6 +857,32 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     transferredFromDriverId: string;
     transferredFromDriverName: string;
   }>>([]);
+
+  const refreshTrips = React.useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await apiClient.getCalculations({ contextName: 'dailyTrip' });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Get the daily trip calculation data
+      const tripCalc = result.data?.items.find(item => item.contextName === 'dailyTrip');
+      if (tripCalc?.inputs?.trips) {
+        setTrips(tripCalc.inputs.trips);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch trips');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshTrips();
+  }, [refreshTrips]);
 
   // Get employee context to access driver balance
   const { getEmployeeById, updateDriverBalance } = useEmployees();

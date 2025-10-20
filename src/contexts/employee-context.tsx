@@ -4,7 +4,7 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { initialEmployees } from './data/employee-list';
+import { apiClient } from '@/lib/api-client';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -47,18 +47,49 @@ interface EmployeeContextType {
   drivers: Employee[];
   staff: Employee[];
   ceo: Employee[];
+  isLoading: boolean;
+  error: string | null;
   getEmployeeById: (id: string) => Employee | undefined;
-  addEmployee: (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateEmployee: (id: string, updates: Partial<Employee>) => void;
-  deleteEmployee: (id: string) => void;
-  updateDriverBalance: (driverId: string, newBalance: number, reason: string, updatedBy?: string) => void;
+  addEmployee: (employee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateEmployee: (id: string, updates: Partial<Employee>) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
+  updateDriverBalance: (driverId: string, newBalance: number, reason: string, updatedBy?: string) => Promise<void>;
   getDriverBalanceHistory: (driverId: string) => BalanceHistoryEntry[];
+  refreshEmployees: () => Promise<void>;
 }
 
 const EmployeeContext = React.createContext<EmployeeContextType | undefined>(undefined);
 
 export function EmployeeProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const [employees, setEmployees] = React.useState<Employee[]>(initialEmployees);
+  const [employees, setEmployees] = React.useState<Employee[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const refreshEmployees = React.useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await apiClient.getCalculations({ contextName: 'employee' });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Get the employee calculation data
+      const employeeCalc = result.data?.items.find(item => item.contextName === 'employee');
+      if (employeeCalc?.inputs?.employees) {
+        setEmployees(employeeCalc.inputs.employees);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch employees');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    refreshEmployees();
+  }, [refreshEmployees]);
 
   const drivers = React.useMemo(() =>
     employees.filter(emp => emp.designation === 'driver' && emp.isActive),
@@ -79,33 +110,90 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     return employees.find(emp => emp.id === id);
   }, [employees]);
 
-  const addEmployee = React.useCallback((employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newEmployee: Employee = {
-      ...employeeData,
-      id: `EMP-${String(employees.length + 1).padStart(3, '0')}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setEmployees(prev => [...prev, newEmployee]);
-  }, [employees.length]);
+  const addEmployee = React.useCallback(async (employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newEmployee: Employee = {
+        ...employeeData,
+        id: `EMP-${String(employees.length + 1).padStart(3, '0')}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Update local state immediately for better UX
+      setEmployees(prev => [...prev, newEmployee]);
+      
+      // Save to backend
+      const result = await apiClient.createCalculation({
+        contextName: 'employee',
+        inputs: { employees: [...employees, newEmployee] },
+        metadata: { type: 'employee_update', action: 'add', employeeId: newEmployee.id }
+      });
+      
+      if (result.error) {
+        // Revert local state on error
+        setEmployees(prev => prev.filter(emp => emp.id !== newEmployee.id));
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add employee');
+    }
+  }, [employees]);
 
-  const updateEmployee = React.useCallback((id: string, updates: Partial<Employee>) => {
-    setEmployees(prev =>
-      prev.map(emp =>
+  const updateEmployee = React.useCallback(async (id: string, updates: Partial<Employee>) => {
+    try {
+      const updatedEmployees = employees.map(emp =>
         emp.id === id
           ? { ...emp, ...updates, updatedAt: new Date() }
           : emp
-      )
-    );
-  }, []);
+      );
+      
+      // Update local state immediately
+      setEmployees(updatedEmployees);
+      
+      // Save to backend
+      const result = await apiClient.createCalculation({
+        contextName: 'employee',
+        inputs: { employees: updatedEmployees },
+        metadata: { type: 'employee_update', action: 'update', employeeId: id }
+      });
+      
+      if (result.error) {
+        // Revert local state on error
+        await refreshEmployees();
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update employee');
+    }
+  }, [employees, refreshEmployees]);
 
-  const deleteEmployee = React.useCallback((id: string) => {
-    setEmployees(prev => prev.filter(emp => emp.id !== id));
-  }, []);
+  const deleteEmployee = React.useCallback(async (id: string) => {
+    try {
+      const updatedEmployees = employees.filter(emp => emp.id !== id);
+      
+      // Update local state immediately
+      setEmployees(updatedEmployees);
+      
+      // Save to backend
+      const result = await apiClient.createCalculation({
+        contextName: 'employee',
+        inputs: { employees: updatedEmployees },
+        metadata: { type: 'employee_update', action: 'delete', employeeId: id }
+      });
+      
+      if (result.error) {
+        // Revert local state on error
+        await refreshEmployees();
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete employee');
+    }
+  }, [employees, refreshEmployees]);
 
-  const updateDriverBalance = React.useCallback((driverId: string, newBalance: number, reason: string, updatedBy?: string) => {
-    setEmployees(prev =>
-      prev.map(emp => {
+  const updateDriverBalance = React.useCallback(async (driverId: string, newBalance: number, reason: string, updatedBy?: string) => {
+    try {
+      const updatedEmployees = employees.map(emp => {
         if (emp.id === driverId && emp.designation === 'driver') {
           const previousBalance = emp.balance || 0;
           const roundedNewBalance = Math.round(newBalance);
@@ -132,9 +220,27 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
           };
         }
         return emp;
-      })
-    );
-  }, []);
+      });
+      
+      // Update local state immediately
+      setEmployees(updatedEmployees);
+      
+      // Save to backend
+      const result = await apiClient.createCalculation({
+        contextName: 'employee',
+        inputs: { employees: updatedEmployees },
+        metadata: { type: 'balance_update', driverId, reason, updatedBy }
+      });
+      
+      if (result.error) {
+        // Revert local state on error
+        await refreshEmployees();
+        setError(result.error);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update driver balance');
+    }
+  }, [employees, refreshEmployees]);
 
   const getDriverBalanceHistory = React.useCallback((driverId: string): BalanceHistoryEntry[] => {
     const employee = employees.find(emp => emp.id === driverId && emp.designation === 'driver');
@@ -146,12 +252,15 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     drivers,
     staff,
     ceo,
+    isLoading,
+    error,
     getEmployeeById,
     addEmployee,
     updateEmployee,
     deleteEmployee,
     updateDriverBalance,
     getDriverBalanceHistory,
+    refreshEmployees,
   };
 
   return (
