@@ -25,6 +25,9 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   });
 
   isConnected = 2;
+  if(isConnected === 2) {
+    console.log('Connected to MongoDB');
+  }
   return mongoose;
 }
 
