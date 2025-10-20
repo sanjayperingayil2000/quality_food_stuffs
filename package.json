@@ -14,11 +14,12 @@
     "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
     "format:write": "prettier --write \"**/*.{js,jsx,mjs,ts,tsx,mdx}\" --cache",
-    "format:check": "prettier --check \"**/*.{js,jsx,mjs,ts,tsx,mdx}\" --cache"
+    "format:check": "prettier --check \"**/*.{js,jsx,mjs,ts,tsx,mdx}\" --cache",
+    "seed": "node ./src/utils/seed.ts ./seed_data.json",
+    "test": "jest"
   },
   "engines": {
     "node": "20.x"
-    
   },
   "dependencies": {
     "@emotion/cache": "11.14.0",
@@ -35,9 +36,16 @@
     "@mui/utils": "7.1.1",
     "@mui/x-date-pickers": "^8.11.3",
     "@phosphor-icons/react": "2.1.10",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/nodemailer": "^7.0.2",
     "apexcharts": "4.7.0",
+    "bcryptjs": "^3.0.2",
     "dayjs": "^1.11.13",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.1",
     "next": "15.3.3",
+    "nodemailer": "^7.0.9",
     "react": "19.1.0",
     "react-apexcharts": "1.7.0",
     "react-dom": "19.1.0",

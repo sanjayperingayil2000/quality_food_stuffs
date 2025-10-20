@@ -1,0 +1,60 @@
+import { z } from 'zod';
+
+export const signupSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(8),
+  roles: z.array(z.enum(['super_admin', 'manager'])).optional(),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+export const refreshSchema = z.object({
+  refreshToken: z.string().min(10),
+});
+
+export const logoutSchema = z.object({
+  refreshToken: z.string().min(10),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(10),
+  newPassword: z.string().min(8),
+});
+
+export const userUpdateSchema = z.object({
+  name: z.string().optional(),
+  roles: z.array(z.enum(['super_admin', 'manager'])).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const settingCreateSchema = z.object({
+  key: z.string().min(1),
+  value: z.any(),
+});
+
+export const settingUpdateSchema = z.object({
+  value: z.any(),
+});
+
+export const calculationCreateSchema = z.object({
+  contextName: z.string().min(1),
+  inputs: z.record(z.any()),
+  results: z.record(z.any()).optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const calculationUpdateSchema = z.object({
+  inputs: z.record(z.any()).optional(),
+  results: z.record(z.any()).optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+

@@ -43,6 +43,78 @@ to save more time and design efforts :)
 - Start the server: `npm run dev` or `yarn dev`
 - Open browser: `http://localhost:3000`
 
+## Backend API (Next.js App Router)
+
+This project includes a modular backend under `src/app/api/*` powered by MongoDB (Mongoose), JWT auth, role-based access, Nodemailer (SMTP), and history/audit logging.
+
+### Environment variables
+
+Copy `.env.example` to `.env.local` and set values:
+- `MONGO_URL`
+- `NEXT_PUBLIC_API_BASE=/api`
+- `JWT_SECRET`, `JWT_REFRESH_SECRET`
+- `ACCESS_TOKEN_EXPIRES_IN=15m`, `REFRESH_TOKEN_EXPIRES_IN=2h`, `RESET_PASSWORD_TOKEN_EXPIRES_IN=1h`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM_NAME`, `SMTP_FROM_EMAIL`
+- `CORS_ORIGIN` (use `*` in dev; lock to your domain in prod)
+- `APP_URL`, `RESET_PASSWORD_URL`
+- `SEED_SUPER_ADMIN_EMAIL`, `SEED_SUPER_ADMIN_PASSWORD`, `SEED_SUPER_ADMIN_NAME`
+
+### Seeding
+
+Run: `node ./src/utils/seed.ts ./seed_data.json`
+
+Seeds default super admin (if env set) and upserts `settings` and `calculations` from the JSON file.
+
+### API Endpoints
+
+- Auth: `POST /api/auth?action=signup|login|refresh|logout|forgot-password|reset-password`
+- Users: `GET /api/users`, `POST /api/users`
+- Users by id: `GET /api/users/:id`, `PATCH /api/users/:id`, `DELETE /api/users/:id`
+- Settings: `GET /api/settings`, `POST /api/settings`, `PATCH /api/settings/:key`
+- Calculations: `GET /api/calculations`, `POST /api/calculations`
+- Calculation by id: `GET /api/calculations/:id`, `PATCH /api/calculations/:id`, `DELETE /api/calculations/:id`
+- History: `GET /api/history`
+
+Protected routes require `Authorization: Bearer <accessToken>`.
+
+### Sample requests
+
+Signup:
+
+```
+POST /api/auth?action=signup
+{ "name": "Manager One", "email": "manager1@example.com", "password": "Passw0rd!", "roles": ["manager"] }
+```
+
+Login:
+
+```
+POST /api/auth?action=login
+{ "email": "manager1@example.com", "password": "Passw0rd!" }
+```
+
+Refresh:
+
+```
+POST /api/auth?action=refresh
+{ "refreshToken": "<refresh>" }
+```
+
+Create calculation from frontend context:
+
+```
+POST /api/calculations
+Authorization: Bearer <access>
+{ "contextName": "dailyTrip", "inputs": { "trips": [] }, "results": {}, "metadata": { "tags": ["today"] } }
+```
+
+### Production
+
+- Set `CORS_ORIGIN` to your domain
+- Rotate JWT secrets regularly
+- Use SMTP app passwords
+- Prefer HTTPS with Secure/HttpOnly cookies if moving tokens to cookies
+
 ## File Structure
 
 Within the download you'll find the following directories and files:
