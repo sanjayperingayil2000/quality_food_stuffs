@@ -1,10 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
 import { jsonError } from '@/middleware/errorHandler';
-import { signupSchema, loginSchema, refreshSchema, logoutSchema, forgotPasswordSchema, resetPasswordSchema } from '@/utils/validators';
-import { signup, login, refreshToken, logout } from '@/services/authService';
+import { loginSchema, refreshSchema, logoutSchema, forgotPasswordSchema, resetPasswordSchema, otpVerificationSchema } from '@/utils/validators';
+import { login, refreshToken, logout } from '@/services/authService';
 import { sendMail } from '@/lib/mailer';
 import { signResetToken } from '@/lib/jwt';
+import { connectToDatabase } from '@/lib/db';
+import { User } from '@/models/User';
+import bcrypt from 'bcryptjs';
 
 export async function OPTIONS() {
   return handleCorsPreflight();
@@ -15,13 +18,6 @@ export async function POST(req: NextRequest) {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
     const body = await req.json();
-
-    if (action === 'signup') {
-      const parsed = signupSchema.safeParse(body);
-      if (!parsed.success) return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
-      const user = await signup(parsed.data);
-      return withCors(NextResponse.json({ user }, { status: 201 }));
-    }
 
     if (action === 'login') {
       const parsed = loginSchema.safeParse(body);
@@ -47,22 +43,77 @@ export async function POST(req: NextRequest) {
     if (action === 'forgot-password') {
       const parsed = forgotPasswordSchema.safeParse(body);
       if (!parsed.success) return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
-      const token = signResetToken({ email: parsed.data.email });
-      const resetUrl = `${process.env.RESET_PASSWORD_URL || process.env.APP_URL || 'http://localhost:3000' }?token=${encodeURIComponent(token)}`;
+      
+      await connectToDatabase();
+      const user = await User.findOne({ email: parsed.data.email, isActive: true });
+      if (!user) {
+        return withCors(NextResponse.json({ error: 'User not found' }, { status: 404 }));
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100_000 + Math.random() * 900_000).toString();
+      
+      // Store OTP in user document (in production, use Redis or separate OTP collection)
+      await User.findByIdAndUpdate(user._id, { 
+        resetPasswordOtp: otp,
+        resetPasswordOtpExpiry: new Date(Date.now() + 5 * 60 * 1_000) // 5 minutes
+      });
+
+      // Send OTP via email
       await sendMail({
         to: parsed.data.email,
-        subject: 'Reset your password',
-        html: `<p>Click the link to reset your password: <a href="${resetUrl}">${resetUrl}</a></p>`,
+        subject: 'Password Reset OTP',
+        html: `<p>Your password reset OTP is: <strong>${otp}</strong></p><p>This OTP will expire in 5 minutes.</p>`,
       });
+      
+      return withCors(NextResponse.json({ success: true }, { status: 200 }));
+    }
+
+    if (action === 'verify-otp') {
+      const parsed = otpVerificationSchema.safeParse(body);
+      if (!parsed.success) return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
+      
+      await connectToDatabase();
+      const user = await User.findOne({ 
+        email: parsed.data.email, 
+        resetPasswordOtp: parsed.data.otp,
+        resetPasswordOtpExpiry: { $gt: new Date() },
+        isActive: true 
+      });
+      
+      if (!user) {
+        return withCors(NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 }));
+      }
+
       return withCors(NextResponse.json({ success: true }, { status: 200 }));
     }
 
     if (action === 'reset-password') {
       const parsed = resetPasswordSchema.safeParse(body);
       if (!parsed.success) return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
-      // For simplicity, accept reset token and new password by asking user to login after reset.
-      // In a full solution, you'd verify token email and update the password here.
-      return withCors(NextResponse.json({ message: 'Use dedicated reset endpoint to change password' }, { status: 200 }));
+      
+      await connectToDatabase();
+      const user = await User.findOne({ 
+        email: parsed.data.email, 
+        resetPasswordOtpExpiry: { $gt: new Date() },
+        isActive: true 
+      });
+      
+      if (!user) {
+        return withCors(NextResponse.json({ error: 'Invalid or expired session' }, { status: 400 }));
+      }
+
+      // Hash new password
+      const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+      
+      // Update password and clear OTP
+      await User.findByIdAndUpdate(user._id, { 
+        passwordHash,
+        resetPasswordOtp: undefined,
+        resetPasswordOtpExpiry: undefined
+      });
+      
+      return withCors(NextResponse.json({ success: true }, { status: 200 }));
     }
 
     return withCors(NextResponse.json({ error: 'Unknown action' }, { status: 400 }));

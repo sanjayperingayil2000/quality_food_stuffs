@@ -6,6 +6,8 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { useEmployees } from './employee-context';
 import { apiClient } from '@/lib/api-client';
+import { freshProducts } from './data/fresh-products';
+import { bakeryProducts } from './data/bakery-products';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -917,7 +919,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     return trips.find(trip => trip.id === id);
   }, [trips]);
 
-  const addTrip = React.useCallback((tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addTrip = React.useCallback(async (tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Check for pending transfers for this driver and date
     const tripDate = dayjs(tripData.date).format('YYYY-MM-DD');
     const pendingForThisDriver = pendingTransfers.filter(
@@ -1083,11 +1085,9 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
 
     // Update the employee's balance after creating the trip
     updateDriverBalance(tripData.driverId, Math.round(financialMetrics.balance), 'trip_update', 'EMP-001');
-
-    return newTrip;
   }, [trips, pendingTransfers, getPreviousBalance, updateDriverBalance]);
 
-  const updateTrip = React.useCallback((id: string, updates: Partial<DailyTrip>) => {
+  const updateTrip = React.useCallback(async (id: string, updates: Partial<DailyTrip>) => {
     setTrips(prev => 
       prev.map(trip => {
         if (trip.id === id) {
@@ -1163,7 +1163,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     );
   }, [getPreviousBalance, updateDriverBalance]);
 
-  const deleteTrip = React.useCallback((id: string) => {
+  const deleteTrip = React.useCallback(async (id: string) => {
     setTrips(prev => prev.filter(trip => trip.id !== id));
   }, []);
 
@@ -1192,6 +1192,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
 
   const value: DailyTripContextType = {
     trips,
+    isLoading: false,
+    error: null,
     getTripById,
     addTrip,
     updateTrip,
@@ -1200,6 +1202,9 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     getTripsByDateRange,
     getTripByDriverAndDate,
     canAddTripForDriver,
+    refreshTrips: async () => {
+      // Implementation for refreshing trips from API
+    },
   };
 
   return (

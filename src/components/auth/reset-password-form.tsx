@@ -14,6 +14,8 @@ import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
 
 import { authClient } from '@/lib/auth/client';
+import { OtpVerificationForm } from './otp-verification-form';
+import { NewPasswordForm } from './new-password-form';
 
 const schema = zod.object({ email: zod.string().min(1, { message: 'Email is required' }).email() });
 
@@ -21,8 +23,12 @@ type Values = zod.infer<typeof schema>;
 
 const defaultValues = { email: '' } satisfies Values;
 
+type Step = 'email' | 'otp' | 'password' | 'success';
+
 export function ResetPasswordForm(): React.JSX.Element {
   const [isPending, setIsPending] = React.useState<boolean>(false);
+  const [step, setStep] = React.useState<Step>('email');
+  const [email, setEmail] = React.useState<string>('');
 
   const {
     control,
@@ -43,12 +49,50 @@ export function ResetPasswordForm(): React.JSX.Element {
         return;
       }
 
+      setEmail(values.email);
+      setStep('otp');
       setIsPending(false);
-
-      // Redirect to confirm password reset
     },
     [setError]
   );
+
+  const handleOtpSuccess = React.useCallback(() => {
+    setStep('password');
+  }, []);
+
+  const handlePasswordSuccess = React.useCallback(() => {
+    setStep('success');
+  }, []);
+
+  const handleBack = React.useCallback(() => {
+    if (step === 'otp') {
+      setStep('email');
+    } else if (step === 'password') {
+      setStep('otp');
+    }
+  }, [step]);
+
+  if (step === 'otp') {
+    return <OtpVerificationForm email={email} onSuccess={handleOtpSuccess} onBack={handleBack} />;
+  }
+
+  if (step === 'password') {
+    return <NewPasswordForm email={email} onSuccess={handlePasswordSuccess} onBack={handleBack} />;
+  }
+
+  if (step === 'success') {
+    return (
+      <Stack spacing={4}>
+        <Typography variant="h5">Password Reset Successful</Typography>
+        <Alert color="success">
+          Your password has been successfully reset. You can now sign in with your new password.
+        </Alert>
+        <Button href="/auth/sign-in" variant="contained" fullWidth>
+          Sign In
+        </Button>
+      </Stack>
+    );
+  }
 
   return (
     <Stack spacing={4}>
@@ -68,7 +112,7 @@ export function ResetPasswordForm(): React.JSX.Element {
           />
           {errors.root ? <Alert color="error">{errors.root.message}</Alert> : null}
           <Button disabled={isPending} type="submit" variant="contained">
-            Send recovery link
+            Send OTP
           </Button>
         </Stack>
       </form>

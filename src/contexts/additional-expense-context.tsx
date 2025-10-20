@@ -4,6 +4,7 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { apiClient } from '@/lib/api-client';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -12,7 +13,7 @@ dayjs.extend(timezone);
 export type ExpenseCategory = 'petrol' | 'maintenance' | 'variance' | 'salary' | 'others';
 
 export interface AdditionalExpense {
-  id: string;
+  _id: string;
   title: string;
   description?: string;
   category: ExpenseCategory;
@@ -37,16 +38,19 @@ export interface AdditionalExpense {
 
 interface AdditionalExpenseContextType {
   expenses: AdditionalExpense[];
+  isLoading: boolean;
+  error: string | null;
   getExpenseById: (id: string) => AdditionalExpense | undefined;
-  addExpense: (expense: Omit<AdditionalExpense, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateExpense: (id: string, updates: Partial<AdditionalExpense>) => void;
-  deleteExpense: (id: string) => void;
+  addExpense: (expense: Omit<AdditionalExpense, '_id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateExpense: (id: string, updates: Partial<AdditionalExpense>) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
   getExpensesByDriver: (driverId: string) => AdditionalExpense[];
   getExpensesByCategory: (category: ExpenseCategory) => AdditionalExpense[];
   getExpensesByDateRange: (startDate: Date, endDate: Date) => AdditionalExpense[];
   getTotalExpenses: () => number;
-  approveExpense: (id: string, approvedBy: string) => void;
-  rejectExpense: (id: string, rejectedBy: string, reason: string) => void;
+  approveExpense: (id: string, approvedBy: string) => Promise<void>;
+  rejectExpense: (id: string, rejectedBy: string, reason: string) => Promise<void>;
+  refreshExpenses: () => Promise<void>;
 }
 
 const AdditionalExpenseContext = React.createContext<AdditionalExpenseContextType | undefined>(undefined);
@@ -54,7 +58,7 @@ const AdditionalExpenseContext = React.createContext<AdditionalExpenseContextTyp
 // Sample data - 8 additional expenses
 const initialExpenses: AdditionalExpense[] = [
   {
-    id: 'EXP-001',
+    _id: 'EXP-001',
     title: 'Fuel Refill - Route A',
     description: 'Regular fuel refill for Route A vehicle',
     category: 'petrol',
@@ -76,7 +80,7 @@ const initialExpenses: AdditionalExpense[] = [
     updatedBy: 'EMP-002',
   },
   {
-    id: 'EXP-002',
+    _id: 'EXP-002',
     title: 'Vehicle Maintenance',
     description: 'Oil change and brake inspection',
     category: 'maintenance',
@@ -98,7 +102,7 @@ const initialExpenses: AdditionalExpense[] = [
     updatedBy: 'EMP-003',
   },
   {
-    id: 'EXP-003',
+    _id: 'EXP-003',
     title: 'Toll Charges',
     description: 'Salik toll charges for the week',
     category: 'salary',
@@ -117,7 +121,7 @@ const initialExpenses: AdditionalExpense[] = [
     createdBy: 'EMP-006',
   },
   {
-    id: 'EXP-004',
+    _id: 'EXP-004',
     title: 'Parking Fees',
     description: 'Parking fees at customer locations',
     category: 'variance',
@@ -139,7 +143,7 @@ const initialExpenses: AdditionalExpense[] = [
     updatedBy: 'EMP-002',
   },
   {
-    id: 'EXP-005',
+    _id: 'EXP-005',
     title: 'Vehicle Insurance Renewal',
     description: 'Annual vehicle insurance renewal',
     category: 'variance',
@@ -159,7 +163,7 @@ const initialExpenses: AdditionalExpense[] = [
     updatedBy: 'EMP-001',
   },
   {
-    id: 'EXP-006',
+    _id: 'EXP-006',
     title: 'Emergency Repair',
     description: 'Flat tire repair on the road',
     category: 'maintenance',
@@ -181,7 +185,7 @@ const initialExpenses: AdditionalExpense[] = [
     updatedBy: 'EMP-003',
   },
   {
-    id: 'EXP-007',
+    _id: 'EXP-007',
     title: 'Office Supplies',
     description: 'Delivery forms and stationery',
     category: 'others',
@@ -200,7 +204,7 @@ const initialExpenses: AdditionalExpense[] = [
     updatedBy: 'EMP-001',
   },
   {
-    id: 'EXP-008',
+    _id: 'EXP-008',
     title: 'Fuel Refill - Route B',
     description: 'Regular fuel refill for Route B vehicle',
     category: 'petrol',
@@ -221,40 +225,131 @@ const initialExpenses: AdditionalExpense[] = [
 ];
 
 export function AdditionalExpenseProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const [expenses, setExpenses] = React.useState<AdditionalExpense[]>(initialExpenses);
+  const [expenses, setExpenses] = React.useState<AdditionalExpense[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const getExpenseById = React.useCallback((id: string): AdditionalExpense | undefined => {
-    return expenses.find(expense => expense.id === id);
-  }, [expenses]);
-
-  const addExpense = React.useCallback((expenseData: Omit<AdditionalExpense, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newExpense: AdditionalExpense = {
-      ...expenseData,
-      id: `EXP-${String(expenses.length + 1).padStart(3, '0')}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setExpenses(prev => [newExpense, ...prev]);
-  }, [expenses.length]);
-
-  const updateExpense = React.useCallback((id: string, updates: Partial<AdditionalExpense>) => {
-    setExpenses(prev => {
-      const updatedList = prev.map(expense =>
-        expense.id === id
-          ? { ...expense, ...updates, updatedAt: new Date() }
-          : expense
-      );
-
-      // Find the updated expense and put it first
-      const updatedExpense = updatedList.find(exp => exp.id === id);
-      const remaining = updatedList.filter(exp => exp.id !== id);
-
-      return updatedExpense ? [updatedExpense, ...remaining] : updatedList;
-    });
+  const refreshExpenses = React.useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await apiClient.getAdditionalExpenses();
+      if (result.error) {
+        setError(result.error);
+        // Fallback to initial data on error
+        setExpenses(initialExpenses);
+        return;
+      }
+      
+      if (result.data?.expenses && result.data.expenses.length > 0) {
+        setExpenses(result.data.expenses);
+      } else {
+        // If no data in API, use initial data as fallback
+        setExpenses(initialExpenses);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch expenses');
+      // Fallback to initial data on error
+      setExpenses(initialExpenses);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const deleteExpense = React.useCallback((id: string) => {
-    setExpenses(prev => prev.filter(expense => expense.id !== id));
+  React.useEffect(() => {
+    refreshExpenses();
+  }, [refreshExpenses]);
+
+  const getExpenseById = React.useCallback((id: string): AdditionalExpense | undefined => {
+    return expenses.find(expense => expense._id === id);
+  }, [expenses]);
+
+  const addExpense = React.useCallback(async (expenseData: Omit<AdditionalExpense, '_id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      // Save to backend first
+      const result = await apiClient.createAdditionalExpense({
+        title: expenseData.title,
+        description: expenseData.description,
+        category: expenseData.category,
+        amount: expenseData.amount,
+        currency: expenseData.currency,
+        date: expenseData.date.toISOString(),
+        driverId: expenseData.driverId,
+        driverName: expenseData.driverName,
+        designation: expenseData.designation,
+        receiptNumber: expenseData.receiptNumber,
+        vendor: expenseData.vendor,
+        isReimbursable: expenseData.isReimbursable,
+        status: expenseData.status,
+      });
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Update local state with the created expense
+      if (result.data?.expense) {
+        setExpenses(prev => [result.data!.expense, ...prev]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add expense');
+    }
+  }, []);
+
+  const updateExpense = React.useCallback(async (id: string, updates: Partial<AdditionalExpense>) => {
+    try {
+      // Prepare update data
+      const updateData: any = {};
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.category !== undefined) updateData.category = updates.category;
+      if (updates.amount !== undefined) updateData.amount = updates.amount;
+      if (updates.currency !== undefined) updateData.currency = updates.currency;
+      if (updates.date !== undefined) updateData.date = updates.date.toISOString();
+      if (updates.driverId !== undefined) updateData.driverId = updates.driverId;
+      if (updates.driverName !== undefined) updateData.driverName = updates.driverName;
+      if (updates.designation !== undefined) updateData.designation = updates.designation;
+      if (updates.receiptNumber !== undefined) updateData.receiptNumber = updates.receiptNumber;
+      if (updates.vendor !== undefined) updateData.vendor = updates.vendor;
+      if (updates.isReimbursable !== undefined) updateData.isReimbursable = updates.isReimbursable;
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.approvedBy !== undefined) updateData.approvedBy = updates.approvedBy;
+      if (updates.approvedAt !== undefined) updateData.approvedAt = updates.approvedAt?.toISOString();
+      if (updates.rejectedReason !== undefined) updateData.rejectedReason = updates.rejectedReason;
+      
+      // Save to backend
+      const result = await apiClient.updateAdditionalExpense(id, updateData);
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Update local state with the updated expense
+      if (result.data?.expense) {
+        setExpenses(prev => prev.map(exp => exp._id === id ? result.data!.expense : exp));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update expense');
+    }
+  }, []);
+
+  const deleteExpense = React.useCallback(async (id: string) => {
+    try {
+      // Delete from backend
+      const result = await apiClient.deleteAdditionalExpense(id);
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Update local state
+      setExpenses(prev => prev.filter(exp => exp._id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete expense');
+    }
   }, []);
 
   const getExpensesByDriver = React.useCallback((driverId: string): AdditionalExpense[] => {
@@ -276,41 +371,55 @@ export function AdditionalExpenseProvider({ children }: { children: React.ReactN
     return expenses.reduce((total, expense) => total + expense.amount, 0);
   }, [expenses]);
 
-  const approveExpense = React.useCallback((id: string, approvedBy: string) => {
-    setExpenses(prev =>
-      prev.map(expense =>
-        expense.id === id
-          ? {
-            ...expense,
-            status: 'approved' as const,
-            approvedBy,
-            approvedAt: new Date(),
-            updatedAt: new Date(),
-            updatedBy: approvedBy
-          }
-          : expense
-      )
-    );
+  const approveExpense = React.useCallback(async (id: string, approvedBy: string) => {
+    try {
+      // Update expense status to approved
+      const result = await apiClient.updateAdditionalExpense(id, {
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date().toISOString(),
+      });
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Update local state with the updated expense
+      if (result.data?.expense) {
+        setExpenses(prev => prev.map(exp => exp._id === id ? result.data!.expense : exp));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve expense');
+    }
   }, []);
 
-  const rejectExpense = React.useCallback((id: string, rejectedBy: string, reason: string) => {
-    setExpenses(prev =>
-      prev.map(expense =>
-        expense.id === id
-          ? {
-            ...expense,
-            status: 'rejected' as const,
-            rejectedReason: reason,
-            updatedAt: new Date(),
-            updatedBy: rejectedBy
-          }
-          : expense
-      )
-    );
+  const rejectExpense = React.useCallback(async (id: string, rejectedBy: string, reason: string) => {
+    try {
+      // Update expense status to rejected
+      const result = await apiClient.updateAdditionalExpense(id, {
+        status: 'rejected',
+        rejectedReason: reason,
+      });
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Update local state with the updated expense
+      if (result.data?.expense) {
+        setExpenses(prev => prev.map(exp => exp._id === id ? result.data!.expense : exp));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reject expense');
+    }
   }, []);
 
   const value: AdditionalExpenseContextType = {
     expenses,
+    isLoading,
+    error,
     getExpenseById,
     addExpense,
     updateExpense,
@@ -321,6 +430,7 @@ export function AdditionalExpenseProvider({ children }: { children: React.ReactN
     getTotalExpenses,
     approveExpense,
     rejectExpense,
+    refreshExpenses,
   };
 
   return (

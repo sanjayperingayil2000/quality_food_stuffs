@@ -4,12 +4,10 @@ import * as React from 'react';
 import RouterLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import Box from '@mui/material/Box';
-// import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-// import { ArrowSquareUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareUpRight';
 import { ListIcon } from '@phosphor-icons/react/dist/ssr/List';
 import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 
@@ -17,6 +15,7 @@ import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { Logo } from '@/components/core/logo';
+import { useUser } from '@/hooks/use-user';
 
 import { navItems } from './config';
 import { navIcons } from './nav-icons';
@@ -26,9 +25,18 @@ interface SideNavProps {
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {  const pathname = usePathname();
+export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {
+  const pathname = usePathname();
+  const { user } = useUser();
 
   const toggleSidebar = () => setOpen((prev) => !prev);
+
+  // Filter nav items based on user roles
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.roles) return true; // No role requirement
+    if (!user?.roles) return false; // User has no roles
+    return item.roles.some((role) => user.roles?.includes(role));
+  });
 
   return (
     <Box
@@ -93,7 +101,7 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {  c
           },
         }}
       >
-        {renderNavItems({ pathname: pathname ?? '', items: navItems, open })}
+        {renderNavItems({ pathname: pathname ?? '', items: filteredNavItems, open })}
       </Box>
 
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />

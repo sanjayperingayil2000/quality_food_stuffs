@@ -15,6 +15,14 @@ export interface UserContextValue {
 
 export const UserContext = React.createContext<UserContextValue | undefined>(undefined);
 
+export function useUser(): UserContextValue {
+  const context = React.useContext(UserContext);
+  if (context === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+  return context;
+}
+
 export interface UserProviderProps {
   children: React.ReactNode;
 }
@@ -31,15 +39,18 @@ export function UserProvider({ children }: UserProviderProps): React.JSX.Element
       const { data, error } = await authClient.getUser();
 
       if (error) {
-        logger.error(error);
-        setState((prev) => ({ ...prev, user: null, error: 'Something went wrong', isLoading: false }));
+        // Only log actual errors, not token expiration which is normal
+        if (error !== 'Invalid or expired token') {
+          logger.error(error);
+        }
+        setState((prev) => ({ ...prev, user: null, error: null, isLoading: false }));
         return;
       }
 
       setState((prev) => ({ ...prev, user: data ?? null, error: null, isLoading: false }));
     } catch (error) {
       logger.error(error);
-      setState((prev) => ({ ...prev, user: null, error: 'Something went wrong', isLoading: false }));
+      setState((prev) => ({ ...prev, user: null, error: null, isLoading: false }));
     }
   }, []);
 

@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-// import type { Metadata } from 'next';
 import type { ChipProps } from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -190,7 +189,7 @@ export default function Page(): React.JSX.Element {
   const handleDelete = (expenseId: string) => {
     deleteExpense(expenseId);
     // Update filtered expenses to reflect the deletion
-    setFilteredExpenses(prev => prev.filter(e => e.id !== expenseId));
+    setFilteredExpenses(prev => prev.filter(e => e._id !== expenseId));
   };
 
   const handleApplyFilter = () => {
@@ -356,7 +355,7 @@ export default function Page(): React.JSX.Element {
 
     if (editingExpense) {
       // Edit existing expense using context
-      updateExpense(editingExpense.id, {
+      updateExpense(editingExpense._id, {
         title: data.description || 'Expense',
         description: data.description,
         category: data.type,
@@ -491,7 +490,7 @@ export default function Page(): React.JSX.Element {
           </TableHead>
           <TableBody>
             {filteredExpenses.map((expense) => (
-              <TableRow hover key={expense.id}>
+              <TableRow hover key={expense._id}>
                 <TableCell>{dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST</TableCell>
                 <TableCell>
                   <Chip
@@ -518,7 +517,7 @@ export default function Page(): React.JSX.Element {
                     <IconButton onClick={() => handleEdit(expense)} size="small">
                       <PencilIcon />
                     </IconButton>
-                    <IconButton onClick={() => handleDelete(expense.id)} size="small" color="error">
+                    <IconButton onClick={() => handleDelete(expense._id)} size="small" color="error">
                       <TrashIcon />
                     </IconButton>
                   </Stack>

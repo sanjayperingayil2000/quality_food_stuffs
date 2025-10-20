@@ -11,18 +11,19 @@ export async function OPTIONS() {
   return handleCorsPreflight();
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { key: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ key: string }> }) {
   const authed = requireAuth(req);
   if (authed instanceof NextResponse) return withCors(authed);
   const forbidden = requireRole(authed, ['super_admin']);
   if (forbidden) return withCors(forbidden);
   try {
+    const { key } = await params;
     const body = await req.json();
     const parsed = settingUpdateSchema.safeParse(body);
     if (!parsed.success) return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
     await connectToDatabase();
     const setting = await Setting.findOneAndUpdate(
-      { key: params.key },
+      { key },
       { $set: { value: parsed.data.value } },
       { new: true }
     );

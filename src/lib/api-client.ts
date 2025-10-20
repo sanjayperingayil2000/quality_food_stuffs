@@ -34,15 +34,25 @@ class ApiClient {
     }
   }
 
-  private async request<T>(
+  async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
+
+    // Handle different types of headers
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        options.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+      } else if (typeof options.headers === 'object') {
+        Object.assign(headers, options.headers);
+      }
+    }
 
     if (this.accessToken) {
       headers.Authorization = `Bearer ${this.accessToken}`;
@@ -56,6 +66,32 @@ class ApiClient {
 
       const data = await response.json();
 
+      // If we get a 401 and have a refresh token, try to refresh
+      if (response.status === 401 && this.accessToken && endpoint !== '/auth?action=refresh') {
+        const refreshResult = await this.refreshToken();
+        if (!refreshResult.error && this.accessToken) {
+          // Retry the original request with the new token
+          const retryHeaders = {
+            ...headers,
+            Authorization: `Bearer ${this.accessToken}`,
+          };
+          const retryResponse = await fetch(url, {
+            ...options,
+            headers: retryHeaders,
+          });
+          const retryData = await retryResponse.json();
+          
+          if (!retryResponse.ok) {
+            return { error: retryData.error || 'Request failed' };
+          }
+          return { data: retryData };
+        } else {
+          // If refresh failed, clear tokens and return error
+          this.clearAccessToken();
+          return { error: 'Session expired. Please login again.' };
+        }
+      }
+
       if (!response.ok) {
         return { error: data.error || 'Request failed' };
       }
@@ -67,12 +103,6 @@ class ApiClient {
   }
 
   // Auth methods
-  async signup(userData: { name: string; email: string; password: string; roles?: string[] }) {
-    return this.request('/auth?action=signup', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-  }
 
   async login(credentials: { email: string; password: string }) {
     const result = await this.request<{ user: any; accessToken: string; refreshToken: string }>('/auth?action=login', {
@@ -209,6 +239,80 @@ class ApiClient {
 
   async deleteCalculation(id: string) {
     return this.request(`/calculations/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Additional Expenses methods
+  async getAdditionalExpenses(filters?: { 
+    driverId?: string; 
+    category?: string; 
+    status?: string; 
+    startDate?: string; 
+    endDate?: string; 
+  }) {
+    const params = new URLSearchParams();
+    if (filters?.driverId) params.append('driverId', filters.driverId);
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    
+    const query = params.toString();
+    return this.request<{ expenses: any[] }>(`/additional-expenses${query ? `?${query}` : ''}`);
+  }
+
+  async createAdditionalExpense(data: {
+    title: string;
+    description?: string;
+    category: string;
+    amount: number;
+    currency?: string;
+    date: string;
+    driverId?: string;
+    driverName?: string;
+    designation: string;
+    receiptNumber?: string;
+    vendor?: string;
+    isReimbursable?: boolean;
+    status?: string;
+  }) {
+    return this.request<{ expense: any }>('/additional-expenses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAdditionalExpense(id: string) {
+    return this.request<{ expense: any }>(`/additional-expenses/${id}`);
+  }
+
+  async updateAdditionalExpense(id: string, updates: {
+    title?: string;
+    description?: string;
+    category?: string;
+    amount?: number;
+    currency?: string;
+    date?: string;
+    driverId?: string;
+    driverName?: string;
+    designation?: string;
+    receiptNumber?: string;
+    vendor?: string;
+    isReimbursable?: boolean;
+    status?: string;
+    approvedBy?: string;
+    approvedAt?: string;
+    rejectedReason?: string;
+  }) {
+    return this.request<{ expense: any }>(`/additional-expenses/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteAdditionalExpense(id: string) {
+    return this.request(`/additional-expenses/${id}`, {
       method: 'DELETE',
     });
   }

@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
+import { User } from './src/models/User';
 // import { freshProducts } from './data/fresh-products.ts';
 // import { bakeryProducts } from './data/bakery-products.ts';
 
@@ -166,21 +167,32 @@ interface IDailyTrip extends Document {
   updatedBy?: string;
 }
 
+interface IAdditionalExpense extends Document {
+  title: string;
+  description?: string;
+  category: 'petrol' | 'maintenance' | 'variance' | 'salary' | 'others';
+  amount: number;
+  currency: string;
+  date: Date;
+  driverId?: string;
+  driverName?: string;
+  designation: 'driver' | 'manager' | 'ceo' | 'staff';
+  receiptNumber?: string;
+  vendor?: string;
+  isReimbursable: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  approvedBy?: string;
+  approvedAt?: Date;
+  rejectedReason?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // ----------------------
 // Schemas
 // ----------------------
-
-const UserSchema = new Schema<IUser>(
-  {
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
-    passwordHash: { type: String, required: true },
-    roles: { type: [String], enum: ['super_admin', 'manager'], default: ['manager'], index: true },
-    isActive: { type: Boolean, default: true },
-    settingsAccess: { type: Boolean, default: false },
-  },
-  { timestamps: true }
-);
 
 const SettingSchema = new Schema<ISetting>(
   {
@@ -272,11 +284,43 @@ const DailyTripSchema = new Schema<IDailyTrip>({
   updatedBy: String,
 });
 
+const AdditionalExpenseSchema = new Schema<IAdditionalExpense>({
+  title: { type: String, required: true, trim: true },
+  description: { type: String, trim: true },
+  category: { 
+    type: String, 
+    enum: ['petrol', 'maintenance', 'variance', 'salary', 'others'], 
+    required: true 
+  },
+  amount: { type: Number, required: true, min: 0 },
+  currency: { type: String, required: true, default: 'AED' },
+  date: { type: Date, required: true },
+  driverId: { type: String, trim: true },
+  driverName: { type: String, trim: true },
+  designation: { 
+    type: String, 
+    enum: ['driver', 'manager', 'ceo', 'staff'], 
+    required: true 
+  },
+  receiptNumber: { type: String, trim: true },
+  vendor: { type: String, trim: true },
+  isReimbursable: { type: Boolean, default: true },
+  status: { 
+    type: String, 
+    enum: ['pending', 'approved', 'rejected'], 
+    default: 'pending' 
+  },
+  approvedBy: { type: String, trim: true },
+  approvedAt: { type: Date },
+  rejectedReason: { type: String, trim: true },
+  createdBy: { type: String, trim: true },
+  updatedBy: { type: String, trim: true },
+}, { timestamps: true });
+
 // ----------------------
 // Models
 // ----------------------
 
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 const Setting: Model<ISetting> = mongoose.models.Setting || mongoose.model<ISetting>('Setting', SettingSchema);
 const Calculation: Model<ICalculation> =
   mongoose.models.Calculation || mongoose.model<ICalculation>('Calculation', CalculationSchema);
@@ -286,6 +330,8 @@ const Product: Model<IProduct> =
   mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema, 'products');
 const DailyTrip: Model<IDailyTrip> =
   mongoose.models.DailyTrip || mongoose.model<IDailyTrip>('DailyTrip', DailyTripSchema, 'daily_trips');
+const AdditionalExpense: Model<IAdditionalExpense> =
+  mongoose.models.AdditionalExpense || mongoose.model<IAdditionalExpense>('AdditionalExpense', AdditionalExpenseSchema);
 
 // ----------------------
 // Utility functions
@@ -303,12 +349,16 @@ async function ensureSuperAdmin(): Promise<void> {
 
   const existing = await User.findOne({ email });
   if (existing) {
-    console.log('Super admin already exists');
+    console.log('Super admin already exists, updating password...');
+    const passwordHash = await bcrypt.hash(password, 12);
+    await User.findByIdAndUpdate(existing._id, { passwordHash });
+    console.log('Super admin password updated for:', email);
     return;
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
   await User.create({ name, email, passwordHash, roles: ['super_admin'], isActive: true });
+  console.log('Super admin password hash created for:', email);
   console.log('Super admin created');
 }
 
@@ -2573,6 +2623,173 @@ async function seedDefaultData(): Promise<void> {
   console.log('Product data seeded');
   await DailyTrip.createCollection().catch(() => {});
   console.log('daily_trips collection ensured');
+
+  // Additional Expenses
+  const defaultAdditionalExpenses: Partial<IAdditionalExpense>[] = [
+    {
+      title: 'Fuel Refill - Route A',
+      description: 'Regular fuel refill for Route A vehicle',
+      category: 'petrol',
+      amount: 150.75,
+      currency: 'AED',
+      date: dayjs().subtract(1, 'day').toDate(),
+      driverId: 'EMP-004',
+      driverName: 'IQBAL',
+      designation: 'driver',
+      receiptNumber: 'RCP-001-2024',
+      vendor: 'ADNOC Station - Downtown',
+      isReimbursable: true,
+      status: 'approved',
+      approvedBy: 'EMP-002',
+      approvedAt: dayjs().subtract(1, 'day').add(2, 'hour').toDate(),
+      createdAt: dayjs().subtract(1, 'day').toDate(),
+      updatedAt: dayjs().subtract(1, 'day').add(2, 'hour').toDate(),
+      createdBy: 'EMP-004',
+      updatedBy: 'EMP-002',
+    },
+    {
+      title: 'Vehicle Maintenance',
+      description: 'Oil change and brake inspection',
+      category: 'maintenance',
+      amount: 320.5,
+      currency: 'AED',
+      date: dayjs().subtract(3, 'day').toDate(),
+      driverId: 'EMP-005',
+      driverName: 'SEBEH',
+      designation: 'driver',
+      receiptNumber: 'RCP-002-2024',
+      vendor: 'AutoCare Center - Marina',
+      isReimbursable: true,
+      status: 'approved',
+      approvedBy: 'EMP-003',
+      approvedAt: dayjs().subtract(3, 'day').add(1, 'hour').toDate(),
+      createdAt: dayjs().subtract(3, 'day').toDate(),
+      updatedAt: dayjs().subtract(3, 'day').add(1, 'hour').toDate(),
+      createdBy: 'EMP-005',
+      updatedBy: 'EMP-003',
+    },
+    {
+      title: 'Toll Charges',
+      description: 'Salik toll charges for the week',
+      category: 'variance',
+      amount: 45.25,
+      currency: 'AED',
+      date: dayjs().subtract(5, 'day').toDate(),
+      driverId: 'EMP-006',
+      driverName: 'RASHEED',
+      designation: 'driver',
+      receiptNumber: 'RCP-003-2024',
+      vendor: 'RTA - Salik',
+      isReimbursable: true,
+      status: 'pending',
+      createdAt: dayjs().subtract(5, 'day').toDate(),
+      updatedAt: dayjs().subtract(5, 'day').toDate(),
+      createdBy: 'EMP-006',
+    },
+    {
+      title: 'Parking Fees',
+      description: 'Parking fees at customer locations',
+      category: 'variance',
+      amount: 25.5,
+      currency: 'AED',
+      date: dayjs().subtract(2, 'day').toDate(),
+      driverId: 'EMP-007',
+      driverName: 'SHINOOF',
+      designation: 'driver',
+      receiptNumber: 'RCP-004-2024',
+      vendor: 'Various Parking Lots',
+      isReimbursable: true,
+      status: 'approved',
+      approvedBy: 'EMP-002',
+      approvedAt: dayjs().subtract(2, 'day').add(3, 'hour').toDate(),
+      createdAt: dayjs().subtract(2, 'day').toDate(),
+      updatedAt: dayjs().subtract(2, 'day').add(3, 'hour').toDate(),
+      createdBy: 'EMP-007',
+      updatedBy: 'EMP-002',
+    },
+    {
+      title: 'Vehicle Insurance Renewal',
+      description: 'Annual vehicle insurance renewal',
+      category: 'variance',
+      amount: 1200,
+      currency: 'AED',
+      date: dayjs().subtract(7, 'day').toDate(),
+      designation: 'manager',
+      receiptNumber: 'RCP-005-2024',
+      vendor: 'National Insurance Co.',
+      isReimbursable: false,
+      status: 'approved',
+      approvedBy: 'EMP-001',
+      approvedAt: dayjs().subtract(7, 'day').add(1, 'hour').toDate(),
+      createdAt: dayjs().subtract(7, 'day').toDate(),
+      updatedAt: dayjs().subtract(7, 'day').add(1, 'hour').toDate(),
+      createdBy: 'EMP-002',
+      updatedBy: 'EMP-001',
+    },
+    {
+      title: 'Emergency Repair',
+      description: 'Flat tire repair on the road',
+      category: 'maintenance',
+      amount: 85.25,
+      currency: 'AED',
+      date: dayjs().subtract(4, 'day').toDate(),
+      driverId: 'EMP-008',
+      driverName: 'ABHIJITH',
+      designation: 'driver',
+      receiptNumber: 'RCP-006-2024',
+      vendor: 'Quick Fix Garage',
+      isReimbursable: true,
+      status: 'approved',
+      approvedBy: 'EMP-003',
+      approvedAt: dayjs().subtract(4, 'day').add(2, 'hour').toDate(),
+      createdAt: dayjs().subtract(4, 'day').toDate(),
+      updatedAt: dayjs().subtract(4, 'day').add(2, 'hour').toDate(),
+      createdBy: 'EMP-008',
+      updatedBy: 'EMP-003',
+    },
+    {
+      title: 'Office Supplies',
+      description: 'Delivery forms and stationery',
+      category: 'others',
+      amount: 45.75,
+      currency: 'AED',
+      date: dayjs().subtract(6, 'day').toDate(),
+      designation: 'manager',
+      receiptNumber: 'RCP-007-2024',
+      vendor: 'Office Depot',
+      isReimbursable: true,
+      status: 'rejected',
+      rejectedReason: 'Not related to vehicle operations',
+      createdAt: dayjs().subtract(6, 'day').toDate(),
+      updatedAt: dayjs().subtract(6, 'day').add(1, 'hour').toDate(),
+      createdBy: 'EMP-002',
+      updatedBy: 'EMP-001',
+    },
+    {
+      title: 'Fuel Refill - Route B',
+      description: 'Regular fuel refill for Route B vehicle',
+      category: 'petrol',
+      amount: 165.5,
+      currency: 'AED',
+      date: dayjs().subtract(1, 'day').toDate(),
+      driverId: 'EMP-005',
+      driverName: 'SEBEH',
+      designation: 'driver',
+      receiptNumber: 'RCP-008-2024',
+      vendor: 'ENOC Station - Marina',
+      isReimbursable: true,
+      status: 'pending',
+      createdAt: dayjs().subtract(1, 'day').toDate(),
+      updatedAt: dayjs().subtract(1, 'day').toDate(),
+      createdBy: 'EMP-005',
+    },
+  ];
+
+  for (const expense of defaultAdditionalExpenses) {
+    await AdditionalExpense.create(expense);
+  }
+
+  console.log('Additional expenses seeded');
 }
 
 // ----------------------

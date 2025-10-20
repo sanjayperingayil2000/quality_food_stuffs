@@ -1,31 +1,7 @@
 'use client';
 
 import type { User } from '@/types/user';
-
-function generateToken(): string {
-  const arr = new Uint8Array(12);
-  globalThis.crypto.getRandomValues(arr);
-  return Array.from(arr, (v) => v.toString(16).padStart(2, '0')).join('');
-}
-
-const user = {
-  id: 'USR-000',
-  avatar: '/assets/avatar.png',
-  firstName: 'Sanjay',
-  lastName: 'Rivers',
-  email: 'sanjay@eg.io',
-} satisfies User;
-
-export interface SignUpParams {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-}
-
-export interface SignInWithOAuthParams {
-  provider: 'google' | 'discord';
-}
+import { apiClient } from '@/lib/api-client';
 
 export interface SignInWithPasswordParams {
   email: string;
@@ -37,60 +13,109 @@ export interface ResetPasswordParams {
 }
 
 class AuthClient {
-  async signUp(_: SignUpParams): Promise<{ error?: string }> {
-    // Make API request
-
-    // We do not handle the API, so we'll just generate a token and store it in localStorage.
-    const token = generateToken();
-    localStorage.setItem('custom-auth-token', token);
-
-    return {};
-  }
-
-  async signInWithOAuth(_: SignInWithOAuthParams): Promise<{ error?: string }> {
-    return { error: 'Social authentication not implemented' };
-  }
-
   async signInWithPassword(params: SignInWithPasswordParams): Promise<{ error?: string }> {
-    const { email, password } = params;
-
-    // Make API request
-
-    // We do not handle the API, so we'll check if the credentials match with the hardcoded ones.
-    if (email !== 'sanjay@eg.io' || password !== 'Secret1') {
-      return { error: 'Invalid credentials' };
+    const result = await apiClient.login(params);
+    
+    if (result.error) {
+      return { error: result.error };
     }
 
-    const token = generateToken();
-    localStorage.setItem('custom-auth-token', token);
+    return {};
+  }
+
+  async resetPassword(params: ResetPasswordParams): Promise<{ error?: string }> {
+    const result = await apiClient.request('/auth?action=forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    
+    if (result.error) {
+      return { error: result.error };
+    }
 
     return {};
   }
 
-  async resetPassword(_: ResetPasswordParams): Promise<{ error?: string }> {
-    return { error: 'Password reset not implemented' };
-  }
-
-  async updatePassword(_: ResetPasswordParams): Promise<{ error?: string }> {
-    return { error: 'Update reset not implemented' };
+  async updatePassword(_params: ResetPasswordParams): Promise<{ error?: string }> {
+    return { error: 'Update password not implemented' };
   }
 
   async getUser(): Promise<{ data?: User | null; error?: string }> {
-    // Make API request
-
-    // We do not handle the API, so just check if we have a token in localStorage.
-    const token = localStorage.getItem('custom-auth-token');
-
+    // Check if we have a token
+    const token = typeof globalThis.window !== 'undefined' ? globalThis.window.localStorage.getItem('accessToken') : null;
+    
     if (!token) {
       return { data: null };
     }
 
-    return { data: user };
+    try {
+      // Decode the JWT token to get user information
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      
+      // Check if token is expired
+      if (payload.exp && payload.exp < Date.now() / 1000) {
+        // Token is expired, try to refresh
+        const refreshResult = await apiClient.refreshToken();
+        if (refreshResult.error) {
+          this.clearAccessToken();
+          return { data: null };
+        }
+        // Retry with new token
+        const newToken = typeof globalThis.window !== 'undefined' ? globalThis.window.localStorage.getItem('accessToken') : null;
+        if (newToken) {
+          const newPayload = JSON.parse(atob(newToken.split('.')[1]));
+          const result = await apiClient.request(`/users/${newPayload.sub}`);
+          
+          if (result.error) {
+            return { data: null, error: result.error };
+          }
+          
+          return { 
+            data: {
+              id: (result.data as any).user._id,
+              avatar: '/assets/avatar.png',
+              firstName: (result.data as any).user.name.split(' ')[0] || 'User',
+              lastName: (result.data as any).user.name.split(' ').slice(1).join(' ') || '',
+              email: (result.data as any).user.email,
+              roles: (result.data as any).user.roles,
+            } as User
+          };
+        }
+      }
+      
+      // Get user details from the database
+      const result = await apiClient.request(`/users/${payload.sub}`);
+      
+      if (result.error) {
+        return { data: null, error: result.error };
+      }
+      
+      return { 
+        data: {
+          id: (result.data as any).user._id,
+          avatar: '/assets/avatar.png',
+          firstName: (result.data as any).user.name.split(' ')[0] || 'User',
+          lastName: (result.data as any).user.name.split(' ').slice(1).join(' ') || '',
+          email: (result.data as any).user.email,
+          roles: (result.data as any).user.roles,
+        } as User
+      };
+    } catch {
+      // If token is invalid, clear it
+      this.clearAccessToken();
+      return { data: null };
+    }
+  }
+
+  clearAccessToken() {
+    if (typeof globalThis.window !== 'undefined') {
+      globalThis.window.localStorage.removeItem('accessToken');
+      globalThis.window.localStorage.removeItem('refreshToken');
+    }
   }
 
   async signOut(): Promise<{ error?: string }> {
-    localStorage.removeItem('custom-auth-token');
-
+    await apiClient.logout();
     return {};
   }
 }
