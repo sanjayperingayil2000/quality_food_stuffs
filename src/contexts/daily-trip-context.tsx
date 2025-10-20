@@ -843,7 +843,8 @@ const _generateDailyTrips = (): DailyTrip[] => {
   return trips;
 };
 
-const initialTrips: DailyTrip[] = _generateDailyTrips();
+// Initialize empty; data will be fetched from API
+const initialTrips: DailyTrip[] = [];
 
 export function DailyTripProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [trips, setTrips] = React.useState<DailyTrip[]>([]);

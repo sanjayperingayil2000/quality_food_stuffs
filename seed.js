@@ -66,6 +66,130 @@ const User = mongoose.models.User || mongoose.model('User', UserSchema);
 const Setting = mongoose.models.Setting || mongoose.model('Setting', SettingSchema);
 const Calculation = mongoose.models.Calculation || mongoose.model('Calculation', CalculationSchema);
 
+// New dedicated collections
+const EmployeeSchema = new mongoose.Schema({
+  id: { type: String, unique: true, index: true },
+  name: String,
+  designation: { type: String, enum: ['driver', 'staff', 'ceo'] },
+  phoneNumber: String,
+  email: String,
+  address: String,
+  routeName: String,
+  location: String,
+  salary: Number,
+  balance: Number,
+  balanceHistory: [
+    {
+      id: String,
+      previousBalance: Number,
+      newBalance: Number,
+      changeAmount: Number,
+      reason: String,
+      date: Date,
+      updatedBy: String,
+    },
+  ],
+  hireDate: Date,
+  isActive: Boolean,
+  createdAt: Date,
+  updatedAt: Date,
+  createdBy: String,
+  updatedBy: String,
+});
+
+const ProductSchema = new mongoose.Schema({
+  id: { type: String, unique: true, index: true },
+  name: String,
+  category: { type: String, enum: ['bakery', 'fresh'] },
+  price: Number,
+  description: String,
+  sku: String,
+  unit: String,
+  minimumQuantity: Number,
+  maximumQuantity: Number,
+  isActive: Boolean,
+  expiryDays: Number,
+  supplier: String,
+  createdAt: Date,
+  updatedAt: Date,
+  createdBy: String,
+  updatedBy: String,
+  priceHistory: [
+    {
+      version: Number,
+      price: Number,
+      updatedAt: Date,
+      updatedBy: String,
+    },
+  ],
+});
+
+const DailyTripSchema = new mongoose.Schema({
+  id: { type: String, unique: true, index: true },
+  driverId: String,
+  driverName: String,
+  date: Date,
+  products: [
+    {
+      productId: String,
+      productName: String,
+      category: String,
+      quantity: Number,
+      unitPrice: Number,
+      transferredFromDriverId: String,
+      transferredFromDriverName: String,
+    },
+  ],
+  transfer: {
+    isProductTransferred: Boolean,
+    transferredProducts: [
+      {
+        productId: String,
+        productName: String,
+        category: String,
+        quantity: Number,
+        unitPrice: Number,
+        receivingDriverId: String,
+        receivingDriverName: String,
+        transferredFromDriverId: String,
+        transferredFromDriverName: String,
+      },
+    ],
+  },
+  acceptedProducts: [
+    {
+      productId: String,
+      productName: String,
+      category: String,
+      quantity: Number,
+      unitPrice: Number,
+      transferredFromDriverId: String,
+      transferredFromDriverName: String,
+    },
+  ],
+  collectionAmount: Number,
+  purchaseAmount: Number,
+  expiry: Number,
+  discount: Number,
+  petrol: Number,
+  balance: Number,
+  totalAmount: Number,
+  netTotal: Number,
+  grandTotal: Number,
+  expiryAfterTax: Number,
+  amountToBe: Number,
+  salesDifference: Number,
+  profit: Number,
+  createdAt: Date,
+  updatedAt: Date,
+  createdBy: String,
+  updatedBy: String,
+});
+
+const Employee = mongoose.models.Employee || mongoose.model('Employee', EmployeeSchema, 'employees');
+const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema, 'products');
+const DailyTrip = mongoose.models.DailyTrip || mongoose.model('DailyTrip', DailyTripSchema, 'daily_trips');
+
 async function ensureSuperAdmin() {
   const email = process.env.SEED_SUPER_ADMIN_EMAIL;
   const password = process.env.SEED_SUPER_ADMIN_PASSWORD;
@@ -191,7 +315,7 @@ async function seedDefaultData() {
     }
   ];
 
-  // Seed employee calculation
+  // Seed employee calculation (legacy aggregation storage)
   await Calculation.findOneAndUpdate(
     { contextName: 'employee' },
     { 
@@ -203,6 +327,12 @@ async function seedDefaultData() {
     { upsert: true }
   );
   console.log('Employee data seeded');
+
+  // Also seed into dedicated employees collection (idempotent upsert)
+  for (const emp of defaultEmployees) {
+    await Employee.updateOne({ id: emp.id }, { $set: emp }, { upsert: true });
+  }
+  console.log('employees collection seeded');
 
   // Seed default settings
   const defaultSettings = [
@@ -269,7 +399,7 @@ async function seedDefaultData() {
     }
   ];
 
-  // Seed product calculation
+  // Seed product calculation (legacy aggregation storage)
   await Calculation.findOneAndUpdate(
     { contextName: 'product' },
     { 
@@ -281,6 +411,16 @@ async function seedDefaultData() {
     { upsert: true }
   );
   console.log('Product data seeded');
+
+  // Also seed products collection (idempotent upsert)
+  for (const pr of defaultProducts) {
+    await Product.updateOne({ id: pr.id }, { $set: pr }, { upsert: true });
+  }
+  console.log('products collection seeded');
+
+  // Ensure daily_trips collection exists (leave empty by default)
+  await DailyTrip.createCollection().catch(() => {});
+  console.log('daily_trips collection ensured');
 }
 
 async function main() {
