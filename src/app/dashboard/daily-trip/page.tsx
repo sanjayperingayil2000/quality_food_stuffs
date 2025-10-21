@@ -273,7 +273,7 @@ export default function Page(): React.JSX.Element {
     setProductSearch('');
     reset({
       driverId: trip.driverId,
-      date: trip.date,
+      date: new Date(trip.date),
       isProductTransferred: trip.transfer.isProductTransferred,
       transferredProducts: trip.transfer.transferredProducts,
       selectedCategory: 'bakery',
@@ -401,7 +401,7 @@ export default function Page(): React.JSX.Element {
 
   const onSubmit = (data: TripFormData) => {
     // Check if this is a new trip and if driver already has a trip for this date
-    if (!editingTrip && !canAddTripForDriver(data.driverId, data.date)) {
+    if (!editingTrip && !canAddTripForDriver(data.driverId, data.date.toISOString().split('T')[0])) {
       alert(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
       return;
     }
@@ -418,7 +418,7 @@ export default function Page(): React.JSX.Element {
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
       driverName: driver?.name || '',
-      date: data.date,
+      date: data.date.toISOString().split('T')[0],
       products: filteredProducts,
       transfer,
       acceptedProducts: [], // Will be populated by context when products are transferred to this driver

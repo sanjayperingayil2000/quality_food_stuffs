@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
-import { Employee } from '@/models/employee';
+import { Employee, BalanceHistoryEntry } from '@/models/employee';
 import { History } from '@/models/history';
 
 export interface CreateEmployeeData {
@@ -28,6 +28,7 @@ export interface UpdateEmployeeData {
   location?: string;
   salary?: number;
   balance?: number;
+  balanceHistory?: BalanceHistoryEntry[];
   hireDate?: Date;
   isActive?: boolean;
   updatedBy?: string;

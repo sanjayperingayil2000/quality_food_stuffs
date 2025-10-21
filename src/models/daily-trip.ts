@@ -51,7 +51,9 @@ export interface IDailyTrip {
   updatedBy?: string; // Employee ID who last updated this trip
 }
 
-export interface IDailyTripDocument extends mongoose.Document, IDailyTrip {}
+export interface IDailyTripDocument extends mongoose.Document, Omit<IDailyTrip, 'id'> {
+  id: string;
+}
 
 const DailyTripSchema = new Schema<IDailyTripDocument>(
   {

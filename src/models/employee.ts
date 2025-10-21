@@ -30,7 +30,9 @@ export interface IEmployee {
   updatedBy?: string; // Employee ID who last updated this record
 }
 
-export interface IEmployeeDocument extends mongoose.Document, IEmployee {}
+export interface IEmployeeDocument extends mongoose.Document, Omit<IEmployee, 'id'> {
+  id: string;
+}
 
 const EmployeeSchema = new Schema<IEmployeeDocument>(
   {

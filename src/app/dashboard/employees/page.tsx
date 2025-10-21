@@ -41,6 +41,8 @@ export default function Page(): React.JSX.Element {
   const [formData, setFormData] = React.useState({
     name: '',
     phoneNumber: '',
+    email: '',
+    address: '',
     role: 'driver' as 'driver' | 'staff',
     location: '',
     routeName: '',
@@ -50,6 +52,8 @@ export default function Page(): React.JSX.Element {
   type FormErrors = {
     name?: string;
     phoneNumber?: string;
+    email?: string;
+    address?: string;
     role?: string;
     location?: string;
     routeName?: string;
@@ -60,7 +64,7 @@ export default function Page(): React.JSX.Element {
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
 
   const handleAddClick = () => {
-    setFormData({ name: '', phoneNumber: '', role: 'driver', location: '', routeName: '', balance: '' });
+    setFormData({ name: '', phoneNumber: '', email: '', address: '', role: 'driver', location: '', routeName: '', balance: '' });
     setFormErrors({});
     setAddDialogOpen(true);
   };
@@ -70,6 +74,8 @@ export default function Page(): React.JSX.Element {
     setFormData({
       name: employee.name,
       phoneNumber: employee.phoneNumber.replace('+971', '').trim(),
+      email: employee.email,
+      address: employee.address,
       role: employee.designation === 'ceo' ? 'staff' : employee.designation,
       location: employee.location || '',
       routeName: employee.routeName || '',
@@ -121,6 +127,18 @@ export default function Page(): React.JSX.Element {
       errors.phoneNumber = 'Phone number must be exactly 9 digits';
     }
 
+    // Email validation
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    // Address validation
+    if (!formData.address.trim()) {
+      errors.address = 'Address is required';
+    }
+
     // Only validate location, routeName, and balance if role is driver
     if (formData.role === 'driver') {
       if (!formData.location.trim()) {
@@ -150,19 +168,17 @@ export default function Page(): React.JSX.Element {
         name: formData.name,
         designation: formData.role,
         phoneNumber: `+971${formData.phoneNumber}`,
-        email: '',
-        address: '',
+        email: formData.email,
+        address: formData.address,
         routeName: formData.role === 'driver' ? formData.routeName : undefined,
         location: formData.role === 'driver' ? formData.location : undefined,
         balance: formData.role === 'driver' ? Number(formData.balance) : undefined,
         balanceHistory: formData.role === 'driver' ? [
           {
-            id: `BAL-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-            previousBalance: 0,
-            newBalance: Number(formData.balance),
-            changeAmount: Number(formData.balance),
+            version: 1,
+            balance: Number(formData.balance),
+            updatedAt: new Date(),
             reason: 'initial',
-            date: new Date(),
             updatedBy: 'EMP-001', // Assuming CEO creates new employees
           }
         ] : undefined,
@@ -179,6 +195,8 @@ export default function Page(): React.JSX.Element {
       const updates: Partial<Employee> = {
         name: formData.name,
         phoneNumber: `+971${formData.phoneNumber}`,
+        email: formData.email,
+        address: formData.address,
         designation: formData.role,
         location: formData.role === 'driver' ? formData.location : undefined,
         routeName: formData.role === 'driver' ? formData.routeName : undefined,
@@ -248,6 +266,8 @@ export default function Page(): React.JSX.Element {
           <TableRow>
             <TableCell>Name</TableCell>
             <TableCell>Phone number</TableCell>
+            <TableCell>Email</TableCell>
+            <TableCell>Address</TableCell>
             <TableCell>Role</TableCell>
             <TableCell>Location</TableCell>
             <TableCell>Route name</TableCell>
@@ -260,6 +280,8 @@ export default function Page(): React.JSX.Element {
             <TableRow hover key={employee.id}>
               <TableCell>{employee.name}</TableCell>
               <TableCell>{employee.phoneNumber}</TableCell>
+              <TableCell>{employee.email}</TableCell>
+              <TableCell>{employee.address}</TableCell>
               <TableCell sx={{ textTransform: 'capitalize' }}>
                 {employee.designation === 'ceo' ? 'CEO' : employee.designation}
               </TableCell>
@@ -332,6 +354,27 @@ export default function Page(): React.JSX.Element {
               InputProps={{
                 startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>+971</Typography>,
               }}
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={handleFormChange('email')}
+              fullWidth
+              required
+              error={!!formErrors.email}
+              helperText={formErrors.email}
+              placeholder="employee@company.com"
+            />
+            <TextField
+              label="Address"
+              value={formData.address}
+              onChange={handleFormChange('address')}
+              fullWidth
+              required
+              error={!!formErrors.address}
+              helperText={formErrors.address}
+              placeholder="123 Main Street, Dubai, UAE"
             />
             <FormControl fullWidth required>
               <InputLabel>Role</InputLabel>
@@ -411,6 +454,27 @@ export default function Page(): React.JSX.Element {
               InputProps={{
                 startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>+971</Typography>,
               }}
+            />
+            <TextField
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={handleFormChange('email')}
+              fullWidth
+              required
+              error={!!formErrors.email}
+              helperText={formErrors.email}
+              placeholder="employee@company.com"
+            />
+            <TextField
+              label="Address"
+              value={formData.address}
+              onChange={handleFormChange('address')}
+              fullWidth
+              required
+              error={!!formErrors.address}
+              helperText={formErrors.address}
+              placeholder="123 Main Street, Dubai, UAE"
             />
             <FormControl fullWidth required>
               <InputLabel>Role</InputLabel>
@@ -503,26 +567,26 @@ export default function Page(): React.JSX.Element {
                 <TableBody>
                   {selectedEmployee.balanceHistory && selectedEmployee.balanceHistory.length > 0 ? (
                     selectedEmployee.balanceHistory
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                      .map((entry) => (
-                        <TableRow key={entry.id}>
+                      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                      .map((entry, index) => (
+                        <TableRow key={`${entry.version}-${index}`}>
                           <TableCell>
-                            {new Date(entry.date).toLocaleDateString()} {new Date(entry.date).toLocaleTimeString()}
+                            {new Date(entry.updatedAt).toLocaleDateString()} {new Date(entry.updatedAt).toLocaleTimeString()}
                           </TableCell>
-                          <TableCell>AED {entry.previousBalance.toFixed(2)}</TableCell>
+                          <TableCell>AED {index > 0 ? selectedEmployee.balanceHistory![index - 1].balance.toFixed(2) : '0.00'}</TableCell>
                           <TableCell>
                             <Typography 
                               variant="body2" 
-                              color={entry.changeAmount >= 0 ? 'success.main' : 'error.main'}
+                              color={entry.balance >= (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance : 0) ? 'success.main' : 'error.main'}
                               sx={{ fontWeight: 600 }}
                             >
-                              {entry.changeAmount >= 0 ? '+' : ''}AED {entry.changeAmount.toFixed(2)}
+                              {entry.balance >= (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance : 0) ? '+' : ''}AED {(entry.balance - (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance : 0)).toFixed(2)}
                             </Typography>
                           </TableCell>
-                          <TableCell>AED {entry.newBalance.toFixed(2)}</TableCell>
+                          <TableCell>AED {entry.balance.toFixed(2)}</TableCell>
                           <TableCell>
                             <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                              {entry.reason.replace('_', ' ')}
+                              {entry.reason?.replace('_', ' ') || 'N/A'}
                             </Typography>
                           </TableCell>
                         </TableRow>

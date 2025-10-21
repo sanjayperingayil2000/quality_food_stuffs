@@ -30,7 +30,9 @@ export interface IProduct {
   priceHistory?: PriceHistoryEntry[];
 }
 
-export interface IProductDocument extends mongoose.Document, IProduct {}
+export interface IProductDocument extends mongoose.Document, Omit<IProduct, 'id'> {
+  id: string;
+}
 
 const ProductSchema = new Schema<IProductDocument>(
   {

@@ -71,7 +71,17 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       
       // Get the product data directly
       if (result.data?.products) {
-        setProducts(result.data.products);
+        const transformedProducts = result.data.products.map(product => ({
+          ...product,
+          createdAt: new Date(product.createdAt),
+          updatedAt: new Date(product.updatedAt),
+          priceHistory: product.priceHistory?.map(entry => ({
+            ...entry,
+            updatedAt: new Date(entry.updatedAt),
+            updatedBy: entry.updatedBy || 'Unknown'
+          }))
+        }));
+        setProducts(transformedProducts);
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to fetch products');
@@ -110,8 +120,17 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       // Update local state immediately
       setProducts(prev => [newProduct, ...prev]);
       
-      // Save to backend
-      const result = await apiClient.createProduct(newProduct);
+      // Save to backend - convert Date objects to strings for API
+      const apiProduct = {
+        ...newProduct,
+        createdAt: newProduct.createdAt.toISOString(),
+        updatedAt: newProduct.updatedAt.toISOString(),
+        priceHistory: newProduct.priceHistory?.map(entry => ({
+          ...entry,
+          updatedAt: entry.updatedAt.toISOString()
+        }))
+      };
+      const result = await apiClient.createProduct(apiProduct);
       
       if (result.error) {
         // Revert local state on error
@@ -134,8 +153,17 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       // Update local state immediately
       setProducts(updatedProducts);
       
-      // Save to backend
-      const result = await apiClient.updateProduct(id, updates);
+      // Save to backend - convert Date objects to strings for API
+      const apiUpdates = {
+        ...updates,
+        createdAt: updates.createdAt?.toISOString(),
+        updatedAt: updates.updatedAt?.toISOString(),
+        priceHistory: updates.priceHistory?.map(entry => ({
+          ...entry,
+          updatedAt: entry.updatedAt.toISOString()
+        }))
+      };
+      const result = await apiClient.updateProduct(id, apiUpdates);
       
       if (result.error) {
         // Revert local state on error

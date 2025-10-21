@@ -945,7 +945,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     );
     
     // Get previous balance for this driver
-    const previousBalance = getPreviousBalance(tripData.driverId, tripData.date, trips);
+    const previousBalance = getPreviousBalance(tripData.driverId, new Date(tripData.date), trips);
     
     // Calculate all financial metrics
     const financialMetrics = calculateFinancialMetrics(
@@ -970,8 +970,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       salesDifference: financialMetrics.salesDifference,
       profit: financialMetrics.profit,
       balance: financialMetrics.balance,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     setTrips(prev => {
@@ -1031,7 +1031,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             );
             
             // Get previous balance for the receiving driver
-            const driverPreviousBalance = getPreviousBalance(driverId, updatedDriverTrip.date, updatedTrips);
+            const driverPreviousBalance = getPreviousBalance(driverId, new Date(updatedDriverTrip.date), updatedTrips);
             
             // Recalculate financial metrics for the receiving driver
             const driverFinancialMetrics = calculateFinancialMetrics(
@@ -1052,7 +1052,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             updatedDriverTrip.salesDifference = driverFinancialMetrics.salesDifference;
             updatedDriverTrip.profit = driverFinancialMetrics.profit;
             updatedDriverTrip.balance = driverFinancialMetrics.balance;
-            updatedDriverTrip.updatedAt = new Date();
+            updatedDriverTrip.updatedAt = new Date().toISOString();
             
             const driverTripIndex = updatedTrips.findIndex(trip => trip.id === driverTrip.id);
             updatedTrips[driverTripIndex] = updatedDriverTrip;
@@ -1090,7 +1090,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     setTrips(prev => 
       prev.map(trip => {
         if (trip.id === id) {
-          const updatedTrip = { ...trip, ...updates, updatedAt: new Date() };
+          const updatedTrip = { ...trip, ...updates, updatedAt: new Date().toISOString() };
           
           // Recalculate totals if products, accepted products, or transferred products changed
           if (updates.products || updates.acceptedProducts || updates.transfer) {
@@ -1104,7 +1104,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             updatedTrip.grandTotal = totals.overall.grandTotal;
             
             // Get previous balance for this driver
-            const previousBalance = getPreviousBalance(updatedTrip.driverId, updatedTrip.date, prev);
+            const previousBalance = getPreviousBalance(updatedTrip.driverId, new Date(updatedTrip.date), prev);
             
             // Recalculate financial metrics
             const financialMetrics = calculateFinancialMetrics(
@@ -1131,7 +1131,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
               updatedTrip.transfer.transferredProducts
             );
             
-            const previousBalance = getPreviousBalance(updatedTrip.driverId, updatedTrip.date, prev);
+            const previousBalance = getPreviousBalance(updatedTrip.driverId,  new Date(updatedTrip.date), prev);
             
             const financialMetrics = calculateFinancialMetrics(
               updatedTrip.expiry,

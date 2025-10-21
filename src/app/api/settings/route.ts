@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withCors, handleCorsPreflight } from '@/middleware/cors';
+import { withCors } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { requireAuth } from '@/middleware/auth';
 import { requireRole } from '@/middleware/role';
@@ -8,7 +8,7 @@ import { connectToDatabase } from '@/lib/db';
 import { Setting } from '@/models/setting';
 
 export async function OPTIONS() {
-  return handleCorsPreflight();
+  return withCors(new NextResponse(null, { status: 200 }));
 }
 
 export async function GET(req: NextRequest) {

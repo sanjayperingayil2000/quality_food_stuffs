@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
-import { Product } from '@/models/product';
+import { Product, PriceHistoryEntry } from '@/models/product';
 import { History } from '@/models/history';
 
 export interface CreateProductData {
@@ -30,6 +30,7 @@ export interface UpdateProductData {
   isActive?: boolean;
   expiryDays?: number;
   supplier?: string;
+  priceHistory?: PriceHistoryEntry[];
   updatedBy?: string;
 }
 

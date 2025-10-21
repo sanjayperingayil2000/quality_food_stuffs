@@ -61,15 +61,6 @@ const userSchema = zod.object({
 
 type UserFormData = zod.infer<typeof userSchema>;
 
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  roles: string[];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export function UserManagement(): React.JSX.Element {
   const { user: currentUser } = useUser();

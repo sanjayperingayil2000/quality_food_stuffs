@@ -477,25 +477,8 @@ class ApiClient {
     return this.request<{ expense: AdditionalExpense }>(`/additional-expenses/${id}`);
   }
 
-  async createAdditionalExpense(data: Partial<AdditionalExpense>) {
-    return this.request<{ expense: AdditionalExpense }>('/additional-expenses', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
 
-  async updateAdditionalExpense(id: string, data: Partial<AdditionalExpense>) {
-    return this.request<{ expense: AdditionalExpense }>(`/additional-expenses/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
-  }
 
-  async deleteAdditionalExpense(id: string) {
-    return this.request<{ message: string }>(`/additional-expenses/${id}`, {
-      method: 'DELETE',
-    });
-  }
 
   async getCalculation(id: string) {
     return this.request<{ item: Record<string, unknown> }>(`/calculations/${id}`);
@@ -518,24 +501,6 @@ class ApiClient {
     });
   }
 
-  // Additional Expenses methods
-  async getAdditionalExpenses(filters?: { 
-    driverId?: string; 
-    category?: string; 
-    status?: string; 
-    startDate?: string; 
-    endDate?: string; 
-  }) {
-    const params = new URLSearchParams();
-    if (filters?.driverId) params.append('driverId', filters.driverId);
-    if (filters?.category) params.append('category', filters.category);
-    if (filters?.status) params.append('status', filters.status);
-    if (filters?.startDate) params.append('startDate', filters.startDate);
-    if (filters?.endDate) params.append('endDate', filters.endDate);
-    
-    const query = params.toString();
-    return this.request<{ expenses: AdditionalExpense[] }>(`/additional-expenses${query ? `?${query}` : ''}`);
-  }
 
   async createAdditionalExpense(data: {
     title: string;
@@ -556,10 +521,6 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
-  }
-
-  async getAdditionalExpense(id: string) {
-    return this.request<{ expense: AdditionalExpense }>(`/additional-expenses/${id}`);
   }
 
   async updateAdditionalExpense(id: string, updates: {

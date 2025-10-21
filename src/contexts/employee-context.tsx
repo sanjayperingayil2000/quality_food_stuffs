@@ -13,12 +13,10 @@ dayjs.extend(timezone);
 export type EmployeeDesignation = 'driver' | 'staff' | 'ceo';
 
 export interface BalanceHistoryEntry {
-  id: string;
-  previousBalance: number;
-  newBalance: number;
-  changeAmount: number;
-  reason: string; // 'initial', 'trip_update', 'manual_adjustment'
-  date: Date;
+  version: number;
+  balance: number;
+  updatedAt: Date;
+  reason?: string; // Reason for balance change
   updatedBy?: string; // Employee ID who made the change
 }
 
@@ -77,7 +75,17 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       
       // Get the employee data directly
       if (result.data?.employees) {
-        setEmployees(result.data.employees);
+        const transformedEmployees = result.data.employees.map(emp => ({
+          ...emp,
+          hireDate: new Date(emp.hireDate),
+          createdAt: new Date(emp.createdAt),
+          updatedAt: new Date(emp.updatedAt),
+          balanceHistory: emp.balanceHistory?.map(entry => ({
+            ...entry,
+            updatedAt: new Date(entry.updatedAt)
+          }))
+        }));
+        setEmployees(transformedEmployees);
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to fetch employees');
@@ -121,8 +129,18 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       // Update local state immediately for better UX
       setEmployees(prev => [...prev, newEmployee]);
       
-      // Save to backend
-      const result = await apiClient.createEmployee(newEmployee);
+      // Save to backend - convert Date objects to strings for API
+      const apiEmployee = {
+        ...newEmployee,
+        hireDate: newEmployee.hireDate.toISOString(),
+        createdAt: newEmployee.createdAt.toISOString(),
+        updatedAt: newEmployee.updatedAt.toISOString(),
+        balanceHistory: newEmployee.balanceHistory?.map(entry => ({
+          ...entry,
+          updatedAt: entry.updatedAt.toISOString()
+        }))
+      };
+      const result = await apiClient.createEmployee(apiEmployee);
       
       if (result.error) {
         // Revert local state on error
@@ -145,8 +163,18 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       // Update local state immediately
       setEmployees(updatedEmployees);
       
-      // Save to backend
-      const result = await apiClient.updateEmployee(id, updates);
+      // Save to backend - convert Date objects to strings for API
+      const apiUpdates = {
+        ...updates,
+        hireDate: updates.hireDate?.toISOString(),
+        createdAt: updates.createdAt?.toISOString(),
+        updatedAt: updates.updatedAt?.toISOString(),
+        balanceHistory: updates.balanceHistory?.map(entry => ({
+          ...entry,
+          updatedAt: entry.updatedAt.toISOString()
+        }))
+      };
+      const result = await apiClient.updateEmployee(id, apiUpdates);
       
       if (result.error) {
         // Revert local state on error
@@ -182,17 +210,15 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     try {
       const updatedEmployees = employees.map(emp => {
         if (emp.id === driverId && emp.designation === 'driver') {
-          const previousBalance = emp.balance || 0;
+          // const previousBalance = emp.balance || 0;
           const roundedNewBalance = Math.round(newBalance);
-          const changeAmount = roundedNewBalance - previousBalance;
+          // const changeAmount = roundedNewBalance - previousBalance;
           
           const newHistoryEntry: BalanceHistoryEntry = {
-            id: `BAL-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-            previousBalance,
-            newBalance: roundedNewBalance,
-            changeAmount,
+            version: (emp.balanceHistory?.length || 0) + 1,
+            balance: roundedNewBalance,
+            updatedAt: new Date(),
             reason,
-            date: new Date(),
             updatedBy,
           };
 

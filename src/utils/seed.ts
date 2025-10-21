@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { connectToDatabase } from '@/lib/db';
 import { User } from '@/models/user';
 import { Setting } from '@/models/setting';

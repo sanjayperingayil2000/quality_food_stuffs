@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth, getRequestUser } from '@/middleware/auth';
-import { withCors, handleCorsPreflight } from '@/middleware/cors';
+import { withCors } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { connectToDatabase } from '@/lib/db';
 import { Employee } from '@/models/employee';
