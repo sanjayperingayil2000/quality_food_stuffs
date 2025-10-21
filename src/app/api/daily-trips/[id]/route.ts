@@ -1,0 +1,158 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { requireAuth, getRequestUser } from '@/middleware/auth';
+import { withCors, handleCorsPreflight } from '@/middleware/cors';
+import { jsonError } from '@/middleware/error-handler';
+import { connectToDatabase } from '@/lib/db';
+import { DailyTrip } from '@/models/daily-trip';
+import { History } from '@/models/history';
+import { Types } from 'mongoose';
+
+const tripProductSchema = z.object({
+  productId: z.string().min(1),
+  productName: z.string().min(1),
+  category: z.enum(['bakery', 'fresh']),
+  quantity: z.number().min(0),
+  unitPrice: z.number().min(0),
+});
+
+const transferredProductSchema = tripProductSchema.extend({
+  receivingDriverId: z.string().min(1),
+  receivingDriverName: z.string().min(1),
+  transferredFromDriverId: z.string().min(1),
+  transferredFromDriverName: z.string().min(1),
+});
+
+const productTransferSchema = z.object({
+  isProductTransferred: z.boolean(),
+  transferredProducts: z.array(transferredProductSchema),
+});
+
+const dailyTripUpdateSchema = z.object({
+  driverId: z.string().min(1).optional(),
+  driverName: z.string().min(1).optional(),
+  date: z.string().transform(str => new Date(str)).optional(),
+  products: z.array(tripProductSchema).optional(),
+  transfer: productTransferSchema.optional(),
+  acceptedProducts: z.array(tripProductSchema).optional(),
+  collectionAmount: z.number().min(0).optional(),
+  purchaseAmount: z.number().min(0).optional(),
+  expiry: z.number().min(0).optional(),
+  discount: z.number().min(0).optional(),
+  petrol: z.number().min(0).optional(),
+  balance: z.number().optional(),
+  totalAmount: z.number().min(0).optional(),
+  netTotal: z.number().min(0).optional(),
+  grandTotal: z.number().min(0).optional(),
+  expiryAfterTax: z.number().min(0).optional(),
+  amountToBe: z.number().optional(),
+  salesDifference: z.number().optional(),
+  profit: z.number().optional(),
+}).partial();
+
+export async function OPTIONS() {
+  return withCors(new NextResponse(null, { status: 200 }));
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authed = requireAuth(req);
+  if (authed instanceof NextResponse) return withCors(authed);
+  
+  try {
+    const { id } = await params;
+    await connectToDatabase();
+    
+    const trip = await DailyTrip.findOne({ id });
+    if (!trip) {
+      return withCors(NextResponse.json({ error: 'Daily trip not found' }, { status: 404 }));
+    }
+    
+    return withCors(NextResponse.json({ trip }, { status: 200 }));
+  } catch (error) {
+    return withCors(jsonError(error, 500));
+  }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authed = requireAuth(req);
+  if (authed instanceof NextResponse) return withCors(authed);
+  
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const parsed = dailyTripUpdateSchema.safeParse(body);
+    
+    if (!parsed.success) {
+      return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
+    }
+    
+    await connectToDatabase();
+    const user = getRequestUser(authed);
+    
+    const trip = await DailyTrip.findOne({ id });
+    if (!trip) {
+      return withCors(NextResponse.json({ error: 'Daily trip not found' }, { status: 404 }));
+    }
+    
+    const beforeData = trip.toObject();
+    const updateData = {
+      ...parsed.data,
+      updatedBy: user?.sub,
+    };
+    
+    const updatedTrip = await DailyTrip.findOneAndUpdate(
+      { id },
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    // Log to history
+    await History.create({
+      collectionName: 'dailyTrips',
+      documentId: trip._id,
+      action: 'update',
+      actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
+      before: beforeData,
+      after: updatedTrip?.toObject(),
+      timestamp: new Date(),
+    });
+    
+    return withCors(NextResponse.json({ trip: updatedTrip }, { status: 200 }));
+  } catch (error) {
+    return withCors(jsonError(error, 500));
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const authed = requireAuth(req);
+  if (authed instanceof NextResponse) return withCors(authed);
+  
+  try {
+    const { id } = await params;
+    await connectToDatabase();
+    const user = getRequestUser(authed);
+    
+    const trip = await DailyTrip.findOne({ id });
+    if (!trip) {
+      return withCors(NextResponse.json({ error: 'Daily trip not found' }, { status: 404 }));
+    }
+    
+    const beforeData = trip.toObject();
+    await DailyTrip.findOneAndDelete({ id });
+    
+    // Log to history
+    await History.create({
+      collectionName: 'dailyTrips',
+      documentId: trip._id,
+      action: 'delete',
+      actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
+      before: beforeData,
+      after: null,
+      timestamp: new Date(),
+    });
+    
+    return withCors(NextResponse.json({ message: 'Daily trip deleted successfully' }, { status: 200 }));
+  } catch (error) {
+    return withCors(jsonError(error, 500));
+  }
+}

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
-import { jsonError } from '@/middleware/errorHandler';
+import { jsonError } from '@/middleware/error-handler';
 import { requireAuth, getRequestUser } from '@/middleware/auth';
 import { calculationCreateSchema } from '@/utils/validators';
-import { createCalculation, listCalculations } from '@/services/calculationService';
+import { createCalculation, listCalculations } from '@/services/calculation-service';
 
 export async function OPTIONS() {
   return handleCorsPreflight();

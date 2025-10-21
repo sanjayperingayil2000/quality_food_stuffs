@@ -4,27 +4,22 @@ import { requireAuth, getRequestUser } from '@/middleware/auth';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { connectToDatabase } from '@/lib/db';
-import { AdditionalExpense } from '@/models/additional-expense';
+import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
 
-const additionalExpenseUpdateSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().optional(),
-  category: z.enum(['petrol', 'maintenance', 'variance', 'salary', 'others']).optional(),
-  amount: z.number().min(0).optional(),
-  currency: z.string().optional(),
-  date: z.string().transform(str => new Date(str)).optional(),
-  driverId: z.string().optional(),
-  driverName: z.string().optional(),
-  designation: z.enum(['driver', 'manager', 'ceo', 'staff']).optional(),
-  receiptNumber: z.string().optional(),
-  vendor: z.string().optional(),
-  isReimbursable: z.boolean().optional(),
-  status: z.enum(['pending', 'approved', 'rejected']).optional(),
-  approvedBy: z.string().optional(),
-  approvedAt: z.string().transform(str => new Date(str)).optional(),
-  rejectedReason: z.string().optional(),
+const employeeUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  designation: z.enum(['driver', 'staff', 'ceo']).optional(),
+  phoneNumber: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  address: z.string().min(1).optional(),
+  routeName: z.string().optional(),
+  location: z.string().optional(),
+  salary: z.number().min(0).optional(),
+  balance: z.number().min(0).optional(),
+  hireDate: z.string().transform(str => new Date(str)).optional(),
+  isActive: z.boolean().optional(),
 }).partial();
 
 export async function OPTIONS() {
@@ -39,12 +34,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     await connectToDatabase();
     
-    const expense = await AdditionalExpense.findById(id);
-    if (!expense) {
-      return withCors(NextResponse.json({ error: 'Additional expense not found' }, { status: 404 }));
+    const employee = await Employee.findOne({ id });
+    if (!employee) {
+      return withCors(NextResponse.json({ error: 'Employee not found' }, { status: 404 }));
     }
     
-    return withCors(NextResponse.json({ expense }, { status: 200 }));
+    return withCors(NextResponse.json({ employee }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }
@@ -57,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const body = await req.json();
-    const parsed = additionalExpenseUpdateSchema.safeParse(body);
+    const parsed = employeeUpdateSchema.safeParse(body);
     
     if (!parsed.success) {
       return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
@@ -66,35 +61,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    const expense = await AdditionalExpense.findById(id);
-    if (!expense) {
-      return withCors(NextResponse.json({ error: 'Additional expense not found' }, { status: 404 }));
+    const employee = await Employee.findOne({ id });
+    if (!employee) {
+      return withCors(NextResponse.json({ error: 'Employee not found' }, { status: 404 }));
     }
     
-    const beforeData = expense.toObject();
+    const beforeData = employee.toObject();
     const updateData = {
       ...parsed.data,
       updatedBy: user?.sub,
     };
     
-    const updatedExpense = await AdditionalExpense.findByIdAndUpdate(
-      id,
+    const updatedEmployee = await Employee.findOneAndUpdate(
+      { id },
       updateData,
       { new: true, runValidators: true }
     );
     
     // Log to history
     await History.create({
-      collectionName: 'additionalExpenses',
-      documentId: expense._id,
+      collectionName: 'employees',
+      documentId: employee._id,
       action: 'update',
       actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
       before: beforeData,
-      after: updatedExpense?.toObject(),
+      after: updatedEmployee?.toObject(),
       timestamp: new Date(),
     });
     
-    return withCors(NextResponse.json({ expense: updatedExpense }, { status: 200 }));
+    return withCors(NextResponse.json({ employee: updatedEmployee }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }
@@ -109,18 +104,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    const expense = await AdditionalExpense.findById(id);
-    if (!expense) {
-      return withCors(NextResponse.json({ error: 'Additional expense not found' }, { status: 404 }));
+    const employee = await Employee.findOne({ id });
+    if (!employee) {
+      return withCors(NextResponse.json({ error: 'Employee not found' }, { status: 404 }));
     }
     
-    const beforeData = expense.toObject();
-    await AdditionalExpense.findByIdAndDelete(id);
+    const beforeData = employee.toObject();
+    await Employee.findOneAndDelete({ id });
     
     // Log to history
     await History.create({
-      collectionName: 'additionalExpenses',
-      documentId: expense._id,
+      collectionName: 'employees',
+      documentId: employee._id,
       action: 'delete',
       actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
       before: beforeData,
@@ -128,7 +123,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       timestamp: new Date(),
     });
     
-    return withCors(NextResponse.json({ message: 'Additional expense deleted successfully' }, { status: 200 }));
+    return withCors(NextResponse.json({ message: 'Employee deleted successfully' }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }

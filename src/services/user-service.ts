@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { connectToDatabase } from '@/lib/db';
-import { User } from '@/models/User';
+import { User } from '@/models/user';
 
 export async function listUsers() {
   await connectToDatabase();
@@ -13,7 +13,7 @@ export async function createUser({ name, email, password, roles }: { name: strin
   const existing = await User.findOne({ email });
   if (existing) throw new Error('Email already in use');
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await User.create({ name, email, passwordHash, roles: roles && roles.length ? roles : ['manager'] });
+  const user = await User.create({ name, email, passwordHash, roles: roles && roles.length > 0 ? roles : ['manager'] });
   return user.toObject();
 }
 

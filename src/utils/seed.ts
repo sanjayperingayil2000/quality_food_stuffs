@@ -1,11 +1,10 @@
 /* eslint-disable no-console */
 import { connectToDatabase } from '@/lib/db';
-import { User } from '@/models/User';
-import { Setting } from '@/models/Setting';
-import { Calculation } from '@/models/Calculation';
+import { User } from '@/models/user';
+import { Setting } from '@/models/setting';
+import { Calculation } from '@/models/calculation';
 import bcrypt from 'bcryptjs';
 import fs from 'node:fs';
-import path from 'node:path';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -553,7 +552,7 @@ async function main() {
   // Optionally seed from file if provided
   const file = process.argv[2];
   if (file && fs.existsSync(file)) {
-    const raw = fs.readFileSync(file, 'utf-8');
+    const raw = fs.readFileSync(file, 'utf8');
     const data = JSON.parse(raw);
 
     if (Array.isArray(data.settings)) {
@@ -576,12 +575,14 @@ async function main() {
   }
   
   console.log('Seeding complete');
-  process.exit(0);
+  return;
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+try {
+  await main();
+} catch (error) {
+  console.error(error);
+  throw error;
+}
 
 

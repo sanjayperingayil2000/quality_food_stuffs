@@ -169,7 +169,7 @@ export default function Page(): React.JSX.Element {
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense);
     reset({
-      date: expense.date,
+      date: new Date(expense.date),
       type: expense.category,
       employeeId: expense.driverId || '',
       maintenanceName: expense.vendor || '',
@@ -189,7 +189,7 @@ export default function Page(): React.JSX.Element {
   const handleDelete = (expenseId: string) => {
     deleteExpense(expenseId);
     // Update filtered expenses to reflect the deletion
-    setFilteredExpenses(prev => prev.filter(e => e._id !== expenseId));
+    setFilteredExpenses(prev => prev.filter(e => e.id !== expenseId));
   };
 
   const handleApplyFilter = () => {
@@ -355,20 +355,20 @@ export default function Page(): React.JSX.Element {
 
     if (editingExpense) {
       // Edit existing expense using context
-      updateExpense(editingExpense._id, {
+      updateExpense(editingExpense.id, {
         title: data.description || 'Expense',
         description: data.description,
         category: data.type,
         amount: data.amount,
         currency: 'AED',
-        date: data.date,
+        date: data.date.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
         driverId: data.employeeId,
         driverName: employee?.name,
         receiptNumber: undefined,
         vendor: data.maintenanceName,
         isReimbursable: true,
         status: 'pending',
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
         updatedBy: 'current-user', // You might want to get this from auth context
       });
     } else {
@@ -379,7 +379,7 @@ export default function Page(): React.JSX.Element {
         category: data.type,
         amount: data.amount,
         currency: 'AED',
-        date: data.date,
+        date: data.date.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
         driverId: data.employeeId,
         driverName: employee?.name,
         designation: employee?.designation || 'driver',
@@ -490,7 +490,7 @@ export default function Page(): React.JSX.Element {
           </TableHead>
           <TableBody>
             {filteredExpenses.map((expense) => (
-              <TableRow hover key={expense._id}>
+              <TableRow hover key={expense.id}>
                 <TableCell>{dayjs(expense.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST</TableCell>
                 <TableCell>
                   <Chip
@@ -517,7 +517,7 @@ export default function Page(): React.JSX.Element {
                     <IconButton onClick={() => handleEdit(expense)} size="small">
                       <PencilIcon />
                     </IconButton>
-                    <IconButton onClick={() => handleDelete(expense._id)} size="small" color="error">
+                    <IconButton onClick={() => handleDelete(expense.id)} size="small" color="error">
                       <TrashIcon />
                     </IconButton>
                   </Stack>

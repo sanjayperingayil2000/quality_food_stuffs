@@ -63,7 +63,7 @@ export function NewPasswordForm({ email, onSuccess, onBack }: NewPasswordFormPro
         }
 
         onSuccess();
-      } catch (error) {
+      } catch {
         setError('root', { type: 'server', message: 'Failed to reset password' });
         setIsPending(false);
       }

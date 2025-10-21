@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
-import { jsonError } from '@/middleware/errorHandler';
+import { jsonError } from '@/middleware/error-handler';
 import { requireAuth } from '@/middleware/auth';
 import { requireRole } from '@/middleware/role';
 import { settingUpdateSchema } from '@/utils/validators';
 import { connectToDatabase } from '@/lib/db';
-import { Setting } from '@/models/Setting';
+import { Setting } from '@/models/setting';
 
 export async function OPTIONS() {
   return handleCorsPreflight();

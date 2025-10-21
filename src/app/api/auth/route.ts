@@ -1,12 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
-import { jsonError } from '@/middleware/errorHandler';
+import { jsonError } from '@/middleware/error-handler';
 import { loginSchema, refreshSchema, logoutSchema, forgotPasswordSchema, resetPasswordSchema, otpVerificationSchema } from '@/utils/validators';
-import { login, refreshToken, logout } from '@/services/authService';
+import { login, refreshToken, logout } from '@/services/auth-service';
 import { sendMail } from '@/lib/mailer';
-import { signResetToken } from '@/lib/jwt';
+import { signResetToken as _signResetToken } from '@/lib/jwt';
 import { connectToDatabase } from '@/lib/db';
-import { User } from '@/models/User';
+import { User } from '@/models/user';
 import bcrypt from 'bcryptjs';
 
 export async function OPTIONS() {
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       // Store OTP in user document (in production, use Redis or separate OTP collection)
       await User.findByIdAndUpdate(user._id, { 
         resetPasswordOtp: otp,
-        resetPasswordOtpExpiry: new Date(Date.now() + 5 * 60 * 1_000) // 5 minutes
+        resetPasswordOtpExpiry: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
       });
 
       // Send OTP via email

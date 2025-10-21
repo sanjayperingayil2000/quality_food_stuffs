@@ -69,19 +69,18 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     try {
       setIsLoading(true);
       setError(null);
-      const result = await apiClient.getCalculations({ contextName: 'employee' });
+      const result = await apiClient.getEmployees();
       if (result.error) {
         setError(result.error);
         return;
       }
       
-      // Get the employee calculation data
-      const employeeCalc = result.data?.items.find(item => item.contextName === 'employee');
-      if (employeeCalc?.inputs?.employees) {
-        setEmployees(employeeCalc.inputs.employees);
+      // Get the employee data directly
+      if (result.data?.employees) {
+        setEmployees(result.data.employees);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch employees');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to fetch employees');
     } finally {
       setIsLoading(false);
     }
@@ -123,19 +122,15 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       setEmployees(prev => [...prev, newEmployee]);
       
       // Save to backend
-      const result = await apiClient.createCalculation({
-        contextName: 'employee',
-        inputs: { employees: [...employees, newEmployee] },
-        metadata: { type: 'employee_update', action: 'add', employeeId: newEmployee.id }
-      });
+      const result = await apiClient.createEmployee(newEmployee);
       
       if (result.error) {
         // Revert local state on error
         setEmployees(prev => prev.filter(emp => emp.id !== newEmployee.id));
         setError(result.error);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add employee');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to add employee');
     }
   }, [employees]);
 
@@ -151,19 +146,15 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       setEmployees(updatedEmployees);
       
       // Save to backend
-      const result = await apiClient.createCalculation({
-        contextName: 'employee',
-        inputs: { employees: updatedEmployees },
-        metadata: { type: 'employee_update', action: 'update', employeeId: id }
-      });
+      const result = await apiClient.updateEmployee(id, updates);
       
       if (result.error) {
         // Revert local state on error
         await refreshEmployees();
         setError(result.error);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update employee');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to update employee');
     }
   }, [employees, refreshEmployees]);
 
@@ -175,19 +166,15 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       setEmployees(updatedEmployees);
       
       // Save to backend
-      const result = await apiClient.createCalculation({
-        contextName: 'employee',
-        inputs: { employees: updatedEmployees },
-        metadata: { type: 'employee_update', action: 'delete', employeeId: id }
-      });
+      const result = await apiClient.deleteEmployee(id);
       
       if (result.error) {
         // Revert local state on error
         await refreshEmployees();
         setError(result.error);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete employee');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to delete employee');
     }
   }, [employees, refreshEmployees]);
 
@@ -226,19 +213,15 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       setEmployees(updatedEmployees);
       
       // Save to backend
-      const result = await apiClient.createCalculation({
-        contextName: 'employee',
-        inputs: { employees: updatedEmployees },
-        metadata: { type: 'balance_update', driverId, reason, updatedBy }
-      });
+      const result = await apiClient.updateEmployee(driverId, { balance: newBalance });
       
       if (result.error) {
         // Revert local state on error
         await refreshEmployees();
         setError(result.error);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update driver balance');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to update driver balance');
     }
   }, [employees, refreshEmployees]);
 

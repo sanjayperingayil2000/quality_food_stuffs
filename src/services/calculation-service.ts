@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
-import { Calculation } from '@/models/Calculation';
-import { History } from '@/models/History';
+import { Calculation } from '@/models/calculation';
+import { History } from '@/models/history';
 
 export async function createCalculation(payload: {
   userId?: string;
@@ -37,6 +37,7 @@ export async function listCalculations(filters: Partial<{ contextName: string; u
   const query: Record<string, unknown> = {};
   if (filters.contextName) query.contextName = filters.contextName;
   if (filters.userId && Types.ObjectId.isValid(filters.userId)) query.userId = new Types.ObjectId(filters.userId);
+  // eslint-disable-next-line unicorn/no-array-callback-reference
   return Calculation.find(query).sort({ createdAt: -1 }).lean();
 }
 

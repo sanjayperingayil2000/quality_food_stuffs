@@ -39,6 +39,18 @@ import { z as zod } from 'zod';
 import { apiClient } from '@/lib/api-client';
 import { useUser } from '@/hooks/use-user';
 
+// Define the User type that matches the API response
+interface ApiUser {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+  isActive: boolean;
+  settingsAccess: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const userSchema = zod.object({
   name: zod.string().min(1, 'Name is required'),
   email: zod.string().min(1, 'Email is required').email('Invalid email format'),
@@ -61,11 +73,11 @@ interface User {
 
 export function UserManagement(): React.JSX.Element {
   const { user: currentUser } = useUser();
-  const [users, setUsers] = React.useState<User[]>([]);
+  const [users, setUsers] = React.useState<ApiUser[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
-  const [editingUser, setEditingUser] = React.useState<User | null>(null);
+  const [editingUser, setEditingUser] = React.useState<ApiUser | null>(null);
 
   const {
     control,
@@ -93,8 +105,8 @@ export function UserManagement(): React.JSX.Element {
         return;
       }
       setUsers(result.data?.users || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch users');
+    } catch {
+      setError('Failed to fetch users');
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +128,7 @@ export function UserManagement(): React.JSX.Element {
     setOpen(true);
   };
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: ApiUser) => {
     setEditingUser(user);
     reset({
       name: user.name,
@@ -151,7 +163,7 @@ export function UserManagement(): React.JSX.Element {
           updateData.password = data.password;
         }
 
-        const result = await apiClient.updateUser(editingUser._id, updateData);
+        const result = await apiClient.updateUser(editingUser.id, updateData);
         if (result.error) {
           setError(result.error);
           return;
@@ -167,8 +179,8 @@ export function UserManagement(): React.JSX.Element {
 
       await fetchUsers();
       handleClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save user');
+    } catch {
+      setError('Failed to save user');
     }
   };
 
@@ -185,8 +197,8 @@ export function UserManagement(): React.JSX.Element {
         return;
       }
       await fetchUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user');
+    } catch {
+      setError('Failed to delete user');
     }
   };
 
@@ -199,8 +211,8 @@ export function UserManagement(): React.JSX.Element {
         return;
       }
       await fetchUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
+    } catch {
+      setError('Failed to update user');
     }
   };
 
@@ -238,7 +250,7 @@ export function UserManagement(): React.JSX.Element {
             </TableHead>
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user._id}>
+                <TableRow key={user.id}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
@@ -251,8 +263,8 @@ export function UserManagement(): React.JSX.Element {
                       control={
                         <Switch
                           checked={user.isActive}
-                          onChange={(e) => handleToggleActive(user._id, e.target.checked)}
-                          disabled={user._id === currentUser?.id} // Can't deactivate self
+                          onChange={(e) => handleToggleActive(user.id, e.target.checked)}
+                          disabled={user.id === currentUser?.id} // Can't deactivate self
                         />
                       }
                       label={user.isActive ? 'Active' : 'Inactive'}
@@ -266,8 +278,8 @@ export function UserManagement(): React.JSX.Element {
                       <PencilIcon />
                     </IconButton>
                     <IconButton 
-                      onClick={() => handleDelete(user._id)}
-                      disabled={user._id === currentUser?.id} // Can't delete self
+                      onClick={() => handleDelete(user.id)}
+                      disabled={user.id === currentUser?.id} // Can't delete self
                     >
                       <TrashIcon />
                     </IconButton>

@@ -4,31 +4,54 @@ import { requireAuth, getRequestUser } from '@/middleware/auth';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { connectToDatabase } from '@/lib/db';
-import { AdditionalExpense } from '@/models/additional-expense';
+import { DailyTrip } from '@/models/daily-trip';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
 
-const additionalExpenseCreateSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().optional(),
-  category: z.enum(['petrol', 'maintenance', 'variance', 'salary', 'others']),
-  amount: z.number().min(0, 'Amount must be non-negative'),
-  currency: z.string().default('AED'),
+const tripProductSchema = z.object({
+  productId: z.string().min(1),
+  productName: z.string().min(1),
+  category: z.enum(['bakery', 'fresh']),
+  quantity: z.number().min(0),
+  unitPrice: z.number().min(0),
+});
+
+const transferredProductSchema = tripProductSchema.extend({
+  receivingDriverId: z.string().min(1),
+  receivingDriverName: z.string().min(1),
+  transferredFromDriverId: z.string().min(1),
+  transferredFromDriverName: z.string().min(1),
+});
+
+const productTransferSchema = z.object({
+  isProductTransferred: z.boolean(),
+  transferredProducts: z.array(transferredProductSchema),
+});
+
+const dailyTripCreateSchema = z.object({
+  driverId: z.string().min(1, 'Driver ID is required'),
+  driverName: z.string().min(1, 'Driver name is required'),
   date: z.string().transform(str => new Date(str)),
-  driverId: z.string().optional(),
-  driverName: z.string().optional(),
-  designation: z.enum(['driver', 'manager', 'ceo', 'staff']),
-  receiptNumber: z.string().optional(),
-  vendor: z.string().optional(),
-  isReimbursable: z.boolean().default(true),
-  status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
-  approvedBy: z.string().optional(),
-  approvedAt: z.string().transform(str => new Date(str)).optional(),
-  rejectedReason: z.string().optional(),
+  products: z.array(tripProductSchema),
+  transfer: productTransferSchema,
+  acceptedProducts: z.array(tripProductSchema).optional().default([]),
+  collectionAmount: z.number().min(0),
+  purchaseAmount: z.number().min(0),
+  expiry: z.number().min(0),
+  discount: z.number().min(0),
+  petrol: z.number().min(0),
+  balance: z.number(),
+  totalAmount: z.number().min(0),
+  netTotal: z.number().min(0),
+  grandTotal: z.number().min(0),
+  expiryAfterTax: z.number().min(0),
+  amountToBe: z.number(),
+  salesDifference: z.number(),
+  profit: z.number(),
 });
 
 // Schema for updates (used in [id]/route.ts)
-const _additionalExpenseUpdateSchema = additionalExpenseCreateSchema.partial();
+const _dailyTripUpdateSchema = dailyTripCreateSchema.partial();
 
 export async function OPTIONS() {
   return withCors(new NextResponse(null, { status: 200 }));
@@ -41,18 +64,14 @@ export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
     const url = new URL(req.url);
-    const category = url.searchParams.get('category');
-    const status = url.searchParams.get('status');
     const driverId = url.searchParams.get('driverId');
-    const designation = url.searchParams.get('designation');
+    const date = url.searchParams.get('date');
     const startDate = url.searchParams.get('startDate');
     const endDate = url.searchParams.get('endDate');
     
     const queryFilter: Record<string, unknown> = {};
-    if (category) queryFilter.category = category;
-    if (status) queryFilter.status = status;
     if (driverId) queryFilter.driverId = driverId;
-    if (designation) queryFilter.designation = designation;
+    if (date) queryFilter.date = new Date(date);
     if (startDate && endDate) {
       queryFilter.date = {
         $gte: new Date(startDate),
@@ -61,8 +80,8 @@ export async function GET(req: NextRequest) {
     }
     
     // eslint-disable-next-line unicorn/no-array-callback-reference
-    const expenses = await AdditionalExpense.find(queryFilter).sort({ date: -1, createdAt: -1 });
-    return withCors(NextResponse.json({ expenses }, { status: 200 }));
+    const trips = await DailyTrip.find(queryFilter).sort({ date: -1, createdAt: -1 });
+    return withCors(NextResponse.json({ trips }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }
@@ -74,7 +93,7 @@ export async function POST(req: NextRequest) {
   
   try {
     const body = await req.json();
-    const parsed = additionalExpenseCreateSchema.safeParse(body);
+    const parsed = dailyTripCreateSchema.safeParse(body);
     if (!parsed.success) {
       return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
     }
@@ -82,26 +101,31 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    const expenseData = {
+    // Generate unique ID
+    const count = await DailyTrip.countDocuments();
+    const id = `TRP-${String(count + 1).padStart(3, '0')}`;
+    
+    const tripData = {
       ...parsed.data,
+      id,
       createdBy: user?.sub,
       updatedBy: user?.sub,
     };
     
-    const expense = await AdditionalExpense.create(expenseData);
+    const trip = await DailyTrip.create(tripData);
     
     // Log to history
     await History.create({
-      collectionName: 'additionalExpenses',
-      documentId: expense._id,
+      collectionName: 'dailyTrips',
+      documentId: trip._id,
       action: 'create',
       actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
       before: null,
-      after: expense.toObject(),
+      after: trip.toObject(),
       timestamp: new Date(),
     });
     
-    return withCors(NextResponse.json({ expense }, { status: 201 }));
+    return withCors(NextResponse.json({ trip }, { status: 201 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }

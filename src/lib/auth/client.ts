@@ -12,6 +12,15 @@ export interface ResetPasswordParams {
   email: string;
 }
 
+interface UserResponse {
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    roles: string[];
+  };
+}
+
 class AuthClient {
   async signInWithPassword(params: SignInWithPasswordParams): Promise<{ error?: string }> {
     const result = await apiClient.login(params);
@@ -42,9 +51,9 @@ class AuthClient {
 
   async getUser(): Promise<{ data?: User | null; error?: string }> {
     // Check if we have a token
-    const token = typeof globalThis.window !== 'undefined' ? globalThis.window.localStorage.getItem('accessToken') : null;
+    const token = globalThis.window?.localStorage.getItem('accessToken');
     
-    if (!token) {
+    if (token === null) {
       return { data: null };
     }
 
@@ -61,8 +70,8 @@ class AuthClient {
           return { data: null };
         }
         // Retry with new token
-        const newToken = typeof globalThis.window !== 'undefined' ? globalThis.window.localStorage.getItem('accessToken') : null;
-        if (newToken) {
+        const newToken = globalThis.window?.localStorage.getItem('accessToken');
+        if (newToken !== null) {
           const newPayload = JSON.parse(atob(newToken.split('.')[1]));
           const result = await apiClient.request(`/users/${newPayload.sub}`);
           
@@ -72,12 +81,12 @@ class AuthClient {
           
           return { 
             data: {
-              id: (result.data as any).user._id,
+              id: (result.data as UserResponse).user._id,
               avatar: '/assets/avatar.png',
-              firstName: (result.data as any).user.name.split(' ')[0] || 'User',
-              lastName: (result.data as any).user.name.split(' ').slice(1).join(' ') || '',
-              email: (result.data as any).user.email,
-              roles: (result.data as any).user.roles,
+              firstName: (result.data as UserResponse).user.name.split(' ')[0] || 'User',
+              lastName: (result.data as UserResponse).user.name.split(' ').slice(1).join(' ') || '',
+              email: (result.data as UserResponse).user.email,
+              roles: (result.data as UserResponse).user.roles,
             } as User
           };
         }
@@ -92,12 +101,12 @@ class AuthClient {
       
       return { 
         data: {
-          id: (result.data as any).user._id,
+          id: (result.data as UserResponse).user._id,
           avatar: '/assets/avatar.png',
-          firstName: (result.data as any).user.name.split(' ')[0] || 'User',
-          lastName: (result.data as any).user.name.split(' ').slice(1).join(' ') || '',
-          email: (result.data as any).user.email,
-          roles: (result.data as any).user.roles,
+          firstName: (result.data as UserResponse).user.name.split(' ')[0] || 'User',
+          lastName: (result.data as UserResponse).user.name.split(' ').slice(1).join(' ') || '',
+          email: (result.data as UserResponse).user.email,
+          roles: (result.data as UserResponse).user.roles,
         } as User
       };
     } catch {
@@ -108,7 +117,7 @@ class AuthClient {
   }
 
   clearAccessToken() {
-    if (typeof globalThis.window !== 'undefined') {
+    if (globalThis.window !== undefined) {
       globalThis.window.localStorage.removeItem('accessToken');
       globalThis.window.localStorage.removeItem('refreshToken');
     }

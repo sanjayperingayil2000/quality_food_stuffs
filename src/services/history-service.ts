@@ -1,5 +1,5 @@
 import { connectToDatabase } from '@/lib/db';
-import { History } from '@/models/History';
+import { History } from '@/models/history';
 
 export async function listHistory(filters: Partial<{ collectionName: string; documentId: string; action: string }>) {
   await connectToDatabase();
@@ -7,6 +7,7 @@ export async function listHistory(filters: Partial<{ collectionName: string; doc
   if (filters.collectionName) query.collectionName = filters.collectionName;
   if (filters.documentId) query.documentId = filters.documentId;
   if (filters.action) query.action = filters.action;
+  // eslint-disable-next-line unicorn/no-array-callback-reference
   return History.find(query).sort({ timestamp: -1 }).lean();
 }
 

@@ -64,7 +64,7 @@ export function OtpVerificationForm({ email, onSuccess, onBack }: OtpVerificatio
         }
 
         onSuccess();
-      } catch (error) {
+      } catch {
         setError('root', { type: 'server', message: 'Failed to verify OTP' });
         setIsPending(false);
       }
@@ -85,22 +85,22 @@ export function OtpVerificationForm({ email, onSuccess, onBack }: OtpVerificatio
       }
 
       setTimeLeft(300); // Reset timer
-    } catch (error) {
+    } catch {
       setError('root', { type: 'server', message: 'Failed to resend OTP' });
     }
   }, [email, setError]);
 
-  const formatTime = (seconds: number) => {
+  const formatTime = React.useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  }, []);
 
   return (
     <Stack spacing={4}>
       <Typography variant="h5">Verify OTP</Typography>
       <Typography color="text.secondary" variant="body2">
-        We've sent a 6-digit OTP to {email}
+        We&apos;ve sent a 6-digit OTP to {email}
       </Typography>
       
       <form onSubmit={handleSubmit(onSubmit)}>

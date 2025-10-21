@@ -4,27 +4,22 @@ import { requireAuth, getRequestUser } from '@/middleware/auth';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { connectToDatabase } from '@/lib/db';
-import { AdditionalExpense } from '@/models/additional-expense';
+import { Product } from '@/models/product';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
 
-const additionalExpenseUpdateSchema = z.object({
-  title: z.string().min(1).optional(),
+const productUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  category: z.enum(['bakery', 'fresh']).optional(),
+  price: z.number().min(0).optional(),
   description: z.string().optional(),
-  category: z.enum(['petrol', 'maintenance', 'variance', 'salary', 'others']).optional(),
-  amount: z.number().min(0).optional(),
-  currency: z.string().optional(),
-  date: z.string().transform(str => new Date(str)).optional(),
-  driverId: z.string().optional(),
-  driverName: z.string().optional(),
-  designation: z.enum(['driver', 'manager', 'ceo', 'staff']).optional(),
-  receiptNumber: z.string().optional(),
-  vendor: z.string().optional(),
-  isReimbursable: z.boolean().optional(),
-  status: z.enum(['pending', 'approved', 'rejected']).optional(),
-  approvedBy: z.string().optional(),
-  approvedAt: z.string().transform(str => new Date(str)).optional(),
-  rejectedReason: z.string().optional(),
+  sku: z.string().min(1).optional(),
+  unit: z.string().min(1).optional(),
+  minimumQuantity: z.number().min(0).optional(),
+  maximumQuantity: z.number().min(0).optional(),
+  isActive: z.boolean().optional(),
+  expiryDays: z.number().min(0).optional(),
+  supplier: z.string().optional(),
 }).partial();
 
 export async function OPTIONS() {
@@ -39,12 +34,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     await connectToDatabase();
     
-    const expense = await AdditionalExpense.findById(id);
-    if (!expense) {
-      return withCors(NextResponse.json({ error: 'Additional expense not found' }, { status: 404 }));
+    const product = await Product.findOne({ id });
+    if (!product) {
+      return withCors(NextResponse.json({ error: 'Product not found' }, { status: 404 }));
     }
     
-    return withCors(NextResponse.json({ expense }, { status: 200 }));
+    return withCors(NextResponse.json({ product }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }
@@ -57,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const body = await req.json();
-    const parsed = additionalExpenseUpdateSchema.safeParse(body);
+    const parsed = productUpdateSchema.safeParse(body);
     
     if (!parsed.success) {
       return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
@@ -66,35 +61,49 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    const expense = await AdditionalExpense.findById(id);
-    if (!expense) {
-      return withCors(NextResponse.json({ error: 'Additional expense not found' }, { status: 404 }));
+    const product = await Product.findOne({ id });
+    if (!product) {
+      return withCors(NextResponse.json({ error: 'Product not found' }, { status: 404 }));
     }
     
-    const beforeData = expense.toObject();
-    const updateData = {
+    const beforeData = product.toObject();
+    const updateData: Record<string, unknown> = {
       ...parsed.data,
       updatedBy: user?.sub,
     };
     
-    const updatedExpense = await AdditionalExpense.findByIdAndUpdate(
-      id,
+    // If price is being updated, add to price history
+    if (parsed.data.price && parsed.data.price !== product.price) {
+      const currentVersion = product.priceHistory?.length || 0;
+      updateData.priceHistory = [
+        ...(product.priceHistory || []),
+        {
+          version: currentVersion + 1,
+          price: parsed.data.price,
+          updatedAt: new Date(),
+          updatedBy: user?.sub,
+        }
+      ];
+    }
+    
+    const updatedProduct = await Product.findOneAndUpdate(
+      { id },
       updateData,
       { new: true, runValidators: true }
     );
     
     // Log to history
     await History.create({
-      collectionName: 'additionalExpenses',
-      documentId: expense._id,
+      collectionName: 'products',
+      documentId: product._id,
       action: 'update',
       actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
       before: beforeData,
-      after: updatedExpense?.toObject(),
+      after: updatedProduct?.toObject(),
       timestamp: new Date(),
     });
     
-    return withCors(NextResponse.json({ expense: updatedExpense }, { status: 200 }));
+    return withCors(NextResponse.json({ product: updatedProduct }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }
@@ -109,18 +118,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    const expense = await AdditionalExpense.findById(id);
-    if (!expense) {
-      return withCors(NextResponse.json({ error: 'Additional expense not found' }, { status: 404 }));
+    const product = await Product.findOne({ id });
+    if (!product) {
+      return withCors(NextResponse.json({ error: 'Product not found' }, { status: 404 }));
     }
     
-    const beforeData = expense.toObject();
-    await AdditionalExpense.findByIdAndDelete(id);
+    const beforeData = product.toObject();
+    await Product.findOneAndDelete({ id });
     
     // Log to history
     await History.create({
-      collectionName: 'additionalExpenses',
-      documentId: expense._id,
+      collectionName: 'products',
+      documentId: product._id,
       action: 'delete',
       actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
       before: beforeData,
@@ -128,7 +137,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       timestamp: new Date(),
     });
     
-    return withCors(NextResponse.json({ message: 'Additional expense deleted successfully' }, { status: 200 }));
+    return withCors(NextResponse.json({ message: 'Product deleted successfully' }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }

@@ -241,7 +241,7 @@ export default function Page(): React.JSX.Element {
   const getAvailableDrivers = React.useCallback(() => {
     if (!watchedDate) return drivers;
     
-    return drivers.filter(driver => canAddTripForDriver(driver.id, watchedDate));
+    return drivers.filter(driver => canAddTripForDriver(driver.id, watchedDate.toISOString().split('T')[0]));
   }, [drivers, watchedDate, canAddTripForDriver]);
 
   // Calculation functions

@@ -1,6 +1,159 @@
 // API service utilities for frontend
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  roles: string[];
+  isActive: boolean;
+  settingsAccess: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Employee {
+  id: string;
+  name: string;
+  designation: 'driver' | 'staff' | 'ceo';
+  phoneNumber: string;
+  email: string;
+  address: string;
+  routeName?: string;
+  location?: string;
+  salary?: number;
+  balance?: number;
+  balanceHistory?: Array<{
+    version: number;
+    balance: number;
+    updatedAt: string;
+    reason?: string;
+    updatedBy?: string;
+  }>;
+  hireDate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  category: 'bakery' | 'fresh';
+  price: number;
+  description?: string;
+  sku: string;
+  unit: string;
+  minimumQuantity: number;
+  maximumQuantity?: number;
+  isActive: boolean;
+  expiryDays?: number;
+  supplier?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+  priceHistory?: Array<{
+    version: number;
+    price: number;
+    updatedAt: string;
+    reason?: string;
+    updatedBy?: string;
+  }>;
+}
+
+interface DailyTrip {
+  id: string;
+  driverId: string;
+  driverName: string;
+  date: string;
+  products: Array<{
+    productId: string;
+    productName: string;
+    category: 'bakery' | 'fresh';
+    quantity: number;
+    unitPrice: number;
+  }>;
+  transfer: {
+    isProductTransferred: boolean;
+    transferredProducts: Array<{
+      productId: string;
+      productName: string;
+      category: 'bakery' | 'fresh';
+      quantity: number;
+      unitPrice: number;
+      receivingDriverId: string;
+      receivingDriverName: string;
+      transferredFromDriverId: string;
+      transferredFromDriverName: string;
+    }>;
+  };
+  acceptedProducts: Array<{
+    productId: string;
+    productName: string;
+    category: 'bakery' | 'fresh';
+    quantity: number;
+    unitPrice: number;
+  }>;
+  collectionAmount: number;
+  purchaseAmount: number;
+  expiry: number;
+  discount: number;
+  petrol: number;
+  balance: number;
+  totalAmount: number;
+  netTotal: number;
+  grandTotal: number;
+  expiryAfterTax: number;
+  amountToBe: number;
+  salesDifference: number;
+  profit: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+interface AdditionalExpense {
+  id: string;
+  title: string;
+  description?: string;
+  category: 'petrol' | 'maintenance' | 'variance' | 'salary' | 'others';
+  amount: number;
+  currency: string;
+  date: string;
+  driverId?: string;
+  driverName?: string;
+  designation: 'driver' | 'manager' | 'ceo' | 'staff';
+  receiptNumber?: string;
+  vendor?: string;
+  isReimbursable: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectedReason?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+interface Setting {
+  key: string;
+  value: unknown;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
+}
+
+interface AuthResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+
 interface ApiResponse<T> {
   data?: T;
   error?: string;
@@ -14,23 +167,23 @@ class ApiClient {
   constructor(baseUrl: string = API_BASE) {
     this.baseUrl = baseUrl;
     // Get token from localStorage on client side
-    if (typeof window !== 'undefined') {
-      this.accessToken = localStorage.getItem('accessToken');
+    if (globalThis.window !== undefined) {
+      this.accessToken = globalThis.window.localStorage.getItem('accessToken');
     }
   }
 
   setAccessToken(token: string) {
     this.accessToken = token;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('accessToken', token);
+    if (globalThis.window !== undefined) {
+      globalThis.window.localStorage.setItem('accessToken', token);
     }
   }
 
   clearAccessToken() {
     this.accessToken = null;
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+    if (globalThis.window !== undefined) {
+      globalThis.window.localStorage.removeItem('accessToken');
+      globalThis.window.localStorage.removeItem('refreshToken');
     }
   }
 
@@ -46,9 +199,9 @@ class ApiClient {
     // Handle different types of headers
     if (options.headers) {
       if (options.headers instanceof Headers) {
-        options.headers.forEach((value, key) => {
+        for (const [key, value] of options.headers) {
           headers[key] = value;
-        });
+        }
       } else if (typeof options.headers === 'object') {
         Object.assign(headers, options.headers);
       }
@@ -105,15 +258,15 @@ class ApiClient {
   // Auth methods
 
   async login(credentials: { email: string; password: string }) {
-    const result = await this.request<{ user: any; accessToken: string; refreshToken: string }>('/auth?action=login', {
+    const result = await this.request<AuthResponse>('/auth?action=login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
 
     if (result.data?.accessToken) {
       this.setAccessToken(result.data.accessToken);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('refreshToken', result.data.refreshToken);
+      if (globalThis.window !== undefined) {
+        globalThis.window.localStorage.setItem('refreshToken', result.data.refreshToken);
       }
     }
 
@@ -121,8 +274,8 @@ class ApiClient {
   }
 
   async refreshToken() {
-    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
-    if (!refreshToken) {
+    const refreshToken = globalThis.window?.localStorage.getItem('refreshToken');
+    if (refreshToken === null) {
       return { error: 'No refresh token available' };
     }
 
@@ -133,8 +286,8 @@ class ApiClient {
 
     if (result.data?.accessToken) {
       this.setAccessToken(result.data.accessToken);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('refreshToken', result.data.refreshToken);
+      if (globalThis.window !== undefined) {
+        globalThis.window.localStorage.setItem('refreshToken', result.data.refreshToken);
       }
     }
 
@@ -142,8 +295,8 @@ class ApiClient {
   }
 
   async logout() {
-    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
-    if (refreshToken) {
+    const refreshToken = globalThis.window?.localStorage.getItem('refreshToken');
+    if (refreshToken !== null) {
       await this.request('/auth?action=logout', {
         method: 'POST',
         body: JSON.stringify({ refreshToken }),
@@ -154,22 +307,22 @@ class ApiClient {
 
   // User methods
   async getUsers() {
-    return this.request<{ users: any[] }>('/users');
+    return this.request<{ users: User[] }>('/users');
   }
 
   async createUser(userData: { name: string; email: string; password: string; roles?: string[] }) {
-    return this.request<{ user: any }>('/users', {
+    return this.request<{ user: User }>('/users', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
   }
 
   async getUser(id: string) {
-    return this.request<{ user: any }>(`/users/${id}`);
+    return this.request<{ user: User }>(`/users/${id}`);
   }
 
   async updateUser(id: string, updates: Partial<{ name: string; roles: string[]; isActive: boolean }>) {
-    return this.request<{ user: any }>(`/users/${id}`, {
+    return this.request<{ user: User }>(`/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
@@ -183,55 +336,177 @@ class ApiClient {
 
   // Settings methods
   async getSettings() {
-    return this.request<{ settings: any[] }>('/settings');
+    return this.request<{ settings: Setting[] }>('/settings');
   }
 
-  async createSetting(key: string, value: any) {
-    return this.request<{ setting: any }>('/settings', {
+  async createSetting(key: string, value: unknown) {
+    return this.request<{ setting: Setting }>('/settings', {
       method: 'POST',
       body: JSON.stringify({ key, value }),
     });
   }
 
-  async updateSetting(key: string, value: any) {
-    return this.request<{ setting: any }>(`/settings/${key}`, {
+  async updateSetting(key: string, value: unknown) {
+    return this.request<{ setting: Setting }>(`/settings/${key}`, {
       method: 'PATCH',
       body: JSON.stringify({ value }),
     });
   }
 
-  // Calculation methods
-  async getCalculations(filters?: { contextName?: string; userId?: string }) {
+  // Employee methods
+  async getEmployees(filters?: { designation?: string; isActive?: boolean; routeName?: string }) {
     const params = new URLSearchParams();
-    if (filters?.contextName) params.append('contextName', filters.contextName);
-    if (filters?.userId) params.append('userId', filters.userId);
+    if (filters?.designation) params.append('designation', filters.designation);
+    if (filters?.isActive !== undefined) params.append('isActive', filters.isActive.toString());
+    if (filters?.routeName) params.append('routeName', filters.routeName);
     
     const query = params.toString();
-    return this.request<{ items: any[] }>(`/calculations${query ? `?${query}` : ''}`);
+    return this.request<{ employees: Employee[] }>(`/employees${query ? `?${query}` : ''}`);
   }
 
-  async createCalculation(data: {
-    contextName: string;
-    inputs: Record<string, any>;
-    results?: Record<string, any>;
-    metadata?: Record<string, any>;
-  }) {
-    return this.request<{ item: any }>('/calculations', {
+  async getEmployee(id: string) {
+    return this.request<{ employee: Employee }>(`/employees/${id}`);
+  }
+
+  async createEmployee(data: Partial<Employee>) {
+    return this.request<{ employee: Employee }>('/employees', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
+  async updateEmployee(id: string, data: Partial<Employee>) {
+    return this.request<{ employee: Employee }>(`/employees/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteEmployee(id: string) {
+    return this.request<{ message: string }>(`/employees/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Product methods
+  async getProducts(filters?: { category?: string; isActive?: boolean; supplier?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.isActive !== undefined) params.append('isActive', filters.isActive.toString());
+    if (filters?.supplier) params.append('supplier', filters.supplier);
+    
+    const query = params.toString();
+    return this.request<{ products: Product[] }>(`/products${query ? `?${query}` : ''}`);
+  }
+
+  async getProduct(id: string) {
+    return this.request<{ product: Product }>(`/products/${id}`);
+  }
+
+  async createProduct(data: Partial<Product>) {
+    return this.request<{ product: Product }>('/products', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProduct(id: string, data: Partial<Product>) {
+    return this.request<{ product: Product }>(`/products/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProduct(id: string) {
+    return this.request<{ message: string }>(`/products/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Daily Trip methods
+  async getDailyTrips(filters?: { driverId?: string; date?: string; startDate?: string; endDate?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.driverId) params.append('driverId', filters.driverId);
+    if (filters?.date) params.append('date', filters.date);
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    
+    const query = params.toString();
+    return this.request<{ trips: DailyTrip[] }>(`/daily-trips${query ? `?${query}` : ''}`);
+  }
+
+  async getDailyTrip(id: string) {
+    return this.request<{ trip: DailyTrip }>(`/daily-trips/${id}`);
+  }
+
+  async createDailyTrip(data: Partial<DailyTrip>) {
+    return this.request<{ trip: DailyTrip }>('/daily-trips', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDailyTrip(id: string, data: Partial<DailyTrip>) {
+    return this.request<{ trip: DailyTrip }>(`/daily-trips/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDailyTrip(id: string) {
+    return this.request<{ message: string }>(`/daily-trips/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Additional Expense methods
+  async getAdditionalExpenses(filters?: { category?: string; status?: string; driverId?: string; designation?: string; startDate?: string; endDate?: string }) {
+    const params = new URLSearchParams();
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.driverId) params.append('driverId', filters.driverId);
+    if (filters?.designation) params.append('designation', filters.designation);
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    
+    const query = params.toString();
+    return this.request<{ expenses: AdditionalExpense[] }>(`/additional-expenses${query ? `?${query}` : ''}`);
+  }
+
+  async getAdditionalExpense(id: string) {
+    return this.request<{ expense: AdditionalExpense }>(`/additional-expenses/${id}`);
+  }
+
+  async createAdditionalExpense(data: Partial<AdditionalExpense>) {
+    return this.request<{ expense: AdditionalExpense }>('/additional-expenses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAdditionalExpense(id: string, data: Partial<AdditionalExpense>) {
+    return this.request<{ expense: AdditionalExpense }>(`/additional-expenses/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAdditionalExpense(id: string) {
+    return this.request<{ message: string }>(`/additional-expenses/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getCalculation(id: string) {
-    return this.request<{ item: any }>(`/calculations/${id}`);
+    return this.request<{ item: Record<string, unknown> }>(`/calculations/${id}`);
   }
 
   async updateCalculation(id: string, updates: {
-    inputs?: Record<string, any>;
-    results?: Record<string, any>;
-    metadata?: Record<string, any>;
+    inputs?: Record<string, unknown>;
+    results?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
   }) {
-    return this.request<{ item: any }>(`/calculations/${id}`, {
+    return this.request<{ item: Record<string, unknown> }>(`/calculations/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
@@ -259,7 +534,7 @@ class ApiClient {
     if (filters?.endDate) params.append('endDate', filters.endDate);
     
     const query = params.toString();
-    return this.request<{ expenses: any[] }>(`/additional-expenses${query ? `?${query}` : ''}`);
+    return this.request<{ expenses: AdditionalExpense[] }>(`/additional-expenses${query ? `?${query}` : ''}`);
   }
 
   async createAdditionalExpense(data: {
@@ -277,14 +552,14 @@ class ApiClient {
     isReimbursable?: boolean;
     status?: string;
   }) {
-    return this.request<{ expense: any }>('/additional-expenses', {
+    return this.request<{ expense: AdditionalExpense }>('/additional-expenses', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async getAdditionalExpense(id: string) {
-    return this.request<{ expense: any }>(`/additional-expenses/${id}`);
+    return this.request<{ expense: AdditionalExpense }>(`/additional-expenses/${id}`);
   }
 
   async updateAdditionalExpense(id: string, updates: {
@@ -305,7 +580,7 @@ class ApiClient {
     approvedAt?: string;
     rejectedReason?: string;
   }) {
-    return this.request<{ expense: any }>(`/additional-expenses/${id}`, {
+    return this.request<{ expense: AdditionalExpense }>(`/additional-expenses/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
@@ -325,7 +600,7 @@ class ApiClient {
     if (filters?.action) params.append('action', filters.action);
     
     const query = params.toString();
-    return this.request<{ items: any[] }>(`/history${query ? `?${query}` : ''}`);
+    return this.request<{ items: Record<string, unknown>[] }>(`/history${query ? `?${query}` : ''}`);
   }
 }
 

@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import { User } from './src/models/User';
+import { User } from './src/models/user';
 // import { freshProducts } from './data/fresh-products.ts';
 // import { bakeryProducts } from './data/bakery-products.ts';
 

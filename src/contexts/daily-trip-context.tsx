@@ -41,7 +41,7 @@ export interface DailyTrip {
   id: string;
   driverId: string;
   driverName: string;
-  date: Date;
+  date: string;
   products: TripProduct[]; // Regular products in the trip
   transfer: ProductTransfer; // Product transfer information
   acceptedProducts: TripProduct[]; // Products accepted from other drivers
@@ -62,8 +62,8 @@ export interface DailyTrip {
   salesDifference: number; // Collection amount - Amount to be
   profit: number; // (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
   // Metadata
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   createdBy?: string; // Employee ID who created this trip
   updatedBy?: string; // Employee ID who last updated this trip
 }
@@ -78,8 +78,8 @@ interface DailyTripContextType {
   deleteTrip: (id: string) => Promise<void>;
   getTripsByDriver: (driverId: string) => DailyTrip[];
   getTripsByDateRange: (startDate: Date, endDate: Date) => DailyTrip[];
-  getTripByDriverAndDate: (driverId: string, date: Date) => DailyTrip | undefined;
-  canAddTripForDriver: (driverId: string, date: Date) => boolean;
+  getTripByDriverAndDate: (driverId: string, date: string) => DailyTrip | undefined;
+  canAddTripForDriver: (driverId: string, date: string) => boolean;
   refreshTrips: () => Promise<void>;
 }
 
@@ -233,7 +233,7 @@ const _generateDailyTrips = (): DailyTrip[] => {
 
   // Generate trips for last 10 days
   for (let dayOffset = 9; dayOffset >= 0; dayOffset--) {
-    const currentDate = dayjs().subtract(dayOffset, 'day').utc().toDate();
+    const currentDate = dayjs().subtract(dayOffset, 'day').utc().format('YYYY-MM-DD');
     
     // Day-specific scenarios
     // eslint-disable-next-line unicorn/prefer-switch
@@ -846,12 +846,12 @@ const _generateDailyTrips = (): DailyTrip[] => {
 };
 
 // Initialize empty; data will be fetched from API
-const initialTrips: DailyTrip[] = [];
+const _initialTrips: DailyTrip[] = [];
 
 export function DailyTripProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [trips, setTrips] = React.useState<DailyTrip[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  const [_isLoading, setIsLoading] = React.useState(true);
+  const [_error, setError] = React.useState<string | null>(null);
   const [pendingTransfers, setPendingTransfers] = React.useState<Array<{
     id: string;
     date: string;
@@ -865,19 +865,18 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     try {
       setIsLoading(true);
       setError(null);
-      const result = await apiClient.getCalculations({ contextName: 'dailyTrip' });
+      const result = await apiClient.getDailyTrips();
       if (result.error) {
         setError(result.error);
         return;
       }
       
-      // Get the daily trip calculation data
-      const tripCalc = result.data?.items.find(item => item.contextName === 'dailyTrip');
-      if (tripCalc?.inputs?.trips) {
-        setTrips(tripCalc.inputs.trips);
+      // Get the daily trip data directly
+      if (result.data?.trips) {
+        setTrips(result.data.trips);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch trips');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to fetch trips');
     } finally {
       setIsLoading(false);
     }
@@ -1178,14 +1177,14 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     });
   }, [trips]);
 
-  const getTripByDriverAndDate = React.useCallback((driverId: string, date: Date): DailyTrip | undefined => {
+  const getTripByDriverAndDate = React.useCallback((driverId: string, date: string): DailyTrip | undefined => {
     return trips.find(trip => 
       trip.driverId === driverId && 
       dayjs(trip.date).format('YYYY-MM-DD') === dayjs(date).format('YYYY-MM-DD')
     );
   }, [trips]);
 
-  const canAddTripForDriver = React.useCallback((driverId: string, date: Date): boolean => {
+  const canAddTripForDriver = React.useCallback((driverId: string, date: string): boolean => {
     const existingTrip = getTripByDriverAndDate(driverId, date);
     return !existingTrip;
   }, [getTripByDriverAndDate]);

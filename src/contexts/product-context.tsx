@@ -63,19 +63,18 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
     try {
       setIsLoading(true);
       setError(null);
-      const result = await apiClient.getCalculations({ contextName: 'product' });
+      const result = await apiClient.getProducts();
       if (result.error) {
         setError(result.error);
         return;
       }
       
-      // Get the product calculation data
-      const productCalc = result.data?.items.find(item => item.contextName === 'product');
-      if (productCalc?.inputs?.products) {
-        setProducts(productCalc.inputs.products);
+      // Get the product data directly
+      if (result.data?.products) {
+        setProducts(result.data.products);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch products');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to fetch products');
     } finally {
       setIsLoading(false);
     }
@@ -112,19 +111,15 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       setProducts(prev => [newProduct, ...prev]);
       
       // Save to backend
-      const result = await apiClient.createCalculation({
-        contextName: 'product',
-        inputs: { products: [newProduct, ...products] },
-        metadata: { type: 'product_update', action: 'add', productId: newProduct.id }
-      });
+      const result = await apiClient.createProduct(newProduct);
       
       if (result.error) {
         // Revert local state on error
         setProducts(prev => prev.filter(prod => prod.id !== newProduct.id));
         setError(result.error);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add product');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to add product');
     }
   }, [products]);
 
@@ -140,19 +135,15 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       setProducts(updatedProducts);
       
       // Save to backend
-      const result = await apiClient.createCalculation({
-        contextName: 'product',
-        inputs: { products: updatedProducts },
-        metadata: { type: 'product_update', action: 'update', productId: id }
-      });
+      const result = await apiClient.updateProduct(id, updates);
       
       if (result.error) {
         // Revert local state on error
         await refreshProducts();
         setError(result.error);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update product');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to update product');
     }
   }, [products, refreshProducts]);
 
@@ -164,19 +155,15 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       setProducts(updatedProducts);
       
       // Save to backend
-      const result = await apiClient.createCalculation({
-        contextName: 'product',
-        inputs: { products: updatedProducts },
-        metadata: { type: 'product_update', action: 'delete', productId: id }
-      });
+      const result = await apiClient.deleteProduct(id);
       
       if (result.error) {
         // Revert local state on error
         await refreshProducts();
         setError(result.error);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete product');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to delete product');
     }
   }, [products, refreshProducts]);
 
