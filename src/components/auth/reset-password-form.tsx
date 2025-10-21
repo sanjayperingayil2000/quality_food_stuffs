@@ -16,6 +16,8 @@ import { z as zod } from 'zod';
 import { authClient } from '@/lib/auth/client';
 import { OtpVerificationForm } from './otp-verification-form';
 import { NewPasswordForm } from './new-password-form';
+import Link from '@mui/material/Link';
+import { paths } from '@/paths';
 
 const schema = zod.object({ email: zod.string().min(1, { message: 'Email is required' }).email() });
 
@@ -95,27 +97,54 @@ export function ResetPasswordForm(): React.JSX.Element {
   }
 
   return (
-    <Stack spacing={4}>
-      <Typography variant="h5">Reset password</Typography>
+    <Stack spacing={4} sx={{ maxWidth: 400, mx: 'auto', mt: 6 }}>
+      <Typography variant="h5" textAlign="center">
+        Reset Password
+      </Typography>
+
+      <Typography variant="body2" textAlign="center" color="text.secondary">
+        Enter your registered email address and we’ll send you an OTP to reset your password.
+      </Typography>
+
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={2}>
           <Controller
             control={control}
             name="email"
             render={({ field }) => (
-              <FormControl error={Boolean(errors.email)}>
+              <FormControl error={Boolean(errors.email)} fullWidth>
                 <InputLabel>Email address</InputLabel>
                 <OutlinedInput {...field} label="Email address" type="email" />
-                {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
+                {errors.email && (
+                  <FormHelperText>{errors.email.message}</FormHelperText>
+                )}
               </FormControl>
             )}
           />
-          {errors.root ? <Alert color="error">{errors.root.message}</Alert> : null}
-          <Button disabled={isPending} type="submit" variant="contained">
-            Send OTP
+
+          {errors.root && <Alert color="error">{errors.root.message}</Alert>}
+
+          <Button disabled={isPending} type="submit" variant="contained" fullWidth>
+            {isPending ? 'Sending...' : 'Send OTP'}
           </Button>
         </Stack>
       </form>
+
+      <Stack direction="row" justifyContent="center" spacing={1}>
+        <Typography variant="body2" color="text.secondary">
+          Remember your password?
+        </Typography>
+        <Link
+          href={paths.auth.signIn}
+          style={{
+            textDecoration: 'none',
+            color: '#1976d2',
+            fontWeight: 500,
+          }}
+        >
+          Sign In
+        </Link>
+      </Stack>
     </Stack>
   );
 }

@@ -29,9 +29,9 @@ export async function signup({ name, email, password, roles }: { name: string; e
 export async function login({ email, password }: { email: string; password: string }) {
   await connectToDatabase();
   const user = await User.findOne({ email });
-  if (!user) throw new Error('Invalid credentials');
+  if (!user) throw new Error('Please enter a valid email address.');
   const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) throw new Error('Invalid credentials');
+  if (!ok) throw new Error('Incorrect password. Please try again.');
   if (!user.isActive) throw new Error('User is inactive');
 
   const accessToken = signAccessToken({ sub: (user as any)._id.toString(), roles: (user as any).roles });
