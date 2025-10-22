@@ -140,7 +140,7 @@ export function UserManagement(): React.JSX.Element {
   const onSubmit = async (data: UserFormData) => {
     try {
       setError(null);
-      
+
       if (editingUser) {
         // Update existing user
         const updateData: Partial<UserFormData> = {
@@ -148,7 +148,7 @@ export function UserManagement(): React.JSX.Element {
           roles: data.roles,
           isActive: data.isActive,
         };
-        
+
         // Only include password if it's provided
         if (data.password) {
           updateData.password = data.password;
@@ -224,7 +224,7 @@ export function UserManagement(): React.JSX.Element {
       />
       <CardContent>
         {error && <Alert color="error" sx={{ mb: 2 }}>{error}</Alert>}
-        
+
         {isLoading ? (
           <Typography>Loading users...</Typography>
         ) : (
@@ -246,7 +246,7 @@ export function UserManagement(): React.JSX.Element {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     {user.roles.map((role) => (
-                      <Chip key={role} label={role} size="small" sx={{ mr: 1 }} />
+                      <Chip key={`${user.id}-${role}`} label={role} size="small" sx={{ mr: 1 }} />
                     ))}
                   </TableCell>
                   <TableCell>
@@ -268,7 +268,7 @@ export function UserManagement(): React.JSX.Element {
                     <IconButton onClick={() => handleEdit(user)}>
                       <PencilIcon />
                     </IconButton>
-                    <IconButton 
+                    <IconButton
                       onClick={() => handleDelete(user.id)}
                       disabled={user.id === currentUser?.id} // Can't delete self
                     >
@@ -302,7 +302,7 @@ export function UserManagement(): React.JSX.Element {
                   />
                 )}
               />
-              
+
               <Controller
                 control={control}
                 name="email"
@@ -318,7 +318,7 @@ export function UserManagement(): React.JSX.Element {
                   />
                 )}
               />
-              
+
               <Controller
                 control={control}
                 name="password"
@@ -333,7 +333,7 @@ export function UserManagement(): React.JSX.Element {
                   />
                 )}
               />
-              
+
               <Controller
                 control={control}
                 name="roles"
@@ -346,8 +346,8 @@ export function UserManagement(): React.JSX.Element {
                       input={<OutlinedInput label="Roles" />}
                       renderValue={(selected) => (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {(selected as string[]).map((value) => (
-                            <Chip key={value} label={value} />
+                          {(selected as string[]).map((value,index) => (
+                            <Chip key={`${value}-${index}`} label={value} />
                           ))}
                         </Box>
                       )}
@@ -359,7 +359,7 @@ export function UserManagement(): React.JSX.Element {
                   </FormControl>
                 )}
               />
-              
+
               <Controller
                 control={control}
                 name="isActive"

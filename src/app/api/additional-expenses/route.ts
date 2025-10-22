@@ -62,7 +62,11 @@ export async function GET(req: NextRequest) {
     
     // eslint-disable-next-line unicorn/no-array-callback-reference
     const expenses = await AdditionalExpense.find(queryFilter).sort({ date: -1, createdAt: -1 });
-    return withCors(NextResponse.json({ expenses }, { status: 200 }));
+    const transformedExpenses = expenses.map(expense => ({
+      ...expense.toObject(),
+      id: (expense._id as unknown as string).toString(),
+    }));
+    return withCors(NextResponse.json({ expenses: transformedExpenses }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }
@@ -101,7 +105,12 @@ export async function POST(req: NextRequest) {
       timestamp: new Date(),
     });
     
-    return withCors(NextResponse.json({ expense }, { status: 201 }));
+    const transformedExpense = {
+      ...expense.toObject(),
+      id: (expense._id as unknown as string).toString(),
+    };
+    
+    return withCors(NextResponse.json({ expense: transformedExpense }, { status: 201 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }

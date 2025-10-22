@@ -44,7 +44,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return withCors(NextResponse.json({ error: 'Additional expense not found' }, { status: 404 }));
     }
     
-    return withCors(NextResponse.json({ expense }, { status: 200 }));
+    const transformedExpense = {
+      ...expense.toObject(),
+      id: (expense._id as unknown as string).toString(),
+    };
+    
+    return withCors(NextResponse.json({ expense: transformedExpense }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }
@@ -94,7 +99,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       timestamp: new Date(),
     });
     
-    return withCors(NextResponse.json({ expense: updatedExpense }, { status: 200 }));
+    const transformedExpense = {
+      ...updatedExpense?.toObject(),
+      id: (updatedExpense?._id as unknown as string).toString(),
+    };
+    
+    return withCors(NextResponse.json({ expense: transformedExpense }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }
@@ -106,6 +116,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   
   try {
     const { id } = await params;
+    console.log('Received DELETE request for additional expense with id:', id);
     await connectToDatabase();
     const user = getRequestUser(authed);
     

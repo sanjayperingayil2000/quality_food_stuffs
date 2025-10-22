@@ -159,6 +159,21 @@ interface ApiResponse<T> {
   error?: string;
   message?: string;
 }
+interface Snapshot {
+  name?: string;
+  id?: string;
+}
+
+interface Activity {
+  _id: string;
+  action: string;
+  collectionName: string;
+  documentId?: string;
+  before?: Snapshot;
+  after?: Snapshot;
+  actor?: string; // username or actor ID
+  timestamp: string;
+}
 
 class ApiClient {
   private baseUrl: string;
@@ -552,17 +567,21 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+  
 
   // History methods
-  async getHistory(filters?: { collectionName?: string; documentId?: string; action?: string }) {
-    const params = new URLSearchParams();
-    if (filters?.collectionName) params.append('collectionName', filters.collectionName);
-    if (filters?.documentId) params.append('documentId', filters.documentId);
-    if (filters?.action) params.append('action', filters.action);
-    
-    const query = params.toString();
-    return this.request<{ items: Record<string, unknown>[] }>(`/history${query ? `?${query}` : ''}`);
-  }
+async getHistory<T extends Activity = Activity>(
+  filters?: { collectionName?: string; documentId?: string; action?: string }
+): Promise<ApiResponse<{ items: T[] }>> {
+  const params = new URLSearchParams();
+  if (filters?.collectionName) params.append('collectionName', filters.collectionName);
+  if (filters?.documentId) params.append('documentId', filters.documentId);
+  if (filters?.action) params.append('action', filters.action);
+
+  const query = params.toString();
+  return this.request<{ items: T[] }>(`/histories${query ? `?${query}` : ''}`);
+}
+
 }
 
 export const apiClient = new ApiClient();

@@ -170,7 +170,7 @@ export default function Page(): React.JSX.Element {
     setEditingExpense(expense);
     reset({
       date: new Date(expense.date),
-      type: expense.category,
+      type: expense.category as ExpenseType,
       employeeId: expense.driverId || '',
       maintenanceName: expense.vendor || '',
       reason: expense.description || '',
@@ -186,10 +186,14 @@ export default function Page(): React.JSX.Element {
     reset();
   };
 
-  const handleDelete = (expenseId: string) => {
-    deleteExpense(expenseId);
-    // Update filtered expenses to reflect the deletion
-    setFilteredExpenses(prev => prev.filter(e => e.id !== expenseId));
+  const handleDelete = async (expenseId: string) => {
+    try {
+      await deleteExpense(expenseId);
+      // Update filtered expenses to reflect the deletion
+      setFilteredExpenses(prev => prev.filter(e => e.id !== expenseId));
+    } catch (error) {
+      console.error('Failed to delete expense:', error);
+    }
   };
 
   const handleApplyFilter = () => {
@@ -350,47 +354,52 @@ export default function Page(): React.JSX.Element {
     link.remove();
   };
 
-  const onSubmit = (data: ExpenseFormData) => {
-    const employee = employees.find(emp => emp.id === data.employeeId);
+  const onSubmit = async (data: ExpenseFormData) => {
+    try {
+      const employee = employees.find(emp => emp.id === data.employeeId);
 
-    if (editingExpense) {
-      // Edit existing expense using context
-      updateExpense(editingExpense.id, {
-        title: data.description || 'Expense',
-        description: data.description,
-        category: data.type,
-        amount: data.amount,
-        currency: 'AED',
-        date: data.date.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
-        driverId: data.employeeId,
-        driverName: employee?.name,
-        receiptNumber: undefined,
-        vendor: data.maintenanceName,
-        isReimbursable: true,
-        status: 'pending',
-        updatedAt: new Date().toISOString(),
-        updatedBy: 'current-user', // You might want to get this from auth context
-      });
-    } else {
-      // Add new expense using context
-      addExpense({
-        title: data.description || 'Expense',
-        description: data.description,
-        category: data.type,
-        amount: data.amount,
-        currency: 'AED',
-        date: data.date.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
-        driverId: data.employeeId,
-        driverName: employee?.name,
-        designation: employee?.designation || 'driver',
-        receiptNumber: undefined,
-        vendor: data.maintenanceName,
-        isReimbursable: true,
-        status: 'pending',
-        createdBy: 'current-user', // You might want to get this from auth context
-      });
+      // eslint-disable-next-line unicorn/prefer-ternary
+      if (editingExpense) {
+        // Edit existing expense using context
+        await updateExpense(editingExpense.id, {
+          title: data.description || 'Expense',
+          description: data.description,
+          category: data.type,
+          amount: data.amount,
+          currency: 'AED',
+          date: data.date.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
+          driverId: data.employeeId,
+          driverName: employee?.name,
+          receiptNumber: undefined,
+          vendor: data.maintenanceName,
+          isReimbursable: true,
+          status: 'pending',
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'current-user', // You might want to get this from auth context
+        });
+      } else {
+        // Add new expense using context
+        await addExpense({
+          title: data.description || 'Expense',
+          description: data.description,
+          category: data.type,
+          amount: data.amount,
+          currency: 'AED',
+          date: data.date.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
+          driverId: data.employeeId,
+          driverName: employee?.name,
+          designation: employee?.designation || 'driver',
+          receiptNumber: undefined,
+          vendor: data.maintenanceName,
+          isReimbursable: true,
+          status: 'pending',
+          createdBy: 'current-user', // You might want to get this from auth context
+        });
+      }
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save expense:', error);
     }
-    handleClose();
   };
 
 
