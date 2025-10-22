@@ -62,10 +62,10 @@ const productSchema = zod.object({
 
 type ProductFormData = zod.infer<typeof productSchema>;
 
-function generateProductId(): string {
-  const count = Math.floor(Math.random() * 1000) + 1;
-  return `PRD-${count.toString().padStart(3, '0')}`;
-}
+// function generateProductId(): string {
+//   const count = Math.floor(Math.random() * 1000) + 1;
+//   return `PRD-${count.toString().padStart(3, '0')}`;
+// }
 
 // Price History Dialog Component
 interface PriceHistoryDialogProps {
