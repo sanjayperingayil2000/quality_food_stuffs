@@ -14,7 +14,6 @@ import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
-import { Logo } from '@/components/core/logo';
 import { useUser } from '@/hooks/use-user';
 
 import { navItems } from './config';
@@ -53,7 +52,7 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {
         '--NavItem-icon-disabled-color': 'var(--mui-palette-neutral-600)',
         bgcolor: 'var(--SideNav-background)',
         color: 'var(--SideNav-color)',
-        display: { xs: 'none', lg: 'flex' },
+        display: { xs: 'flex', lg: 'flex' },
         flexDirection: 'column',
         height: '100vh', // full height
         left: 0,
@@ -61,6 +60,14 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {
         top: 0,
         transition: 'width 0.3s ease',
         width: open ? '240px' : '72px',
+        // Mobile and tablet specific styling
+        '@media (max-width: 1023px)': {
+          width: open ? '280px' : '0px',
+          transform: open ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s ease, width 0.3s ease',
+          backgroundColor: 'var(--SideNav-background)',
+          boxShadow: open ? '2px 0 8px rgba(0,0,0,0.3)' : 'none',
+        },
         zIndex: 'var(--SideNav-zIndex)',
         overflow: 'hidden', // no page scroll
       }}
@@ -76,8 +83,10 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {
         }}
       >
         {open && (
-          <Box component={RouterLink} href={paths.home} sx={{ display: 'inline-flex' }}>
-            <Logo color="light" height={32} width={122} />
+          <Box component={RouterLink} href={paths.home} sx={{ display: 'inline-flex', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+              Quality Food Stuffs
+            </Typography>
           </Box>
         )}
         <IconButton onClick={toggleSidebar} sx={{ color: 'white' }}>

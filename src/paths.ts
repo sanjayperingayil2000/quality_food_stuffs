@@ -8,6 +8,7 @@ export const paths = {
     products: '/dashboard/products',
     additionalExpenses: '/dashboard/additional-expenses',
     dailyTrip: '/dashboard/daily-trip',
+    activity: '/dashboard/activity',
     settings: '/dashboard/settings',
   },
   errors: { notFound: '/errors/not-found' },

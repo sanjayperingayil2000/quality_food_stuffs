@@ -119,4 +119,4 @@ DailyTripSchema.index({ createdBy: 1 });
 DailyTripSchema.index({ updatedBy: 1 });
 
 export const DailyTrip: Model<IDailyTripDocument> =
-  mongoose.models.DailyTrip || mongoose.model<IDailyTripDocument>('DailyTrip', DailyTripSchema);
+  mongoose.models.DailyTrip || mongoose.model<IDailyTripDocument>('DailyTrip', DailyTripSchema, 'daily_trips');

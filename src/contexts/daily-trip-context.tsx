@@ -860,6 +860,14 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     transferredFromDriverId: string;
     transferredFromDriverName: string;
   }>>([]);
+  
+  // Ref to track balance updates that need to be processed after state changes
+  const balanceUpdatesRef = React.useRef<Array<{
+    driverId: string;
+    balance: number;
+    reason: string;
+    updatedBy: string;
+  }>>([]);
 
   const refreshTrips = React.useCallback(async () => {
     try {
@@ -888,6 +896,19 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
 
   // Get employee context to access driver balance
   const { getEmployeeById, updateDriverBalance } = useEmployees();
+
+  // Process balance updates after state changes to avoid setState during render
+  React.useEffect(() => {
+    if (balanceUpdatesRef.current.length > 0) {
+      const updates = [...balanceUpdatesRef.current];
+      balanceUpdatesRef.current = []; // Clear the ref
+      
+      // Process each balance update
+      for (const update of updates) {
+        updateDriverBalance(update.driverId, update.balance, update.reason, update.updatedBy);
+      }
+    }
+  }, [trips, updateDriverBalance]);
 
   // Helper to get previous balance for a driver
   const getPreviousBalance = React.useCallback((driverId: string, currentDate: Date, allTrips: DailyTrip[]): number => {
@@ -1082,9 +1103,38 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       return updatedTrips;
     });
 
-    // Update the employee's balance after creating the trip
-    updateDriverBalance(tripData.driverId, Math.round(financialMetrics.balance), 'trip_update', 'EMP-001');
-  }, [trips, pendingTransfers, getPreviousBalance, updateDriverBalance]);
+    // Save to backend
+    try {
+      const result = await apiClient.createDailyTrip({
+        ...newTrip,
+        date: newTrip.date,
+        createdAt: newTrip.createdAt,
+        updatedAt: newTrip.updatedAt,
+      });
+      
+      if (result.error) {
+        console.error('Failed to save trip to backend:', result.error);
+        // Revert local state on error
+        setTrips(prev => prev.filter(trip => trip.id !== newTrip.id));
+        setError(result.error);
+        return;
+      }
+    } catch (error_) {
+      console.error('Error saving trip to backend:', error_);
+      // Revert local state on error
+      setTrips(prev => prev.filter(trip => trip.id !== newTrip.id));
+      setError(error_ instanceof Error ? error_.message : 'Failed to save trip');
+      return;
+    }
+
+    // Track balance update to be processed after state change
+    balanceUpdatesRef.current.push({
+      driverId: tripData.driverId,
+      balance: Math.round(financialMetrics.balance),
+      reason: 'trip_update',
+      updatedBy: 'EMP-001'
+    });
+  }, [trips, pendingTransfers, getPreviousBalance]);
 
   const updateTrip = React.useCallback(async (id: string, updates: Partial<DailyTrip>) => {
     setTrips(prev => 
@@ -1150,9 +1200,15 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             updatedTrip.balance = financialMetrics.balance;
           }
           
-          // Update employee balance if it changed
+          // Track balance changes to update after state change
           if (updatedTrip.balance !== trip.balance) {
-            updateDriverBalance(updatedTrip.driverId, updatedTrip.balance, 'trip_update', 'EMP-001');
+            // Store the balance update to be processed after state update
+            balanceUpdatesRef.current.push({
+              driverId: updatedTrip.driverId,
+              balance: updatedTrip.balance,
+              reason: 'trip_update',
+              updatedBy: 'EMP-001'
+            });
           }
           
           return updatedTrip;
@@ -1160,7 +1216,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
         return trip;
       })
     );
-  }, [getPreviousBalance, updateDriverBalance]);
+  }, [getPreviousBalance]);
 
   const deleteTrip = React.useCallback(async (id: string) => {
     setTrips(prev => prev.filter(trip => trip.id !== id));
@@ -1201,9 +1257,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     getTripsByDateRange,
     getTripByDriverAndDate,
     canAddTripForDriver,
-    refreshTrips: async () => {
-      // Implementation for refreshing trips from API
-    },
+    refreshTrips,
   };
 
   return (

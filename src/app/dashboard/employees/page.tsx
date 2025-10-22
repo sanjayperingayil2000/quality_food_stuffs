@@ -349,8 +349,8 @@ export default function Page(): React.JSX.Element {
               fullWidth
               required
               error={!!formErrors.phoneNumber}
-              helperText={formErrors.phoneNumber || 'Enter 10 digits (e.g., 5012345678). +971 will be added automatically'}
-              placeholder="5012345678"
+              helperText={formErrors.phoneNumber || 'Enter 9 digits (e.g., 5012345678). +971 will be added automatically'}
+              placeholder="552345678"
               InputProps={{
                 startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>+971</Typography>,
               }}
@@ -449,7 +449,7 @@ export default function Page(): React.JSX.Element {
               fullWidth
               required
               error={!!formErrors.phoneNumber}
-              helperText={formErrors.phoneNumber || 'Enter 10 digits (e.g., 5012345678). +971 will be added automatically'}
+              helperText={formErrors.phoneNumber || 'Enter 9 digits (e.g., 552345678). +971 will be added automatically'}
               placeholder="5012345678"
               InputProps={{
                 startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>+971</Typography>,
@@ -573,17 +573,17 @@ export default function Page(): React.JSX.Element {
                           <TableCell>
                             {new Date(entry.updatedAt).toLocaleDateString()} {new Date(entry.updatedAt).toLocaleTimeString()}
                           </TableCell>
-                          <TableCell>AED {index > 0 ? selectedEmployee.balanceHistory![index - 1].balance.toFixed(2) : '0.00'}</TableCell>
+                          <TableCell>AED {index > 0 ? (selectedEmployee.balanceHistory![index - 1].balance || 0).toFixed(2) : '0.00'}</TableCell>
                           <TableCell>
                             <Typography 
                               variant="body2" 
-                              color={entry.balance >= (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance : 0) ? 'success.main' : 'error.main'}
+                              color={(entry.balance || 0) >= (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance || 0 : 0) ? 'success.main' : 'error.main'}
                               sx={{ fontWeight: 600 }}
                             >
-                              {entry.balance >= (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance : 0) ? '+' : ''}AED {(entry.balance - (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance : 0)).toFixed(2)}
+                              {(entry.balance || 0) >= (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance || 0 : 0) ? '+' : ''}AED {((entry.balance || 0) - (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance || 0 : 0)).toFixed(2)}
                             </Typography>
                           </TableCell>
-                          <TableCell>AED {entry.balance.toFixed(2)}</TableCell>
+                          <TableCell>AED {entry.balance?.toFixed(2) || '0.00'}</TableCell>
                           <TableCell>
                             <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
                               {entry.reason?.replace('_', ' ') || 'N/A'}

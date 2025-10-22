@@ -627,7 +627,7 @@ export default function Page(): React.JSX.Element {
                       const maxRows = Math.max(freshProducts.length, bakeryProducts.length);
                       
                       return Array.from({ length: maxRows }, (_, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={`product-row-${index}`}>
                           <TableCell sx={{ borderRight: '1px solid #e0e0e0', width: '50%' }}>
                             {freshProducts[index] ? (
                               <Box>
@@ -1006,8 +1006,24 @@ export default function Page(): React.JSX.Element {
                   </Typography>
 
                   {/* Transfer Product Form */}
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 2, flexWrap: 'wrap' }}>
-                    <FormControl sx={{ flex: 1, minWidth: '200px' }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 2, 
+                    alignItems: 'flex-end', 
+                    mb: 2, 
+                    flexWrap: 'wrap',
+                    '@media (min-width: 1024px)': {
+                      flexWrap: 'nowrap',
+                      alignItems: 'flex-end'
+                    }
+                  }}>
+                    <FormControl sx={{ 
+                      flex: 1, 
+                      minWidth: '200px',
+                      '@media (min-width: 1024px)': {
+                        flex: '2 1 0'
+                      }
+                    }}>
                       <TextField
                         label="Search Product (Name or ID)"
                         value={productSearch}
@@ -1078,6 +1094,10 @@ export default function Page(): React.JSX.Element {
                       size="small"
                       sx={{ 
                         width: 140,
+                        '@media (min-width: 1024px)': {
+                          width: 160,
+                          flex: '0 0 auto'
+                        },
                         '& .MuiInputBase-input': {
                           cursor: 'text',
                           pointerEvents: 'auto',
@@ -1097,7 +1117,12 @@ export default function Page(): React.JSX.Element {
                       }}
                     />
                     
-                    <Box sx={{ flex: 1 }}>
+                    <Box sx={{ 
+                      flex: 1,
+                      '@media (min-width: 1024px)': {
+                        flex: '1.5 1 0'
+                      }
+                    }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -1157,16 +1182,6 @@ export default function Page(): React.JSX.Element {
                             console.log('Transfer driver dropdown closed');
                           }}
                         >
-                          <MenuItem value="TEST-DRIVER">
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                TEST DRIVER
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Test Route
-                              </Typography>
-                            </Box>
-                          </MenuItem>
                           {(() => {
                             if (!drivers || drivers.length === 0) {
                               return <MenuItem disabled>No drivers available</MenuItem>;

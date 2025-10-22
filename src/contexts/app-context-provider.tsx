@@ -5,6 +5,8 @@ import { EmployeeProvider } from './employee-context';
 import { ProductProvider } from './product-context';
 import { DailyTripProvider } from './daily-trip-context';
 import { AdditionalExpenseProvider } from './additional-expense-context';
+import { NotificationProvider } from './notification-context';
+import { NotificationContainer } from '@/components/notifications/notification-container';
 
 interface AppContextProviderProps {
   children: React.ReactNode;
@@ -12,14 +14,17 @@ interface AppContextProviderProps {
 
 export function AppContextProvider({ children }: AppContextProviderProps): React.JSX.Element {
   return (
-    <EmployeeProvider>
-      <ProductProvider>
-        <DailyTripProvider>
-          <AdditionalExpenseProvider>
-            {children}
-          </AdditionalExpenseProvider>
-        </DailyTripProvider>
-      </ProductProvider>
-    </EmployeeProvider>
+    <NotificationProvider>
+      <EmployeeProvider>
+        <ProductProvider>
+          <DailyTripProvider>
+            <AdditionalExpenseProvider>
+              {children}
+              <NotificationContainer />
+            </AdditionalExpenseProvider>
+          </DailyTripProvider>
+        </ProductProvider>
+      </EmployeeProvider>
+    </NotificationProvider>
   );
 }

@@ -65,11 +65,11 @@ const expenseSchema = zod.object({
     return data.employeeId && data.employeeId.length > 0;
   }
   if (data.type === 'others') {
-    return data.employeeId && data.employeeId.length > 0 && data.reason && data.reason.length > 0;
+    return data.employeeId && data.employeeId.length > 0;
   }
   return true;
 }, {
-  message: 'Required fields are missing for the selected expense type',
+  message: 'Please select a driver/employee for this expense type',
   path: ['employeeId']
 });
 

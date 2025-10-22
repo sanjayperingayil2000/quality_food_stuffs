@@ -35,6 +35,7 @@ import timezone from 'dayjs/plugin/timezone';
 
 import { useProducts, type Product } from '@/contexts/product-context';
 import { ExportPdfButton } from '@/components/products/export-pdf';
+import { useNotifications } from '@/contexts/notification-context';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -57,7 +58,6 @@ const productSchema = zod.object({
     .number({ invalid_type_error: 'Price must be a number' })
     .gt(0, 'Price must be greater than 0'),
   category: zod.enum(['bakery', 'fresh'], { required_error: 'Category is required' }),
-  productId: zod.string().min(1, 'Product ID is required'),
 });
 
 type ProductFormData = zod.infer<typeof productSchema>;
@@ -106,6 +106,7 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
 
 export default function Page(): React.JSX.Element {
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { showSuccess, showError } = useNotifications();
   const [open, setOpen] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<ProductWithHistory | null>(null);
   const [filteredProducts, setFilteredProducts] = React.useState<ProductWithHistory[]>([]);
@@ -139,12 +140,12 @@ export default function Page(): React.JSX.Element {
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: { name: '', price: 0, category: 'bakery', productId: '' },
+    defaultValues: { name: '', price: 0, category: 'bakery' },
   });
 
   const handleOpen = () => {
     setEditingProduct(null);
-    reset({ name: '', price: 0, category: 'bakery', productId: generateProductId() });
+    reset({ name: '', price: 0, category: 'bakery' });
     setOpen(true);
   };
 
@@ -154,7 +155,6 @@ export default function Page(): React.JSX.Element {
       name: product.name,
       price: product.price,
       category: product.category,
-      productId: product.id,
     });
     setOpen(true);
   };
@@ -165,50 +165,61 @@ export default function Page(): React.JSX.Element {
     reset();
   };
 
-  const handleDelete = (productId: string) => deleteProduct(productId);
+  const handleDelete = async (productId: string) => {
+    try {
+      await deleteProduct(productId);
+      showSuccess('Product deleted successfully!');
+    } catch {
+      showError('Failed to delete product. Please try again.');
+    }
+  };
 
-  const onSubmit = (data: ProductFormData) => {
-    if (editingProduct) {
-      const prevPrice = editingProduct.price;
-      const newPrice = data.price;
-      const priceHistory = editingProduct.priceHistory ? [...editingProduct.priceHistory] : [];
+  const onSubmit = async (data: ProductFormData) => {
+    try {
+      if (editingProduct) {
+        const prevPrice = editingProduct.price;
+        const newPrice = data.price;
+        const priceHistory = editingProduct.priceHistory ? [...editingProduct.priceHistory] : [];
 
-      if (prevPrice !== newPrice) {
-        priceHistory.push({
-          version: priceHistory.length + 1,
-          price: prevPrice,
-          updatedAt: new Date(),
-          updatedBy: 'Admin', // you can replace with actual user
+        if (prevPrice !== newPrice) {
+          priceHistory.push({
+            version: priceHistory.length + 1,
+            price: prevPrice,
+            updatedAt: new Date(),
+            updatedBy: 'Admin', // you can replace with actual user
+          });
+        }
+
+        await updateProduct(editingProduct.id, {
+          id: editingProduct.id,
+          name: data.name,
+          price: newPrice,
+          category: data.category,
+          updatedAt: dayjs().utc().toDate(),
+          priceHistory,
         });
+        showSuccess('Product updated successfully!');
+      } else {
+        const newProduct: Product = {
+          id: `PRD-${String(products.length + 1).padStart(3, '0')}`,
+          name: data.name,
+          price: data.price,
+          category: data.category,
+          sku: `PRD-${String(products.length + 1).padStart(3, '0')}`,
+          unit: 'piece',
+          minimumQuantity: 1,
+          isActive: true,
+          createdAt: dayjs().utc().toDate(),
+          updatedAt: dayjs().utc().toDate(),
+          priceHistory: [],
+        };
+        await addProduct(newProduct);
+        showSuccess('Product added successfully!');
       }
-
-      updateProduct(editingProduct.id, {
-        id: data.productId,
-        name: data.name,
-        price: newPrice,
-        category: data.category,
-        updatedAt: dayjs().utc().toDate(),
-        priceHistory,
-      });
+      handleClose();
+    } catch {
+      showError('Failed to save product. Please try again.');
     }
-    else {
-
-      const newProduct: Product = {
-        id: data.productId,
-        name: data.name,
-        price: data.price,
-        category: data.category,
-        sku: `PRD-${data.productId}`,
-        unit: 'piece',
-        minimumQuantity: 1,
-        isActive: true,
-        createdAt: dayjs().utc().toDate(),
-        updatedAt: dayjs().utc().toDate(),
-        priceHistory: [],
-      }
-      addProduct(newProduct);
-    }
-    handleClose();
   };
 
   const handleExportExcel = () => {
@@ -313,6 +324,20 @@ export default function Page(): React.JSX.Element {
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogContent>
             <Stack spacing={2} sx={{ pt: 1 }}>
+              {/* Product ID - Auto-generated and read-only */}
+              <TextField
+                label="Product ID"
+                value={editingProduct ? editingProduct.id : `PRD-${String(products.length + 1).padStart(3, '0')}`}
+                disabled
+                fullWidth
+                helperText="Product ID is automatically generated"
+                sx={{
+                  '& .MuiInputBase-input': {
+                    backgroundColor: 'action.disabledBackground',
+                    color: 'text.secondary'
+                  }
+                }}
+              />
               <Controller
                 control={control}
                 name="name"
@@ -353,13 +378,6 @@ export default function Page(): React.JSX.Element {
                       <MenuItem value="fresh">Fresh</MenuItem>
                     </Select>
                   </FormControl>
-                )}
-              />
-              <Controller
-                control={control}
-                name="productId"
-                render={({ field }) => (
-                  <TextField {...field} label="Product ID" error={Boolean(errors.productId)} helperText={errors.productId?.message} fullWidth />
                 )}
               />
             </Stack>
