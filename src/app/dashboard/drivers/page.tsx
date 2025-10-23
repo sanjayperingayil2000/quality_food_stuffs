@@ -20,10 +20,12 @@ import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { useEmployees, Employee } from '@/contexts/employee-context';
+import { useNotifications } from '@/contexts/notification-context';
 import { Tooltip } from '@mui/material';
 
 export default function Page(): React.JSX.Element {
   const { drivers, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
+  const { showSuccess, showError } = useNotifications();
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
@@ -105,7 +107,7 @@ export default function Page(): React.JSX.Element {
   };
 
 
-  const handleAddSubmit = () => {
+  const handleAddSubmit = async () => {
     if (validateForm() && formData.name && formData.phoneNumber && formData.location && formData.routeName) {
       const newDriver: Employee = {
         id: `EMP-${Date.now()}`,
@@ -121,24 +123,39 @@ export default function Page(): React.JSX.Element {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      addEmployee(newDriver);
-      setAddDialogOpen(false);
+      try {
+        await addEmployee(newDriver);
+        showSuccess('Driver added successfully!');
+        setAddDialogOpen(false);
+      } catch {
+        showError('Failed to add driver. Please try again.');
+      }
     }
   };
 
-  const handleEditSubmit = () => {
+  const handleEditSubmit = async () => {
     if (selectedDriver && validateForm()) {
-      updateEmployee(selectedDriver.id, formData);
-      setEditDialogOpen(false);
-      setSelectedDriver(null);
+      try {
+        updateEmployee(selectedDriver.id, formData);
+        showSuccess('Driver updated successfully!');
+        setEditDialogOpen(false);
+        setSelectedDriver(null);
+      } catch {
+        showError('Failed to update driver. Please try again.');
+      }
     }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (selectedDriver) {
-      deleteEmployee(selectedDriver.id);
-      setDeleteDialogOpen(false);
-      setSelectedDriver(null);
+      try {
+        deleteEmployee(selectedDriver.id);
+        showSuccess('Driver deleted successfully!');
+        setDeleteDialogOpen(false);
+        setSelectedDriver(null);
+      } catch {
+        showError('Failed to delete driver. Please try again.');
+      }
     }
   };
 

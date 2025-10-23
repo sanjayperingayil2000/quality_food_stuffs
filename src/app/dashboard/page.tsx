@@ -9,49 +9,36 @@ import { TotalProfit } from '@/components/dashboard/overview/total-profit';
 import { MainNavWrapper } from '@/components/dashboard/layout/main-nav';
 import { useDailyTrips } from '@/contexts/daily-trip-context';
 import { useEmployees } from '@/contexts/employee-context';
+import { useFilters } from '@/contexts/filter-context';
 
 export default function Page(): React.JSX.Element {
   const { trips } = useDailyTrips();
   const { drivers } = useEmployees();
+  const { filters } = useFilters();
 
   // Calculate overview metrics from trips and employee data
   const overviewMetrics = React.useMemo(() => {
-    const today = dayjs().startOf('day');
-    const thisWeek = today.subtract(7, 'days');
-    const lastWeek = thisWeek.subtract(7, 'days');
-
-    // Filter trips for this week and last week
-    const thisWeekTrips = trips.filter(trip => 
-      dayjs(trip.date).isAfter(thisWeek) && dayjs(trip.date).isBefore(today.add(1, 'day'))
-    );
-    
-    const lastWeekTrips = trips.filter(trip => 
-      dayjs(trip.date).isAfter(lastWeek) && dayjs(trip.date).isBefore(thisWeek.add(1, 'day'))
-    );
-
-    // Calculate totals for this week
-    const thisWeekTotals = thisWeekTrips.reduce((acc, trip) => ({
-      collectionAmount: acc.collectionAmount + trip.collectionAmount,
-      purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
-      discount: acc.discount + trip.discount,
-      amountToBe: acc.amountToBe + trip.amountToBe,
-      petrol: acc.petrol + trip.petrol,
-      balance: acc.balance + trip.balance,
-      expiry: acc.expiry + trip.expiry,
-      profit: acc.profit + trip.profit,
-    }), {
-      collectionAmount: 0,
-      purchaseAmount: 0,
-      discount: 0,
-      amountToBe: 0,
-      petrol: 0,
-      balance: 0,
-      expiry: 0,
-      profit: 0,
+    // Filter trips based on selected date range
+    let filteredTrips = trips.filter(trip => {
+      const tripDate = dayjs(trip.date);
+      const fromDate = filters.dateRange[0];
+      const toDate = filters.dateRange[1];
+      
+      if (!fromDate || !toDate) return true;
+      
+      return tripDate.isAfter(fromDate.subtract(1, 'day')) && tripDate.isBefore(toDate.add(1, 'day'));
     });
 
-    // Calculate totals for last week
-    const lastWeekTotals = lastWeekTrips.reduce((acc, trip) => ({
+    // Filter trips based on driver selection
+    if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+      const selectedDriver = drivers.find(driver => driver.name === filters.driver);
+      if (selectedDriver) {
+        filteredTrips = filteredTrips.filter(trip => trip.driverId === selectedDriver.id);
+      }
+    }
+
+    // Calculate totals for the filtered trips
+    const totals = filteredTrips.reduce((acc, trip) => ({
       collectionAmount: acc.collectionAmount + trip.collectionAmount,
       purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
       discount: acc.discount + trip.discount,
@@ -74,55 +61,49 @@ export default function Page(): React.JSX.Element {
     // Calculate total driver balance from employee data
     const totalDriverBalance = drivers.reduce((sum, driver) => sum + (driver.balance || 0), 0);
 
-    // Calculate percentage changes
-    const calculatePercentageChange = (current: number, previous: number) => {
-      if (previous === 0) return current > 0 ? 100 : 0;
-      return Math.round(((current - previous) / previous) * 100);
-    };
-
     return {
       collectionAmount: {
-        value: thisWeekTotals.collectionAmount,
-        diff: calculatePercentageChange(thisWeekTotals.collectionAmount, lastWeekTotals.collectionAmount),
-        trend: thisWeekTotals.collectionAmount >= lastWeekTotals.collectionAmount ? 'up' : 'down' as 'up' | 'down'
+        value: totals.collectionAmount,
+        diff: 0, // We'll calculate this based on previous period if needed
+        trend: 'up' as 'up' | 'down'
       },
       purchaseAmount: {
-        value: thisWeekTotals.purchaseAmount,
-        diff: calculatePercentageChange(thisWeekTotals.purchaseAmount, lastWeekTotals.purchaseAmount),
-        trend: thisWeekTotals.purchaseAmount >= lastWeekTotals.purchaseAmount ? 'up' : 'down' as 'up' | 'down'
+        value: totals.purchaseAmount,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       discount: {
-        value: thisWeekTotals.discount,
-        diff: calculatePercentageChange(thisWeekTotals.discount, lastWeekTotals.discount),
-        trend: thisWeekTotals.discount >= lastWeekTotals.discount ? 'up' : 'down' as 'up' | 'down'
+        value: totals.discount,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       amountToBe: {
-        value: thisWeekTotals.amountToBe,
-        diff: calculatePercentageChange(thisWeekTotals.amountToBe, lastWeekTotals.amountToBe),
-        trend: thisWeekTotals.amountToBe >= lastWeekTotals.amountToBe ? 'up' : 'down' as 'up' | 'down'
+        value: totals.amountToBe,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       petrol: {
-        value: thisWeekTotals.petrol,
-        diff: calculatePercentageChange(thisWeekTotals.petrol, lastWeekTotals.petrol),
-        trend: thisWeekTotals.petrol >= lastWeekTotals.petrol ? 'up' : 'down' as 'up' | 'down'
+        value: totals.petrol,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       balance: {
         value: totalDriverBalance,
-        diff: 0, // Balance is cumulative, so we don't show week-over-week change
+        diff: 0,
         trend: 'up' as 'up' | 'down'
       },
       expiry: {
-        value: thisWeekTotals.expiry,
-        diff: calculatePercentageChange(thisWeekTotals.expiry, lastWeekTotals.expiry),
-        trend: thisWeekTotals.expiry >= lastWeekTotals.expiry ? 'up' : 'down' as 'up' | 'down'
+        value: totals.expiry,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       profit: {
-        value: thisWeekTotals.profit,
-        diff: calculatePercentageChange(thisWeekTotals.profit, lastWeekTotals.profit),
-        trend: thisWeekTotals.profit >= lastWeekTotals.profit ? 'up' : 'down' as 'up' | 'down'
+        value: totals.profit,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       }
     };
-  }, [trips, drivers]);
+  }, [trips, drivers, filters]);
 
   return (
     <> 

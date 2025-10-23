@@ -16,41 +16,31 @@ import {
   Tooltip,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs, { Dayjs } from 'dayjs';
 import { ListIcon } from '@phosphor-icons/react/dist/ssr/List';
 import { FilePdfIcon, FileXlsIcon } from '@phosphor-icons/react/dist/ssr';
 
 import { usePopover } from '@/hooks/use-popover';
 import { MobileNav } from './mobile-nav';
 import { UserPopover } from './user-popover';
+import { useEmployees } from '@/contexts/employee-context';
+import { useFilters } from '@/contexts/filter-context';
 
 export interface MainNavProps extends BoxProps { }
 
 export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState(false);
-
-  // 👇 defaults: Company + All drivers
-  const [selection, setSelection] = React.useState('company');
-  const [driver, setDriver] = React.useState('All drivers');
-
-
-  const [dateRange, setDateRange] = React.useState<[Dayjs | null, Dayjs | null]>([
-    dayjs().subtract(1, 'day'), // From = yesterday
-    dayjs().subtract(1, 'day'), // To = yesterday
-  ]);
+  const { drivers } = useEmployees();
+  const { filters, updateSelection, updateDriver, updateDateRange } = useFilters();
 
   const userPopover = usePopover<HTMLDivElement>();
 
-  const driverList = ['John Doe', 'Jane Smith', 'Michael Brown'];
-
   const handleSelectionChange = (event: SelectChangeEvent) => {
-    const value = event.target.value as string;
-    setSelection(value);
-    setDriver(value === 'driver' ? 'All drivers' : ''); // reset driver if switching
+    const value = event.target.value as 'company' | 'driver';
+    updateSelection(value);
   };
 
   const handleDriverChange = (event: SelectChangeEvent) => {
-    setDriver(event.target.value as string);
+    updateDriver(event.target.value as string);
   };
 
   return (
@@ -78,19 +68,28 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
           }}
         >
           {/* Left side */}
-          <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
+          <Stack 
+            sx={{ 
+              alignItems: 'center',
+              flex: 1,
+              minWidth: 0, // Allow shrinking
+              overflow: 'hidden'
+            }} 
+            direction="row" 
+            spacing={1}
+          >
             <IconButton onClick={() => setOpenNav(true)} sx={{ display: { lg: 'none' } }}>
               <ListIcon />
             </IconButton>
 
             {/* First dropdown */}
-            <Box sx={{ minWidth: 230 }}>
+            <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto' }}>
               <FormControl fullWidth>
                 <InputLabel id="main-select-label">Select</InputLabel>
                 <Select
                   labelId="main-select-label"
                   id="main-select"
-                  value={selection}
+                  value={filters.selection}
                   label="Select"
                   onChange={handleSelectionChange}
                   sx={{
@@ -108,14 +107,14 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
             </Box>
 
             {/* Second dropdown (only when Driver selected) */}
-            {selection === 'driver' && (
-              <Box sx={{ minWidth: 230 }}>
+            {filters.selection === 'driver' && (
+              <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto' }}>
                 <FormControl fullWidth>
                   <InputLabel id="driver-select-label">Driver</InputLabel>
                   <Select
                     labelId="driver-select-label"
                     id="driver-select"
-                    value={driver}
+                    value={filters.driver}
                     label="Driver"
                     onChange={handleDriverChange}
                     sx={{
@@ -128,9 +127,9 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
                   >
                     {/* Default All drivers option */}
                     <MenuItem value="All drivers">All drivers</MenuItem>
-                    {driverList.map((d) => (
-                      <MenuItem key={d} value={d}>
-                        {d}
+                    {drivers.map((driver) => (
+                      <MenuItem key={driver.id} value={driver.name}>
+                        {driver.name}
                       </MenuItem>
                     ))}
                   </Select>
@@ -139,16 +138,22 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
             )}
 
             {/* Date pickers */}
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1,
+              flex: '0 0 auto',
+              minWidth: 0
+            }}>
               <DatePicker
                 label="From"
-                value={dateRange[0]}
-                onChange={(newValue) => setDateRange([newValue, dateRange[1]])}
+                value={filters.dateRange[0]}
+                onChange={(newValue) => updateDateRange([newValue, filters.dateRange[1]])}
                 slotProps={{
                   textField: {
                     sx: {
                       borderRadius: '50px',
                       backgroundColor: 'white',
+                      minWidth: 120,
                       '& .MuiOutlinedInput-notchedOutline': {
                         borderRadius: '50px',
                       },
@@ -158,13 +163,14 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
               />
               <DatePicker
                 label="To"
-                value={dateRange[1]}
-                onChange={(newValue) => setDateRange([dateRange[0], newValue])}
+                value={filters.dateRange[1]}
+                onChange={(newValue) => updateDateRange([filters.dateRange[0], newValue])}
                 slotProps={{
                   textField: {
                     sx: {
                       borderRadius: '50px',
                       backgroundColor: 'white',
+                      minWidth: 120,
                       '& .MuiOutlinedInput-notchedOutline': {
                         borderRadius: '50px',
                       },
@@ -174,7 +180,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
               />
             </Box>
 
-            <Button variant="contained">Apply</Button>
+            <Button variant="contained" sx={{ flex: '0 0 auto' }}>Apply</Button>
           </Stack>
 
           {/* Right side */}

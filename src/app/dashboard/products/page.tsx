@@ -177,26 +177,11 @@ export default function Page(): React.JSX.Element {
   const onSubmit = async (data: ProductFormData) => {
     try {
       if (editingProduct) {
-        const prevPrice = editingProduct.price;
-        const newPrice = data.price;
-        const priceHistory = editingProduct.priceHistory ? [...editingProduct.priceHistory] : [];
-
-        if (prevPrice !== newPrice) {
-          priceHistory.push({
-            version: priceHistory.length + 1,
-            price: prevPrice,
-            updatedAt: new Date(),
-            updatedBy: 'Admin', // you can replace with actual user
-          });
-        }
-
         await updateProduct(editingProduct.id, {
-          id: editingProduct.id,
           name: data.name,
-          price: newPrice,
+          price: data.price,
           category: data.category,
           updatedAt: dayjs().utc().toDate(),
-          priceHistory,
         });
         showSuccess('Product updated successfully!');
       } else {

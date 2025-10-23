@@ -169,6 +169,9 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
         // Revert local state on error
         await refreshProducts();
         setError(result.error);
+      } else {
+        // Refresh products to get updated price history from backend
+        await refreshProducts();
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to update product');

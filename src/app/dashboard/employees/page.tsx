@@ -25,10 +25,12 @@ import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { useEmployees, Employee } from '@/contexts/employee-context';
+import { useNotifications } from '@/contexts/notification-context';
 import { Tooltip } from '@mui/material';
 
 export default function Page(): React.JSX.Element {
   const { employees, addEmployee, updateEmployee, deleteEmployee, updateDriverBalance } = useEmployees();
+  const { showSuccess, showError } = useNotifications();
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
@@ -162,7 +164,7 @@ export default function Page(): React.JSX.Element {
     return Object.keys(errors).length === 0;
   };
 
-  const handleAddSubmit = () => {
+  const handleAddSubmit = async () => {
     if (validateForm() && formData.name && formData.phoneNumber) {
       const newEmployee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'> = {
         name: formData.name,
@@ -185,12 +187,17 @@ export default function Page(): React.JSX.Element {
         hireDate: new Date(),
         isActive: true,
       };
-      addEmployee(newEmployee);
-      setAddDialogOpen(false);
+      try {
+        await addEmployee(newEmployee);
+        showSuccess('Employee added successfully!');
+        setAddDialogOpen(false);
+      } catch {
+        showError('Failed to add employee. Please try again.');
+      }
     }
   };
 
-  const handleEditSubmit = () => {
+  const handleEditSubmit = async () => {
     if (selectedEmployee && validateForm()) {
       const updates: Partial<Employee> = {
         name: formData.name,
@@ -213,17 +220,27 @@ export default function Page(): React.JSX.Element {
         }
       }
 
-      updateEmployee(selectedEmployee.id, updates);
-      setEditDialogOpen(false);
-      setSelectedEmployee(null);
+      try {
+        await updateEmployee(selectedEmployee.id, updates);
+        showSuccess('Employee updated successfully!');
+        setEditDialogOpen(false);
+        setSelectedEmployee(null);
+      } catch {
+        showError('Failed to update employee. Please try again.');
+      }
     }
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (selectedEmployee) {
-      deleteEmployee(selectedEmployee.id);
-      setDeleteDialogOpen(false);
-      setSelectedEmployee(null);
+      try {
+        deleteEmployee(selectedEmployee.id);
+        showSuccess('Employee deleted successfully!');
+        setDeleteDialogOpen(false);
+        setSelectedEmployee(null);
+      } catch {
+        showError('Failed to delete employee. Please try again.');
+      }
     }
   };
 
