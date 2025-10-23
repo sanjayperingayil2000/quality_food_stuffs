@@ -36,8 +36,14 @@ export const otpVerificationSchema = z.object({
 
 export const userUpdateSchema = z.object({
   name: z.string().optional(),
+  email: z.string().email().optional(),
   roles: z.array(z.enum(['super_admin', 'manager'])).optional(),
   isActive: z.boolean().optional(),
+  phone: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  profilePhoto: z.string().optional(),
+  password: z.string().optional(),
 });
 
 export const settingCreateSchema = z.object({

@@ -1,37 +1,64 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
-import { connectToDatabase } from '@/lib/db';
-import { User } from '@/models/user';
-import { verifyAccessToken } from '@/lib/jwt';
+import { requireAuth, getRequestUser } from '@/middleware/auth';
+import { z } from 'zod';
+import { updateUser, getUserById } from '@/services/user-service';
+
+const profileUpdateSchema = z.object({
+  phone: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  profilePhoto: z.string().optional(),
+});
 
 export async function OPTIONS() {
   return handleCorsPreflight();
 }
 
 export async function GET(req: NextRequest) {
+  const authed = requireAuth(req);
+  if (authed instanceof NextResponse) return withCors(authed);
+  
   try {
-    // Validate Authorization header and extract user from access token
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
-    if (!token) {
-      return withCors(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
+    const userInfo = getRequestUser(authed);
+    if (!userInfo) {
+      return withCors(NextResponse.json({ error: 'User not found' }, { status: 404 }));
     }
-    let tokenUser: { sub: string; roles: string[] } | null = null;
-    try {
-      tokenUser = verifyAccessToken(token) as { sub: string; roles: string[] };
-    } catch {
-      return withCors(NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 }));
-    }
-
-    // Fetch user from database
-    await connectToDatabase();
-    const user = await User.findById(tokenUser.sub).select('-passwordHash');
     
+    const user = await getUserById(userInfo.sub);
     if (!user) {
       return withCors(NextResponse.json({ error: 'User not found' }, { status: 404 }));
     }
+    
+    return withCors(NextResponse.json({ user }, { status: 200 }));
+  } catch (error) {
+    return withCors(jsonError(error, 500));
+  }
+}
 
+export async function PATCH(req: NextRequest) {
+  const authed = requireAuth(req);
+  if (authed instanceof NextResponse) return withCors(authed);
+  
+  try {
+    const userInfo = getRequestUser(authed);
+    if (!userInfo) {
+      return withCors(NextResponse.json({ error: 'User not found' }, { status: 404 }));
+    }
+    
+    const body = await req.json();
+    const parsed = profileUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
+    }
+    
+    // Update the current user's profile
+    const user = await updateUser(userInfo.sub, parsed.data);
+    if (!user) {
+      return withCors(NextResponse.json({ error: 'User not found' }, { status: 404 }));
+    }
+    
     return withCors(NextResponse.json({ user }, { status: 200 }));
   } catch (error) {
     return withCors(jsonError(error, 500));

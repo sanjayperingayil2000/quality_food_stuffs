@@ -15,6 +15,7 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import Select from '@mui/material/Select';
 import { useUser } from '@/hooks/use-user';
 import { useNotifications } from '@/contexts/notification-context';
+import { apiClient } from '@/lib/api-client';
 
 const states = [
   { value: 'dubai', label: 'Dubai' },
@@ -50,13 +51,14 @@ export function AccountDetailsForm(): React.JSX.Element {
     }
   }, [user]);
 
-  const isSuperAdmin = user?.roles?.includes('super_admin');
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     try {
-      // TODO: Implement API call to update user profile
-      console.log('Updating profile:', formData);
+      await apiClient.updateProfile({
+        phone: formData.phone,
+        state: formData.state,
+        city: formData.city,
+      });
       showSuccess('Profile updated successfully!');
     } catch {
       showError('Failed to update profile. Please try again.');
@@ -89,7 +91,7 @@ export function AccountDetailsForm(): React.JSX.Element {
                   value={formData.name}
                   label="Full name" 
                   name="name"
-                  disabled={isSuperAdmin}
+                  disabled={true}
                 />
               </FormControl>
             </Grid>
@@ -104,7 +106,7 @@ export function AccountDetailsForm(): React.JSX.Element {
                   value={formData.email}
                   label="Email address" 
                   name="email"
-                  disabled={isSuperAdmin}
+                  disabled={true}
                 />
               </FormControl>
             </Grid>

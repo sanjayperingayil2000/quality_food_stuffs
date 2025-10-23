@@ -23,10 +23,35 @@ export async function getUserById(id: string) {
   return User.findById(id).lean();
 }
 
-export async function updateUser(id: string, updates: Partial<{ name: string; roles: string[]; isActive: boolean }>) {
+export async function updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string; password?: string }>) {
   await connectToDatabase();
   if (!Types.ObjectId.isValid(id)) return null;
-  return User.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
+  
+  // If email is being updated, check if it's already in use by another user
+  if (updates.email) {
+    const existing = await User.findOne({ email: updates.email, _id: { $ne: id } });
+    if (existing) throw new Error('Email already in use');
+  }
+  
+  // Prepare update data
+  const updateData: Partial<{ name: string; email: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string; passwordHash: string }> = {};
+  
+  // Copy all fields except password
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.email !== undefined) updateData.email = updates.email;
+  if (updates.roles !== undefined) updateData.roles = updates.roles;
+  if (updates.isActive !== undefined) updateData.isActive = updates.isActive;
+  if (updates.phone !== undefined) updateData.phone = updates.phone;
+  if (updates.state !== undefined) updateData.state = updates.state;
+  if (updates.city !== undefined) updateData.city = updates.city;
+  if (updates.profilePhoto !== undefined) updateData.profilePhoto = updates.profilePhoto;
+  
+  // If password is provided, hash it
+  if (updates.password) {
+    updateData.passwordHash = await bcrypt.hash(updates.password, 12);
+  }
+  
+  return User.findByIdAndUpdate(id, { $set: updateData }, { new: true }).lean();
 }
 
 export async function deleteUser(id: string) {

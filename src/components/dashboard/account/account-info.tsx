@@ -49,7 +49,7 @@ export function AccountInfo(): React.JSX.Element {
           const base64String = e.target?.result as string;
           
           // Update user profile with new photo
-          await apiClient.updateUser(user?.id || '', {
+          await apiClient.updateProfile({
             profilePhoto: base64String
           });
 

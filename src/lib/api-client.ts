@@ -329,7 +329,7 @@ class ApiClient {
     return this.request<{ users: User[] }>('/users');
   }
 
-  async createUser(userData: { name: string; email: string; password: string; roles?: string[] }) {
+  async createUser(userData: { name: string; email: string; password: string; roles?: string[]; isActive?: boolean }) {
     return this.request<{ user: User }>('/users', {
       method: 'POST',
       body: JSON.stringify(userData),
@@ -340,8 +340,15 @@ class ApiClient {
     return this.request<{ user: User }>(`/users/${id}`);
   }
 
-  async updateUser(id: string, updates: Partial<{ name: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string }>) {
+  async updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string; password?: string }>) {
     return this.request<{ user: User }>(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async updateProfile(updates: Partial<{ phone?: string; state?: string; city?: string; profilePhoto?: string }>) {
+    return this.request<{ user: User }>('/me', {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });

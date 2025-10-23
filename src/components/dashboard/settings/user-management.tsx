@@ -54,9 +54,28 @@ interface ApiUser {
 const userSchema = zod.object({
   name: zod.string().min(1, 'Name is required'),
   email: zod.string().min(1, 'Email is required').email('Invalid email format'),
-  password: zod.string().min(6, 'Password must be at least 6 characters'),
+  password: zod.string().optional(),
+  confirmPassword: zod.string().optional(),
   roles: zod.array(zod.enum(['super_admin', 'manager'])).min(1, 'At least one role is required'),
   isActive: zod.boolean(),
+}).refine((data) => {
+  // If password is provided, it must be at least 6 characters
+  if (data.password && data.password.length < 6) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Password must be at least 6 characters",
+  path: ["password"],
+}).refine((data) => {
+  // If password is provided, confirmPassword must match
+  if (data.password && data.password !== data.confirmPassword) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type UserFormData = zod.infer<typeof userSchema>;
@@ -74,6 +93,7 @@ export function UserManagement(): React.JSX.Element {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
@@ -81,6 +101,7 @@ export function UserManagement(): React.JSX.Element {
       name: '',
       email: '',
       password: '',
+      confirmPassword: '',
       roles: ['manager'],
       isActive: true,
     },
@@ -113,6 +134,7 @@ export function UserManagement(): React.JSX.Element {
       name: '',
       email: '',
       password: '',
+      confirmPassword: '',
       roles: ['manager'],
       isActive: true,
     });
@@ -125,6 +147,7 @@ export function UserManagement(): React.JSX.Element {
       name: user.name,
       email: user.email,
       password: '', // Don't pre-fill password
+      confirmPassword: '', // Don't pre-fill confirm password
       roles: user.roles as ('super_admin' | 'manager')[],
       isActive: user.isActive,
     });
@@ -145,12 +168,13 @@ export function UserManagement(): React.JSX.Element {
         // Update existing user
         const updateData: Partial<UserFormData> = {
           name: data.name,
+          email: data.email, // Allow email updates
           roles: data.roles,
           isActive: data.isActive,
         };
 
         // Only include password if it's provided
-        if (data.password) {
+        if (data.password && data.password.trim() !== '') {
           updateData.password = data.password;
         }
 
@@ -160,8 +184,19 @@ export function UserManagement(): React.JSX.Element {
           return;
         }
       } else {
-        // Create new user
-        const result = await apiClient.createUser(data);
+        // Create new user - password is required for new users
+        if (!data.password || data.password.trim() === '') {
+          setError('Password is required for new users');
+          return;
+        }
+        
+        const result = await apiClient.createUser({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          roles: data.roles,
+          isActive: data.isActive,
+        });
         if (result.error) {
           setError(result.error);
           return;
@@ -314,7 +349,6 @@ export function UserManagement(): React.JSX.Element {
                     error={Boolean(errors.email)}
                     helperText={errors.email?.message}
                     fullWidth
-                    disabled={!!editingUser} // Don't allow email changes
                   />
                 )}
               />
@@ -330,6 +364,22 @@ export function UserManagement(): React.JSX.Element {
                     error={Boolean(errors.password)}
                     helperText={errors.password?.message}
                     fullWidth
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="Confirm Password"
+                    type="password"
+                    error={Boolean(errors.confirmPassword)}
+                    helperText={errors.confirmPassword?.message}
+                    fullWidth
+                    disabled={!editingUser || !watch('password')} // Only show when editing and password is provided
                   />
                 )}
               />
