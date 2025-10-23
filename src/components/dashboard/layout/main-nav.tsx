@@ -23,6 +23,7 @@ import { MobileNav } from './mobile-nav';
 import { UserPopover } from './user-popover';
 import { useEmployees } from '@/contexts/employee-context';
 import { useFilters } from '@/contexts/filter-context';
+import { useUser } from '@/hooks/use-user';
 
 export interface MainNavProps extends BoxProps { }
 
@@ -30,6 +31,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
   const [openNav, setOpenNav] = React.useState(false);
   const { drivers } = useEmployees();
   const { filters, updateSelection, updateDriver, updateDateRange } = useFilters();
+  const { user } = useUser();
 
   const userPopover = usePopover<HTMLDivElement>();
 
@@ -239,7 +241,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
             <Avatar
               onClick={userPopover.handleOpen}
               ref={userPopover.anchorRef}
-              src="/assets/avatar.png"
+              src={user?.profilePhoto || user?.avatar || '/assets/avatar.png'}
               sx={{ cursor: 'pointer' }}
             />
           </Stack>

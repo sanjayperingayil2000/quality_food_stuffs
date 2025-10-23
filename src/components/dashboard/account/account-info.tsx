@@ -12,11 +12,14 @@ import Typography from '@mui/material/Typography';
 import { useUser } from '@/hooks/use-user';
 import { useNotifications } from '@/contexts/notification-context';
 import { apiClient } from '@/lib/api-client';
+import { authClient } from '@/lib/auth/client';
+import { useRouter } from 'next/navigation';
 
 export function AccountInfo(): React.JSX.Element {
   const { user, checkSession } = useUser();
   const { showSuccess, showError } = useNotifications();
   const [uploading, setUploading] = React.useState(false);
+  const router = useRouter();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -68,6 +71,21 @@ export function AccountInfo(): React.JSX.Element {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await authClient.signOut();
+      if (error) {
+        showError('Failed to sign out');
+        return;
+      }
+      await checkSession?.();
+      router.refresh();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      showError('Failed to sign out');
+    }
+  };
+
   return (
     <Card>
       <CardContent>
@@ -79,7 +97,7 @@ export function AccountInfo(): React.JSX.Element {
             />
           </div>
           <Stack spacing={1} sx={{ textAlign: 'center' }}>
-            <Typography variant="h5">{user?.name || 'User'}</Typography>
+            <Typography variant="h5">{user?.name || 'Loading...'}</Typography>
             <Typography color="text.secondary" variant="body2">
               {user?.city || 'N/A'} {user?.state || 'N/A'}
             </Typography>
@@ -94,21 +112,31 @@ export function AccountInfo(): React.JSX.Element {
       </CardContent>
       <Divider />
       <CardActions>
-        <Button 
-          fullWidth 
-          variant="text"
-          component="label"
-          disabled={uploading}
-        >
-          {uploading ? 'Uploading...' : 'Upload picture'}
-          <input
-            type="file"
-            hidden
-            accept="image/*"
-            onChange={handleFileUpload}
+        <Stack spacing={1} sx={{ width: '100%' }}>
+          <Button 
+            fullWidth 
+            variant="text"
+            component="label"
             disabled={uploading}
-          />
-        </Button>
+          >
+            {uploading ? 'Uploading...' : 'Upload picture'}
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              onChange={handleFileUpload}
+              disabled={uploading}
+            />
+          </Button>
+          <Button 
+            fullWidth 
+            variant="outlined"
+            color="error"
+            onClick={handleSignOut}
+          >
+            Sign out
+          </Button>
+        </Stack>
       </CardActions>
     </Card>
   );
