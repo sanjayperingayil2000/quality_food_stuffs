@@ -42,13 +42,13 @@ const getActionColor = (
 ): 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info' => {
   switch (action.toLowerCase()) {
     case 'created': {
-      return 'success';
+      return 'success'; // Green
     }
     case 'updated': {
-      return 'primary';
+      return 'primary'; // Blue
     }
     case 'deleted': {
-      return 'error';
+      return 'error'; // Red
     }
     default: {
       return 'info';
@@ -62,6 +62,7 @@ const getActionDescription = (activity: Activity): string => {
   
   // Get entity name from after, before, or documentId
   const entityName = after?.name || before?.name || documentId || 'Unknown';
+  
   
   switch (collectionName) {
     case 'employees': {
@@ -133,18 +134,23 @@ const getActionDescription = (activity: Activity): string => {
     }
       
     case 'additional_expenses': {
+      // Try to get expense details from before/after snapshots
+      const expenseData = after || before;
+      const driverName = expenseData?.driverName || expenseData?.name || 'Unknown Employee';
+      const expenseType = expenseData?.category || expenseData?.type || 'expense';
+      
       switch (actionLower) {
         case 'created': {
-          return `${entityName} expense added`;
+          return `${driverName} ${expenseType} expense added`;
         }
         case 'updated': {
-          return `${entityName} expense updated`;
+          return `${driverName} ${expenseType} expense updated`;
         }
         case 'deleted': {
-          return `${entityName} expense has been deleted`;
+          return `${driverName} ${expenseType} expense has been deleted`;
         }
         default: {
-          return `${action} ${entityName} expense`;
+          return `${action} ${driverName} ${expenseType} expense`;
         }
       }
     }

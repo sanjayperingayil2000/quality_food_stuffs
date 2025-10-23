@@ -62,9 +62,9 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
           sx={{
             alignItems: 'center',
             justifyContent: 'space-between',
-            minHeight: '85px',
+            minHeight: '95px',
             px: 2,
-            py: 2, // Increased vertical padding to prevent header cutoff
+            py: 3, // Further increased vertical padding to prevent header cutoff
           }}
         >
           {/* Left side */}
@@ -85,7 +85,19 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
             {/* First dropdown */}
             <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto' }}>
               <FormControl fullWidth>
-                <InputLabel id="main-select-label">Select</InputLabel>
+                <InputLabel 
+                  id="main-select-label"
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    '&.Mui-focused': {
+                      color: 'primary.main'
+                    }
+                  }}
+                >
+                  Select
+                </InputLabel>
                 <Select
                   labelId="main-select-label"
                   id="main-select"
@@ -110,7 +122,19 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
             {filters.selection === 'driver' && (
               <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto' }}>
                 <FormControl fullWidth>
-                  <InputLabel id="driver-select-label">Driver</InputLabel>
+                  <InputLabel 
+                    id="driver-select-label"
+                    sx={{ 
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: 'text.primary',
+                      '&.Mui-focused': {
+                        color: 'primary.main'
+                      }
+                    }}
+                  >
+                    Driver
+                  </InputLabel>
                   <Select
                     labelId="driver-select-label"
                     id="driver-select"
@@ -157,6 +181,14 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
                       '& .MuiOutlinedInput-notchedOutline': {
                         borderRadius: '50px',
                       },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        color: 'text.primary',
+                        '&.Mui-focused': {
+                          color: 'primary.main'
+                        }
+                      },
                     },
                   },
                 }}
@@ -173,6 +205,14 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
                       minWidth: 120,
                       '& .MuiOutlinedInput-notchedOutline': {
                         borderRadius: '50px',
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        color: 'text.primary',
+                        '&.Mui-focused': {
+                          color: 'primary.main'
+                        }
                       },
                     },
                   },
