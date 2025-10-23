@@ -60,20 +60,21 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
           direction="row"
           spacing={2}
           sx={{
-            alignItems: 'center',
+            alignItems: 'flex-start', // Changed from 'center' to 'flex-start'
             justifyContent: 'space-between',
-            minHeight: '95px',
+            minHeight: '120px', // Increased from 95px
             px: 2,
-            py: 3, // Further increased vertical padding to prevent header cutoff
+            py: 4, // Increased from py: 3
           }}
         >
           {/* Left side */}
           <Stack 
             sx={{ 
-              alignItems: 'center',
+              alignItems: 'flex-start', // Changed from 'center'
               flex: 1,
               minWidth: 0, // Allow shrinking
-              overflow: 'hidden'
+              overflow: 'hidden',
+              pt: 2 // Add top padding to align with labels
             }} 
             direction="row" 
             spacing={1}
@@ -83,8 +84,8 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
             </IconButton>
 
             {/* First dropdown */}
-            <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto' }}>
-              <FormControl fullWidth>
+            <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto', height: '100%' }}>
+              <FormControl fullWidth sx={{ height: '100%' }}>
                 <InputLabel 
                   id="main-select-label"
                   sx={{ 
@@ -120,8 +121,8 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
 
             {/* Second dropdown (only when Driver selected) */}
             {filters.selection === 'driver' && (
-              <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto' }}>
-                <FormControl fullWidth>
+              <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto', height: '100%' }}>
+                <FormControl fullWidth sx={{ height: '100%' }}>
                   <InputLabel 
                     id="driver-select-label"
                     sx={{ 
@@ -166,7 +167,9 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
               display: 'flex', 
               gap: 1,
               flex: '0 0 auto',
-              minWidth: 0
+              minWidth: 0,
+              height: '100%',
+              alignItems: 'center'
             }}>
               <DatePicker
                 label="From"

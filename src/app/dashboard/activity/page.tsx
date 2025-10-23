@@ -40,20 +40,21 @@ export interface Activity {
 const getActionColor = (
   action: string
 ): 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info' => {
-  switch (action.toLowerCase()) {
-    case 'created': {
-      return 'success'; // Green
-    }
-    case 'updated': {
-      return 'primary'; // Blue
-    }
-    case 'deleted': {
-      return 'error'; // Red
-    }
-    default: {
-      return 'info';
-    }
+  const actionLower = action.toLowerCase();
+  
+  // Handle various possible action values
+  if (actionLower.includes('create') || actionLower === 'create') {
+    return 'success'; // Green
   }
+  if (actionLower.includes('update') || actionLower === 'update') {
+    return 'primary'; // Blue
+  }
+  if (actionLower.includes('delete') || actionLower === 'delete') {
+    return 'error'; // Red
+  }
+  
+  // Default fallback
+  return 'info';
 };
 
 const getActionDescription = (activity: Activity): string => {
