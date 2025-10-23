@@ -120,7 +120,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.collectionAmount.diff} 
             trend={overviewMetrics.collectionAmount.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.collectionAmount.value.toFixed(0)}`} 
+            value={`${overviewMetrics.collectionAmount.value.toFixed(0)}`} 
             name="Cash Collection" 
           />
         </Grid>
@@ -135,7 +135,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.purchaseAmount.diff} 
             trend={overviewMetrics.purchaseAmount.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.purchaseAmount.value.toFixed(0)}`} 
+            value={`${overviewMetrics.purchaseAmount.value.toFixed(0)}`} 
             name="Purchase Amount" 
           />
         </Grid>
@@ -159,7 +159,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.discount.diff} 
             trend={overviewMetrics.discount.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.discount.value.toFixed(0)}`} 
+            value={`${overviewMetrics.discount.value.toFixed(0)}`} 
             name="Discount" 
           />
         </Grid>
@@ -220,7 +220,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.amountToBe.diff} 
             trend={overviewMetrics.amountToBe.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.amountToBe.value.toFixed(0)}`} 
+            value={`${overviewMetrics.amountToBe.value.toFixed(0)}`} 
             name='Amount to be' 
           />
         </Grid>
@@ -244,7 +244,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.petrol.diff} 
             trend={overviewMetrics.petrol.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.petrol.value.toFixed(0)}`} 
+            value={`${overviewMetrics.petrol.value.toFixed(0)}`} 
             name='Petrol' 
           />
         </Grid>
@@ -268,7 +268,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.balance.diff} 
             trend={overviewMetrics.balance.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.balance.value.toFixed(0)}`} 
+            value={`${overviewMetrics.balance.value.toFixed(0)}`} 
             name='Balance' 
           />
         </Grid>
@@ -292,7 +292,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.expiry.diff} 
             trend={overviewMetrics.expiry.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.expiry.value.toFixed(0)}`} 
+            value={`${overviewMetrics.expiry.value.toFixed(0)}`} 
             name='Expiry' 
           />
         </Grid>
@@ -305,7 +305,7 @@ export default function Page(): React.JSX.Element {
         >
           <TotalProfit 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.profit.value.toFixed(0)}`} 
+            value={`${overviewMetrics.profit.value.toFixed(0)}`} 
           />
         </Grid>
         <Grid
@@ -317,10 +317,8 @@ export default function Page(): React.JSX.Element {
           }}
         >
           <Sales
-            chartSeries={[
-              { name: 'This year', data: [18, 16, 5, 8, 3, 14, 14, 16, 17, 19, 18, 20] },
-              // { name: 'Last year', data: [12, 11, 4, 6, 2, 9, 9, 10, 11, 12, 13, 13] },
-            ]}
+            trips={trips}
+            drivers={drivers}
             sx={{ height: '100%' }}
           />
         </Grid>

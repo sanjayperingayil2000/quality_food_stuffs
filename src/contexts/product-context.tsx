@@ -81,7 +81,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
             updatedBy: entry.updatedBy || 'Unknown'
           }))
         }));
-        setProducts(transformedProducts);
+        setProducts(transformedProducts.sort((a, b) => a.id.localeCompare(b.id)));
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to fetch products');
@@ -95,12 +95,14 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
   }, [refreshProducts]);
 
   const bakeryProducts = React.useMemo(() => 
-    products.filter(prod => prod.category === 'bakery' && prod.isActive), 
+    products.filter(prod => prod.category === 'bakery' && prod.isActive)
+            .sort((a, b) => a.id.localeCompare(b.id)), 
     [products]
   );
 
   const freshProducts = React.useMemo(() => 
-    products.filter(prod => prod.category === 'fresh' && prod.isActive), 
+    products.filter(prod => prod.category === 'fresh' && prod.isActive)
+            .sort((a, b) => a.id.localeCompare(b.id)), 
     [products]
   );
 

@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Alert from '@mui/material/Alert';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -19,7 +18,6 @@ import FormHelperText from '@mui/material/FormHelperText';
 import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
-import OutlinedInput from '@mui/material/OutlinedInput';
 import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -33,6 +31,8 @@ import Typography from '@mui/material/Typography';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
+import { EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
+import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
 
@@ -51,34 +51,44 @@ interface ApiUser {
   updatedAt: string;
 }
 
-const userSchema = zod.object({
+const createUserSchema = (existingUsers: ApiUser[], editingUser: ApiUser | null) => zod.object({
   name: zod.string().min(1, 'Name is required'),
   email: zod.string().min(1, 'Email is required').email('Invalid email format'),
-  password: zod.string().optional(),
-  confirmPassword: zod.string().optional(),
-  roles: zod.array(zod.enum(['super_admin', 'manager'])).min(1, 'At least one role is required'),
+  password: zod.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: zod.string().min(1, 'Confirm Password is required'),
+  role: zod.enum(['super_admin', 'manager'], { required_error: 'Role is required' }),
   isActive: zod.boolean(),
 }).refine((data) => {
-  // If password is provided, it must be at least 6 characters
-  if (data.password && data.password.length < 6) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Password must be at least 6 characters",
-  path: ["password"],
-}).refine((data) => {
-  // If password is provided, confirmPassword must match
-  if (data.password && data.password !== data.confirmPassword) {
+  // Password and confirmPassword must match
+  if (data.password !== data.confirmPassword) {
     return false;
   }
   return true;
 }, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine((data) => {
+  // Check if trying to create/update to super_admin when one already exists
+  if (data.role === 'super_admin') {
+    const existingSuperAdmins = existingUsers.filter(user => 
+      user.roles.includes('super_admin') && user.isActive && user.id !== editingUser?.id
+    );
+    return existingSuperAdmins.length === 0;
+  }
+  return true;
+}, {
+  message: "Only one super admin is allowed",
+  path: ["role"],
 });
 
-type UserFormData = zod.infer<typeof userSchema>;
+type UserFormData = {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  role: 'super_admin' | 'manager';
+  isActive: boolean;
+};
 
 
 export function UserManagement(): React.JSX.Element {
@@ -88,21 +98,22 @@ export function UserManagement(): React.JSX.Element {
   const [error, setError] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<ApiUser | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   const {
     control,
     handleSubmit,
     reset,
-    watch,
     formState: { errors },
   } = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(createUserSchema(users, editingUser)),
     defaultValues: {
       name: '',
       email: '',
       password: '',
       confirmPassword: '',
-      roles: ['manager'],
+      role: 'manager',
       isActive: true,
     },
   });
@@ -135,7 +146,7 @@ export function UserManagement(): React.JSX.Element {
       email: '',
       password: '',
       confirmPassword: '',
-      roles: ['manager'],
+      role: 'manager',
       isActive: true,
     });
     setOpen(true);
@@ -148,7 +159,7 @@ export function UserManagement(): React.JSX.Element {
       email: user.email,
       password: '', // Don't pre-fill password
       confirmPassword: '', // Don't pre-fill confirm password
-      roles: user.roles as ('super_admin' | 'manager')[],
+      role: user.roles[0] as 'super_admin' | 'manager', // Take the first role
       isActive: user.isActive,
     });
     setOpen(true);
@@ -157,8 +168,25 @@ export function UserManagement(): React.JSX.Element {
   const handleClose = () => {
     setOpen(false);
     setEditingUser(null);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     reset();
   };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  // Check if super admin already exists
+  const hasExistingSuperAdmin = React.useMemo(() => {
+    return users.some(user => 
+      user.roles.includes('super_admin') && user.isActive && user.id !== editingUser?.id
+    );
+  }, [users, editingUser]);
 
   const onSubmit = async (data: UserFormData) => {
     try {
@@ -166,10 +194,16 @@ export function UserManagement(): React.JSX.Element {
 
       if (editingUser) {
         // Update existing user
-        const updateData: Partial<UserFormData> = {
+        const updateData: {
+          name: string;
+          email: string;
+          roles: string[];
+          isActive: boolean;
+          password?: string;
+        } = {
           name: data.name,
           email: data.email, // Allow email updates
-          roles: data.roles,
+          roles: [data.role], // Convert single role to array for API
           isActive: data.isActive,
         };
 
@@ -194,7 +228,7 @@ export function UserManagement(): React.JSX.Element {
           name: data.name,
           email: data.email,
           password: data.password,
-          roles: data.roles,
+          roles: [data.role], // Convert single role to array for API
           isActive: data.isActive,
         });
         if (result.error) {
@@ -275,13 +309,13 @@ export function UserManagement(): React.JSX.Element {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
+              {users?.map((user, index) => (
+                <TableRow key={user.id || `user-${index}`}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    {user.roles.map((role) => (
-                      <Chip key={`${user.id}-${role}`} label={role} size="small" sx={{ mr: 1 }} />
+                    {user.roles?.map((role) => (
+                      <Chip key={`${user.id || index}-${role}`} label={role} size="small" sx={{ mr: 1 }} />
                     ))}
                   </TableCell>
                   <TableCell>
@@ -359,11 +393,22 @@ export function UserManagement(): React.JSX.Element {
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label={editingUser ? "New Password (leave blank to keep current)" : "Password"}
-                    type="password"
+                    label="Password"
+                    type={showPassword ? "text" : "password"}
                     error={Boolean(errors.password)}
                     helperText={errors.password?.message}
                     fullWidth
+                    InputProps={{
+                      endAdornment: (
+                        <IconButton
+                          onClick={togglePasswordVisibility}
+                          edge="end"
+                          size="small"
+                        >
+                          {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                        </IconButton>
+                      ),
+                    }}
                   />
                 )}
               />
@@ -375,37 +420,44 @@ export function UserManagement(): React.JSX.Element {
                   <TextField
                     {...field}
                     label="Confirm Password"
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     error={Boolean(errors.confirmPassword)}
                     helperText={errors.confirmPassword?.message}
                     fullWidth
-                    disabled={!editingUser || !watch('password')} // Only show when editing and password is provided
+                    InputProps={{
+                      endAdornment: (
+                        <IconButton
+                          onClick={toggleConfirmPasswordVisibility}
+                          edge="end"
+                          size="small"
+                        >
+                          {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                        </IconButton>
+                      ),
+                    }}
                   />
                 )}
               />
 
               <Controller
                 control={control}
-                name="roles"
+                name="role"
                 render={({ field }) => (
-                  <FormControl error={Boolean(errors.roles)} fullWidth>
-                    <InputLabel>Roles</InputLabel>
+                  <FormControl error={Boolean(errors.role)} fullWidth>
+                    <InputLabel>Role</InputLabel>
                     <Select
                       {...field}
-                      multiple
-                      input={<OutlinedInput label="Roles" />}
-                      renderValue={(selected) => (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {(selected as string[]).map((value,index) => (
-                            <Chip key={`${value}-${index}`} label={value} />
-                          ))}
-                        </Box>
-                      )}
+                      label="Role"
                     >
                       <MenuItem value="manager">Manager</MenuItem>
-                      <MenuItem value="super_admin">Super Admin</MenuItem>
+                      <MenuItem 
+                        value="super_admin" 
+                        disabled={hasExistingSuperAdmin}
+                      >
+                        Super Admin {hasExistingSuperAdmin ? '(Already exists)' : ''}
+                      </MenuItem>
                     </Select>
-                    {errors.roles && <FormHelperText>{errors.roles.message}</FormHelperText>}
+                    {errors.role && <FormHelperText>{errors.role.message}</FormHelperText>}
                   </FormControl>
                 )}
               />

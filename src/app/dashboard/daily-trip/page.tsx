@@ -232,7 +232,7 @@ export default function Page(): React.JSX.Element {
       const filtered = products.filter(product => 
         product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
         product.id.toLowerCase().includes(productSearch.toLowerCase())
-      );
+      ).sort((a, b) => a.id.localeCompare(b.id));
       setFilteredProducts(filtered);
     }
   }, [productSearch, products]);

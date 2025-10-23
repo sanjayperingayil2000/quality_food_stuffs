@@ -76,6 +76,11 @@ class AuthClient {
           const result = await apiClient.request(`/users/${newPayload.sub}`);
           
           if (result.error) {
+            // If user not found, clear tokens and return null (not an error)
+            if (result.error === 'Not found') {
+              this.clearAccessToken();
+              return { data: null };
+            }
             return { data: null, error: result.error };
           }
           
@@ -96,6 +101,11 @@ class AuthClient {
       const result = await apiClient.request(`/users/${payload.sub}`);
       
       if (result.error) {
+        // If user not found, clear tokens and return null (not an error)
+        if (result.error === 'Not found') {
+          this.clearAccessToken();
+          return { data: null };
+        }
         return { data: null, error: result.error };
       }
       
