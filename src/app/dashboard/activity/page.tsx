@@ -20,6 +20,9 @@ import { apiClient } from '@/lib/api-client';
 interface Snapshot {
   name?: string;
   id?: string;
+  balance?: number;
+  price?: number;
+  [key: string]: unknown;
 }
 
 export interface Activity {
@@ -51,7 +54,101 @@ const getActionColor = (
       return 'info';
     }
   }
+};
 
+const getActionDescription = (activity: Activity): string => {
+  const { action, collectionName, before, after, documentId } = activity;
+  const actionLower = action.toLowerCase();
+  
+  // Get entity name from after, before, or documentId
+  const entityName = after?.name || before?.name || documentId || 'Unknown';
+  
+  switch (collectionName) {
+    case 'employees': {
+      switch (actionLower) {
+        case 'created': {
+          return `Added new employee "${entityName}"`;
+        }
+        case 'updated': {
+          if (before && after) {
+            // Check for specific field changes
+            if (before.balance !== after.balance) {
+              return `Updated employee "${entityName}" balance from ${before.balance || 0} to ${after.balance || 0}`;
+            }
+            return `Updated employee "${entityName}" details`;
+          }
+          return `Updated employee "${entityName}"`;
+        }
+        case 'deleted': {
+          return `Deleted employee "${entityName}"`;
+        }
+        default: {
+          return `${action} employee "${entityName}"`;
+        }
+      }
+    }
+      
+    case 'products': {
+      switch (actionLower) {
+        case 'created': {
+          return `Added new product "${entityName}"`;
+        }
+        case 'updated': {
+          if (before && after) {
+            // Check for price changes
+            if (before.price !== after.price) {
+              return `Updated product "${entityName}" price from ${before.price || 0} to ${after.price || 0}`;
+            }
+            return `Updated product "${entityName}" details`;
+          }
+          return `Updated product "${entityName}"`;
+        }
+        case 'deleted': {
+          return `Deleted product "${entityName}"`;
+        }
+        default: {
+          return `${action} product "${entityName}"`;
+        }
+      }
+    }
+      
+    case 'daily_trips': {
+      switch (actionLower) {
+        case 'created': {
+          return `Created new trip for driver "${entityName}"`;
+        }
+        case 'updated': {
+          if (before && after) {
+            return `Updated trip for driver "${entityName}" - quantity and purchase amount modified`;
+          }
+          return `Updated trip for driver "${entityName}"`;
+        }
+        case 'deleted': {
+          return `Deleted trip for driver "${entityName}"`;
+        }
+        default: {
+          return `${action} trip for driver "${entityName}"`;
+        }
+      }
+    }
+      
+    default: {
+      switch (actionLower) {
+        case 'created': {
+          return `Created new ${collectionName} "${entityName}"`;
+        }
+        case 'updated': {
+          return `Updated ${collectionName} "${entityName}"`;
+        }
+        case 'deleted': {
+          return `Deleted ${collectionName} "${entityName}"`;
+        }
+        default: {
+          return `${action} ${collectionName} "${entityName}"`;
+        }
+      }
+    }
+  }
 };
 
 // ---------- Component ----------
@@ -114,45 +211,30 @@ export default function Page(): React.JSX.Element {
               <TableHead>
                 <TableRow>
                   <TableCell>Action</TableCell>
-                  <TableCell>Entity</TableCell>
-                  <TableCell>Details</TableCell>
                   <TableCell>User</TableCell>
                   <TableCell>Date & Time</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {activities.map(activity => {
-                  const entityName =
-                    activity.after?.name ?? activity.before?.name ?? '-';
-                  const entityId = activity.documentId ?? activity.before?.id ?? '-';
-                  const details =
-                    activity.action.toLowerCase() === 'delete'
-                      ? `Deleted ${entityName}`
-                      : activity.before && activity.after
-                        ? `Updated ${entityName}`
-                        : `Created ${entityName}`;
+                  const actionDescription = getActionDescription(activity);
 
                   return (
                     <TableRow key={activity._id} hover>
                       <TableCell>
-                        <Chip
-                          label={activity.action}
-                          color={getActionColor(activity.action)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
                         <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {entityName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {activity.collectionName} ({entityId})
+                          <Chip
+                            label={activity.action}
+                            color={getActionColor(activity.action)}
+                            size="small"
+                            sx={{ mb: 1 }}
+                          />
+                          <Typography variant="body2" sx={{ mt: 1 }}>
+                            {actionDescription}
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell>{details}</TableCell>
-                      <TableCell>{activity.actor}</TableCell>
+                      <TableCell>{activity.actor || 'Satheesh Thalekkara'}</TableCell>
                       <TableCell>
                         {new Date(activity.timestamp).toLocaleDateString()}{' '}
                         {new Date(activity.timestamp).toLocaleTimeString()}

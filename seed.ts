@@ -340,7 +340,7 @@ const AdditionalExpense: Model<IAdditionalExpense> =
 async function ensureSuperAdmin(): Promise<void> {
   const email = process.env.SEED_SUPER_ADMIN_EMAIL;
   const password = process.env.SEED_SUPER_ADMIN_PASSWORD;
-  const name = process.env.SEED_SUPER_ADMIN_NAME || 'Super Admin';
+  const name = process.env.SEED_SUPER_ADMIN_NAME || 'Satheesh Thalekkara';
 
   if (!email || !password) {
     console.log('SEED_SUPER_ADMIN_* envs not set, skipping super admin creation');
@@ -351,13 +351,30 @@ async function ensureSuperAdmin(): Promise<void> {
   if (existing) {
     console.log('Super admin already exists, updating password...');
     const passwordHash = await bcrypt.hash(password, 12);
-    await User.findByIdAndUpdate(existing._id, { passwordHash });
+    await User.findByIdAndUpdate(existing._id, { 
+      passwordHash,
+      name: 'Satheesh Thalekkara',
+      phone: '+971 50 123 4567',
+      state: 'Dubai',
+      city: 'Dubai',
+      profilePhoto: '/assets/avatar.png'
+    });
     console.log('Super admin password updated for:', email);
     return;
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
-  await User.create({ name, email, passwordHash, roles: ['super_admin'], isActive: true });
+  await User.create({ 
+    name: 'Satheesh Thalekkara',
+    email, 
+    passwordHash, 
+    roles: ['super_admin'], 
+    isActive: true,
+    phone: '+971 50 123 4567',
+    state: 'Dubai',
+    city: 'Dubai',
+    profilePhoto: '/assets/avatar.png'
+  });
   console.log('Super admin password hash created for:', email);
   console.log('Super admin created');
 }

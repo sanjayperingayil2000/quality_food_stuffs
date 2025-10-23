@@ -12,9 +12,9 @@ export const metadata = { title: `Settings | Dashboard | ${config.site.name}` } 
 
 export default function Page(): React.JSX.Element {
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ pl: 2 }}>
       <div>
-        <Typography variant="h4">Settings</Typography>
+        <Typography variant="h4" sx={{ pl: 2 }}>Settings</Typography>
       </div>
       <UserManagement />
       {/* <Notifications /> */}

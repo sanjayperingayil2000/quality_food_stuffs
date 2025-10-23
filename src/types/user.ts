@@ -6,6 +6,10 @@ export interface User {
   avatar?: string;
   email?: string;
   roles?: string[];
+  phone?: string;
+  state?: string;
+  city?: string;
+  profilePhoto?: string;
 
   [key: string]: unknown;
 }

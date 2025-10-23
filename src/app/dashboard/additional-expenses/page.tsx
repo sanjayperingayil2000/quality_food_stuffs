@@ -196,7 +196,7 @@ export default function Page(): React.JSX.Element {
     }
   };
 
-  const handleApplyFilter = () => {
+  const applyFilters = React.useCallback(() => {
     let filtered = mappedExpenses;
 
     // Date range filter
@@ -225,7 +225,12 @@ export default function Page(): React.JSX.Element {
     }
 
     setFilteredExpenses(filtered);
-  };
+  }, [mappedExpenses, dateFrom, dateTo, expenseTypeFilter, employeeFilter]);
+
+  // Auto-apply filters when any filter changes
+  React.useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
 
   const handleExportPdf = () => {
@@ -477,9 +482,6 @@ export default function Page(): React.JSX.Element {
             ))}
           </Select>
         </FormControl>
-        <Button variant="contained" onClick={handleApplyFilter}>
-          Apply
-        </Button>
       </Stack>
 
       {filteredExpenses.length > 0 ? (

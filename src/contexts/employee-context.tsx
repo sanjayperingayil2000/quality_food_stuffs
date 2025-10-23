@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { apiClient } from '@/lib/api-client';
+import { useUser } from '@/hooks/use-user';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -59,11 +60,17 @@ interface EmployeeContextType {
 const EmployeeContext = React.createContext<EmployeeContextType | undefined>(undefined);
 
 export function EmployeeProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { user, isLoading: userLoading } = useUser();
   const [employees, setEmployees] = React.useState<Employee[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const refreshEmployees = React.useCallback(async () => {
+    // Don't load data if user is not authenticated yet
+    if (userLoading || !user) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -92,7 +99,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user, userLoading]);
 
   React.useEffect(() => {
     refreshEmployees();

@@ -9,6 +9,10 @@ export interface IUser {
   roles: UserRole[];
   isActive: boolean;
   settingsAccess?: boolean;
+  phone?: string;
+  state?: string;
+  city?: string;
+  profilePhoto?: string;
   resetPasswordOtp?: string;
   resetPasswordOtpExpiry?: Date;
   createdAt: Date;
@@ -25,6 +29,10 @@ const UserSchema = new Schema<IUserDocument>(
     roles: { type: [String], enum: ['super_admin', 'manager'], default: ['manager'], index: true },
     isActive: { type: Boolean, default: true },
     settingsAccess: { type: Boolean, default: false },
+    phone: { type: String, trim: true },
+    state: { type: String, trim: true },
+    city: { type: String, trim: true },
+    profilePhoto: { type: String },
     resetPasswordOtp: { type: String },
     resetPasswordOtpExpiry: { type: Date },
   },

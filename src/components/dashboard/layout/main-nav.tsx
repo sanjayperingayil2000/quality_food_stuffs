@@ -5,7 +5,6 @@ import {
   Avatar,
   Box,
   BoxProps,
-  Button,
   FormControl,
   IconButton,
   InputLabel,
@@ -65,6 +64,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
             justifyContent: 'space-between',
             minHeight: '75px',
             px: 2,
+            py: 1, // Add vertical padding to prevent header cutoff
           }}
         >
           {/* Left side */}
@@ -179,8 +179,6 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
                 }}
               />
             </Box>
-
-            <Button variant="contained" sx={{ flex: '0 0 auto' }}>Apply</Button>
           </Stack>
 
           {/* Right side */}

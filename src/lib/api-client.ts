@@ -8,6 +8,10 @@ interface User {
   roles: string[];
   isActive: boolean;
   settingsAccess: boolean;
+  phone?: string;
+  state?: string;
+  city?: string;
+  profilePhoto?: string;
   createdAt: string;
   updatedAt: string;
 }

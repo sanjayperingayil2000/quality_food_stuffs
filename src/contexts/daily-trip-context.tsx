@@ -8,6 +8,7 @@ import { useEmployees } from './employee-context';
 import { apiClient } from '@/lib/api-client';
 import { freshProducts } from './data/fresh-products';
 import { bakeryProducts } from './data/bakery-products';
+import { useUser } from '@/hooks/use-user';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -849,6 +850,7 @@ const _generateDailyTrips = (): DailyTrip[] => {
 const _initialTrips: DailyTrip[] = [];
 
 export function DailyTripProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { user, isLoading: userLoading } = useUser();
   const [trips, setTrips] = React.useState<DailyTrip[]>([]);
   const [_isLoading, setIsLoading] = React.useState(true);
   const [_error, setError] = React.useState<string | null>(null);
@@ -870,6 +872,11 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
   }>>([]);
 
   const refreshTrips = React.useCallback(async () => {
+    // Don't load data if user is not authenticated yet
+    if (userLoading || !user) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -888,7 +895,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user, userLoading]);
 
   React.useEffect(() => {
     refreshTrips();
