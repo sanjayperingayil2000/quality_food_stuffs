@@ -10,15 +10,61 @@ import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useUser } from '@/hooks/use-user';
+import { useNotifications } from '@/contexts/notification-context';
+import { apiClient } from '@/lib/api-client';
 
 export function AccountInfo(): React.JSX.Element {
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
+  const { showSuccess, showError } = useNotifications();
+  const [uploading, setUploading] = React.useState(false);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // TODO: Implement file upload logic
-      console.log('File selected:', file);
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showError('File size must be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('profilePhoto', file);
+
+      // Convert to base64 for now (in production, you'd upload to a file service)
+      const reader = new FileReader();
+      reader.addEventListener('load', async (e) => {
+        try {
+          const base64String = e.target?.result as string;
+          
+          // Update user profile with new photo
+          await apiClient.updateUser(user?.id || '', {
+            profilePhoto: base64String
+          });
+
+          // Refresh user data
+          await checkSession?.();
+          showSuccess('Profile photo updated successfully!');
+        } catch (error) {
+          console.error('Error updating profile photo:', error);
+          showError('Failed to update profile photo');
+        } finally {
+          setUploading(false);
+        }
+      });
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      showError('Failed to upload profile photo');
+      setUploading(false);
     }
   };
 
@@ -52,13 +98,15 @@ export function AccountInfo(): React.JSX.Element {
           fullWidth 
           variant="text"
           component="label"
+          disabled={uploading}
         >
-          Upload picture
+          {uploading ? 'Uploading...' : 'Upload picture'}
           <input
             type="file"
             hidden
             accept="image/*"
             onChange={handleFileUpload}
+            disabled={uploading}
           />
         </Button>
       </CardActions>

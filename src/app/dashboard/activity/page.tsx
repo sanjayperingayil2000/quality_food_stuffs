@@ -67,23 +67,23 @@ const getActionDescription = (activity: Activity): string => {
     case 'employees': {
       switch (actionLower) {
         case 'created': {
-          return `Added new employee "${entityName}"`;
+          return `${entityName} named employee added`;
         }
         case 'updated': {
           if (before && after) {
             // Check for specific field changes
             if (before.balance !== after.balance) {
-              return `Updated employee "${entityName}" balance from ${before.balance || 0} to ${after.balance || 0}`;
+              return `${entityName} employee balance updated from ${before.balance || 0} to ${after.balance || 0}`;
             }
-            return `Updated employee "${entityName}" details`;
+            return `${entityName} employee details updated`;
           }
-          return `Updated employee "${entityName}"`;
+          return `${entityName} employee updated`;
         }
         case 'deleted': {
-          return `Deleted employee "${entityName}"`;
+          return `${entityName} named employee has been deleted`;
         }
         default: {
-          return `${action} employee "${entityName}"`;
+          return `${action} ${entityName} employee`;
         }
       }
     }
@@ -91,23 +91,23 @@ const getActionDescription = (activity: Activity): string => {
     case 'products': {
       switch (actionLower) {
         case 'created': {
-          return `Added new product "${entityName}"`;
+          return `${entityName} named product added`;
         }
         case 'updated': {
           if (before && after) {
             // Check for price changes
             if (before.price !== after.price) {
-              return `Updated product "${entityName}" price from ${before.price || 0} to ${after.price || 0}`;
+              return `${entityName} product unit price updated from ${before.price || 0} to ${after.price || 0}`;
             }
-            return `Updated product "${entityName}" details`;
+            return `${entityName} product details updated`;
           }
-          return `Updated product "${entityName}"`;
+          return `${entityName} product updated`;
         }
         case 'deleted': {
-          return `Deleted product "${entityName}"`;
+          return `${entityName} product has been deleted`;
         }
         default: {
-          return `${action} product "${entityName}"`;
+          return `${action} ${entityName} product`;
         }
       }
     }
@@ -115,19 +115,36 @@ const getActionDescription = (activity: Activity): string => {
     case 'daily_trips': {
       switch (actionLower) {
         case 'created': {
-          return `Created new trip for driver "${entityName}"`;
+          return `${entityName} daily trip added`;
         }
         case 'updated': {
           if (before && after) {
-            return `Updated trip for driver "${entityName}" - quantity and purchase amount modified`;
+            return `${entityName} daily trip (quantity and financial details) updated`;
           }
-          return `Updated trip for driver "${entityName}"`;
+          return `${entityName} daily trip updated`;
         }
         case 'deleted': {
-          return `Deleted trip for driver "${entityName}"`;
+          return `${entityName} daily trip has been deleted`;
         }
         default: {
-          return `${action} trip for driver "${entityName}"`;
+          return `${action} ${entityName} daily trip`;
+        }
+      }
+    }
+      
+    case 'additional_expenses': {
+      switch (actionLower) {
+        case 'created': {
+          return `${entityName} expense added`;
+        }
+        case 'updated': {
+          return `${entityName} expense updated`;
+        }
+        case 'deleted': {
+          return `${entityName} expense has been deleted`;
+        }
+        default: {
+          return `${action} ${entityName} expense`;
         }
       }
     }
@@ -135,16 +152,16 @@ const getActionDescription = (activity: Activity): string => {
     default: {
       switch (actionLower) {
         case 'created': {
-          return `Created new ${collectionName} "${entityName}"`;
+          return `${entityName} named ${collectionName} added`;
         }
         case 'updated': {
-          return `Updated ${collectionName} "${entityName}"`;
+          return `${entityName} ${collectionName} updated`;
         }
         case 'deleted': {
-          return `Deleted ${collectionName} "${entityName}"`;
+          return `${entityName} ${collectionName} has been deleted`;
         }
         default: {
-          return `${action} ${collectionName} "${entityName}"`;
+          return `${action} ${entityName} ${collectionName}`;
         }
       }
     }
@@ -211,6 +228,7 @@ export default function Page(): React.JSX.Element {
               <TableHead>
                 <TableRow>
                   <TableCell>Action</TableCell>
+                  <TableCell>Description</TableCell>
                   <TableCell>User</TableCell>
                   <TableCell>Date & Time</TableCell>
                 </TableRow>
@@ -222,17 +240,16 @@ export default function Page(): React.JSX.Element {
                   return (
                     <TableRow key={activity._id} hover>
                       <TableCell>
-                        <Box>
-                          <Chip
-                            label={activity.action}
-                            color={getActionColor(activity.action)}
-                            size="small"
-                            sx={{ mb: 1 }}
-                          />
-                          <Typography variant="body2" sx={{ mt: 1 }}>
-                            {actionDescription}
-                          </Typography>
-                        </Box>
+                        <Chip
+                          label={activity.action}
+                          color={getActionColor(activity.action)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {actionDescription}
+                        </Typography>
                       </TableCell>
                       <TableCell>{activity.actor || 'Satheesh Thalekkara'}</TableCell>
                       <TableCell>

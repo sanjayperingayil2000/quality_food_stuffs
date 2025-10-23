@@ -62,9 +62,9 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
           sx={{
             alignItems: 'center',
             justifyContent: 'space-between',
-            minHeight: '75px',
+            minHeight: '85px',
             px: 2,
-            py: 1, // Add vertical padding to prevent header cutoff
+            py: 2, // Increased vertical padding to prevent header cutoff
           }}
         >
           {/* Left side */}

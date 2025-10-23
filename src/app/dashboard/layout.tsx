@@ -22,6 +22,23 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps): React.JSX.Element {
   const [open, setOpen] = React.useState(true);
 
+  // Auto-minimize menu on mobile screens
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1200) {
+        setOpen(false);
+      } else {
+        setOpen(true);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <AuthGuard>
       <GlobalStyles
@@ -105,7 +122,16 @@ export default function Layout({ children }: LayoutProps): React.JSX.Element {
         >
           {/* Page Content */}
           <main>
-            <Container maxWidth={false} disableGutters sx={{ py: '24px' }}>
+            <Container 
+              maxWidth={false} 
+              disableGutters 
+              sx={{ 
+                py: '24px',
+                px: { xs: 2, sm: 3, md: 4 }, // Add horizontal padding for mobile
+                maxWidth: '100%',
+                overflow: 'hidden', // Prevent horizontal overflow
+              }}
+            >
               {children}
             </Container>
           </main>

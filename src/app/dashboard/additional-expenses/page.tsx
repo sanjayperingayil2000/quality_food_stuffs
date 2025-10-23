@@ -109,8 +109,8 @@ export default function Page(): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
   const [filteredExpenses, setFilteredExpenses] = React.useState<Expense[]>([]);
-  const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(1, 'day').format('YYYY-MM-DD'));
-  const [dateTo, setDateTo] = React.useState<string>(dayjs().subtract(1, 'day').format('YYYY-MM-DD'));
+  const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(30, 'day').format('YYYY-MM-DD'));
+  const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
   const [expenseTypeFilter, setExpenseTypeFilter] = React.useState<string>('allTypes');
   const [employeeFilter, setEmployeeFilter] = React.useState<string>('allEmployees');
 

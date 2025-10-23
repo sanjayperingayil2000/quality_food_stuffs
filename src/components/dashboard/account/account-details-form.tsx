@@ -73,11 +73,11 @@ export function AccountDetailsForm(): React.JSX.Element {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Card>
+      <Card sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
         <CardHeader subheader="The information can be edited" title="Profile" />
         <Divider />
-        <CardContent>
-          <Grid container spacing={3}>
+        <CardContent sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+          <Grid container spacing={3} sx={{ width: '100%', maxWidth: '100%' }}>
             <Grid
               size={{
                 xs: 12,

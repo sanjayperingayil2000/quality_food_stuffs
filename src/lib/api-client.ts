@@ -340,7 +340,7 @@ class ApiClient {
     return this.request<{ user: User }>(`/users/${id}`);
   }
 
-  async updateUser(id: string, updates: Partial<{ name: string; roles: string[]; isActive: boolean }>) {
+  async updateUser(id: string, updates: Partial<{ name: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string }>) {
     return this.request<{ user: User }>(`/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
