@@ -355,9 +355,12 @@ class ApiClient {
   }
 
   async deleteUser(id: string) {
-    return this.request(`/users/${id}`, {
+    console.log('API Client deleteUser called with ID:', id);
+    const result = await this.request(`/users/${id}`, {
       method: 'DELETE',
     });
+    console.log('API Client deleteUser result:', result);
+    return result;
   }
 
   // Settings methods
@@ -480,9 +483,12 @@ class ApiClient {
   }
 
   async deleteDailyTrip(id: string) {
-    return this.request<{ message: string }>(`/daily-trips/${id}`, {
+    console.log('API Client deleteDailyTrip called with ID:', id);
+    const result = await this.request<{ message: string }>(`/daily-trips/${id}`, {
       method: 'DELETE',
     });
+    console.log('API Client deleteDailyTrip result:', result);
+    return result;
   }
 
   // Additional Expense methods

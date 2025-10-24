@@ -129,16 +129,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   
   try {
     const { id } = await params;
+    console.log('Attempting to delete daily trip with ID:', id);
     await connectToDatabase();
     const user = getRequestUser(authed);
     
     const trip = await DailyTrip.findOne({ id });
+    console.log('Found trip:', trip);
     if (!trip) {
+      console.log('Trip not found for ID:', id);
       return withCors(NextResponse.json({ error: 'Daily trip not found' }, { status: 404 }));
     }
     
     const beforeData = trip.toObject();
-    await DailyTrip.findOneAndDelete({ id });
+    console.log('Before data:', beforeData);
+    const deleteResult = await DailyTrip.findOneAndDelete({ id });
+    console.log('Delete result:', deleteResult);
     
     // Log to history
     await History.create({
@@ -151,8 +156,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       timestamp: new Date(),
     });
     
+    console.log('Daily trip deleted successfully');
     return withCors(NextResponse.json({ message: 'Daily trip deleted successfully' }, { status: 200 }));
   } catch (error) {
+    console.error('Error deleting daily trip:', error);
     return withCors(jsonError(error, 500));
   }
 }

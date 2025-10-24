@@ -62,11 +62,6 @@ const productSchema = zod.object({
 
 type ProductFormData = zod.infer<typeof productSchema>;
 
-// function generateProductId(): string {
-//   const count = Math.floor(Math.random() * 1000) + 1;
-//   return `PRD-${count.toString().padStart(3, '0')}`;
-// }
-
 // Price History Dialog Component
 interface PriceHistoryDialogProps {
   open: boolean;
@@ -115,6 +110,25 @@ export default function Page(): React.JSX.Element {
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [historyProduct, setHistoryProduct] = React.useState<ProductWithHistory | null>(null);
 
+  // Helper function to generate product ID based on category
+  const generateProductId = (category: 'bakery' | 'fresh'): string => {
+    // Get the last ID for the specific category
+    const categoryProducts = products.filter(p => p.category === category);
+    const lastId = categoryProducts.length > 0 ? categoryProducts.at(-1)?.id : null;
+    
+    let nextNumber = 1;
+    if (lastId) {
+      // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
+      const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+      if (match) {
+        nextNumber = Number.parseInt(match[2], 10) + 1;
+      }
+    }
+    
+    const prefix = category === 'fresh' ? 'FRS' : 'BAK';
+    return `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
+  };
+
   React.useEffect(() => {
     const query = searchQuery.trim().toLowerCase();
     let filtered = products as ProductWithHistory[];
@@ -137,11 +151,14 @@ export default function Page(): React.JSX.Element {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: { name: '', price: 0, category: 'bakery' },
   });
+
+  const watchedCategory = watch('category');
 
   const handleOpen = () => {
     setEditingProduct(null);
@@ -185,12 +202,13 @@ export default function Page(): React.JSX.Element {
         });
         showSuccess('Product updated successfully!');
       } else {
+        const newProductId = generateProductId(data.category);
         const newProduct: Product = {
-          id: `PRD-${String(products.length + 1).padStart(3, '0')}`,
+          id: newProductId,
           name: data.name,
           price: data.price,
           category: data.category,
-          sku: `PRD-${String(products.length + 1).padStart(3, '0')}`,
+          sku: newProductId,
           unit: 'piece',
           minimumQuantity: 1,
           isActive: true,
@@ -312,10 +330,10 @@ export default function Page(): React.JSX.Element {
               {/* Product ID - Auto-generated and read-only */}
               <TextField
                 label="Product ID"
-                value={editingProduct ? editingProduct.id : `PRD-${String(products.length + 1).padStart(3, '0')}`}
+                value={editingProduct ? editingProduct.id : generateProductId(watchedCategory || 'bakery')}
                 disabled
                 fullWidth
-                helperText="Product ID is automatically generated"
+                helperText="Product ID is automatically generated based on category"
                 sx={{
                   '& .MuiInputBase-input': {
                     backgroundColor: 'action.disabledBackground',

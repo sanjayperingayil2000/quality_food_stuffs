@@ -296,6 +296,14 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = (tripId: string) => {
+    console.log('Frontend handleDelete called with trip ID:', tripId);
+    console.log('Trip ID type:', typeof tripId);
+    
+    // Show confirmation dialog
+    if (!confirm('Are you sure you want to delete this daily trip? This action cannot be undone.')) {
+      return;
+    }
+    
     deleteTrip(tripId);
   };
 

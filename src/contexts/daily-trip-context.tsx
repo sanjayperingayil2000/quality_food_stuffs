@@ -1226,7 +1226,23 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
   }, [getPreviousBalance]);
 
   const deleteTrip = React.useCallback(async (id: string) => {
-    setTrips(prev => prev.filter(trip => trip.id !== id));
+    try {
+      console.log('Attempting to delete daily trip with ID:', id);
+      const result = await apiClient.deleteDailyTrip(id);
+      console.log('Delete daily trip API result:', result);
+      
+      if (result.error) {
+        console.error('Failed to delete trip from backend:', result.error);
+        setError(result.error);
+        return;
+      }
+      
+      // Only remove from local state if API call succeeded
+      setTrips(prev => prev.filter(trip => trip.id !== id));
+    } catch (error_) {
+      console.error('Error deleting trip from backend:', error_);
+      setError(error_ instanceof Error ? error_.message : 'Failed to delete trip');
+    }
   }, []);
 
   const getTripsByDriver = React.useCallback((driverId: string): DailyTrip[] => {

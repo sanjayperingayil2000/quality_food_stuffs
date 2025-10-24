@@ -127,6 +127,7 @@ export function UserManagement(): React.JSX.Element {
         setError(result.error);
         return;
       }
+      console.log('Fetched users:', result.data?.users);
       setUsers(result.data?.users || []);
     } catch {
       setError('Failed to fetch users');
@@ -251,13 +252,17 @@ export function UserManagement(): React.JSX.Element {
 
     try {
       setError(null);
+      console.log('Attempting to delete user with ID:', userId);
+      console.log('User ID type:', typeof userId);
       const result = await apiClient.deleteUser(userId);
+      console.log('Delete API result:', result);
       if (result.error) {
         setError(result.error);
         return;
       }
       await fetchUsers();
-    } catch {
+    } catch (error) {
+      console.error('Delete error:', error);
       setError('Failed to delete user');
     }
   };
@@ -311,7 +316,7 @@ export function UserManagement(): React.JSX.Element {
             <TableBody>
               {users?.map((user, index) => (
                 <TableRow key={user.id || `user-${index}`}>
-                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.name} (ID: {user.id})</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     {user.roles?.map((role) => (

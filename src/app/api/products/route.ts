@@ -65,9 +65,21 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    // Generate unique ID
-    const count = await Product.countDocuments();
-    const id = `PRD-${String(count + 1).padStart(3, '0')}`;
+    // Generate unique ID based on category
+    const categoryProducts = await Product.find({ category: parsed.data.category }).sort({ id: -1 });
+    let nextNumber = 1;
+    
+    if (categoryProducts.length > 0) {
+      // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
+      const lastId = categoryProducts[0].id;
+      const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+      if (match) {
+        nextNumber = Number.parseInt(match[2], 10) + 1;
+      }
+    }
+    
+    const prefix = parsed.data.category === 'fresh' ? 'FRS' : 'BAK';
+    const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
     
     const productData = {
       ...parsed.data,

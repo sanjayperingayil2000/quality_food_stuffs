@@ -56,8 +56,12 @@ export async function updateUser(id: string, updates: Partial<{ name: string; em
 
 export async function deleteUser(id: string) {
   await connectToDatabase();
+  console.log('deleteUser called with ID:', id);
+  console.log('ID is valid ObjectId:', Types.ObjectId.isValid(id));
   if (!Types.ObjectId.isValid(id)) return null;
-  return User.findByIdAndDelete(id).lean();
+  const result = await User.findByIdAndDelete(id).lean();
+  console.log('MongoDB delete result:', result);
+  return result;
 }
 
 

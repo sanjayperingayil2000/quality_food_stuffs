@@ -49,10 +49,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (forbidden) return withCors(forbidden);
   try {
     const { id } = await params;
+    console.log('Attempting to delete user with ID:', id);
     const user = await deleteUser(id);
+    console.log('Delete result:', user);
     if (!user) return withCors(NextResponse.json({ error: 'Not found' }, { status: 404 }));
     return withCors(NextResponse.json({ success: true }, { status: 200 }));
   } catch (error) {
+    console.error('Error deleting user:', error);
     return withCors(jsonError(error, 500));
   }
 }
