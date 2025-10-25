@@ -39,6 +39,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { useProducts } from '@/contexts/product-context';
 import { useEmployees } from '@/contexts/employee-context';
 import { useDailyTrips, ProductTransfer } from '@/contexts/daily-trip-context';
+import { useNotifications } from '@/contexts/notification-context';
 import type { DailyTrip, TripProduct } from '@/contexts/daily-trip-context';
 
 // Configure dayjs plugins
@@ -153,6 +154,7 @@ export default function Page(): React.JSX.Element {
   const { products } = useProducts();
   const { drivers } = useEmployees();
   const { trips, addTrip, updateTrip, deleteTrip, canAddTripForDriver } = useDailyTrips();
+  const { showSuccess, showError } = useNotifications();
   const [open, setOpen] = React.useState(false);
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
   const [filteredTrips, setFilteredTrips] = React.useState<DailyTrip[]>([]);
@@ -416,7 +418,7 @@ export default function Page(): React.JSX.Element {
     }
   };
 
-  const onSubmit = (data: TripFormData) => {
+  const onSubmit = async (data: TripFormData) => {
     // Check if this is a new trip and if driver already has a trip for this date
     if (!editingTrip && !canAddTripForDriver(data.driverId, data.date.toISOString().split('T')[0])) {
       alert(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
@@ -454,12 +456,19 @@ export default function Page(): React.JSX.Element {
       profit: 0, // Will be calculated in context
     };
 
-    if (editingTrip) {
-      updateTrip(editingTrip.id, tripData);
-    } else {
-      addTrip(tripData);
+    try {
+      if (editingTrip) {
+        await updateTrip(editingTrip.id, tripData);
+        showSuccess('Daily trip updated successfully!');
+      } else {
+        await addTrip(tripData);
+        showSuccess('Daily trip created successfully!');
+      }
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save trip:', error);
+      showError('Failed to save daily trip. Please try again.');
     }
-    handleClose();
   };
 
   const bakeryProducts = products.filter(p => p.category === 'bakery');

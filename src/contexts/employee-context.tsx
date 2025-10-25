@@ -217,9 +217,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
     try {
       const updatedEmployees = employees.map(emp => {
         if (emp.id === driverId && emp.designation === 'driver') {
-          // const previousBalance = emp.balance || 0;
           const roundedNewBalance = Math.round(newBalance);
-          // const changeAmount = roundedNewBalance - previousBalance;
           
           const newHistoryEntry: BalanceHistoryEntry = {
             version: (emp.balanceHistory?.length || 0) + 1,
@@ -245,8 +243,11 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       // Update local state immediately
       setEmployees(updatedEmployees);
       
-      // Save to backend
-      const result = await apiClient.updateEmployee(driverId, { balance: newBalance });
+      // Save to backend - the API will handle balance history
+      const result = await apiClient.updateEmployee(driverId, { 
+        balance: newBalance,
+        updatedBy
+      });
       
       if (result.error) {
         // Revert local state on error

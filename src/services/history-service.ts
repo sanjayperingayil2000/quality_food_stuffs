@@ -1,6 +1,7 @@
 import { connectToDatabase } from '@/lib/db';
 import { History } from '@/models/history';
 import { IUserDocument } from '@/models/user';
+import { getUserById } from './user-service';
 
 export type HistoryFilters = Partial<{
   collectionName: string;
@@ -37,9 +38,27 @@ export async function listHistory(filters: HistoryFilters): Promise<HistoryItem[
     .populate<{ actor: IUserDocument }>('actor', 'name email')
     .lean(); // returns unknown[]
 
-  // Map to strict HistoryItem[]
-  const items: HistoryItem[] = rawItems.map((item: unknown) => {
+  // Map to strict HistoryItem[] and manually fetch user names if needed
+  const items: HistoryItem[] = await Promise.all(rawItems.map(async (item: unknown) => {
     const typedItem = item as Record<string, unknown>;
+    
+    let actorName = 'Unknown';
+    
+    // Try to get actor name from populated field first
+    if (typedItem.actor && typeof typedItem.actor === 'object' && 'name' in typedItem.actor) {
+      actorName = (typedItem.actor as { name: string }).name;
+    } else if (typedItem.actor && typeof typedItem.actor === 'string') {
+      // If actor is a string (ObjectId), try to fetch user name manually
+      try {
+        const user = await getUserById(typedItem.actor);
+        if (user) {
+          actorName = user.name;
+        }
+      } catch (error) {
+        console.warn('Failed to fetch user name for actor:', typedItem.actor, error);
+      }
+    }
+    
     return {
       _id: (typedItem._id as string).toString(),
       collectionName: typedItem.collectionName as string,
@@ -47,13 +66,10 @@ export async function listHistory(filters: HistoryFilters): Promise<HistoryItem[
       action: typedItem.action as string,
       before: typedItem.before as Record<string, unknown>,
       after: typedItem.after as Record<string, unknown>,
-      actor:
-        typedItem.actor && typeof typedItem.actor === 'object' && 'name' in typedItem.actor
-          ? (typedItem.actor as { name: string }).name
-          : 'Unknown',
+      actor: actorName,
       timestamp: typedItem.timestamp as Date,
     };
-  });
+  }));
 
   return items;
 }
@@ -72,8 +88,26 @@ export async function listHistoryForDocument(
     .populate<{ actor: IUserDocument }>('actor', 'name email')
     .lean(); // returns unknown[]
 
-  const items: HistoryItem[] = rawItems.map((item: unknown) => {
+  const items: HistoryItem[] = await Promise.all(rawItems.map(async (item: unknown) => {
     const typedItem = item as Record<string, unknown>;
+    
+    let actorName = 'Unknown';
+    
+    // Try to get actor name from populated field first
+    if (typedItem.actor && typeof typedItem.actor === 'object' && 'name' in typedItem.actor) {
+      actorName = (typedItem.actor as { name: string }).name;
+    } else if (typedItem.actor && typeof typedItem.actor === 'string') {
+      // If actor is a string (ObjectId), try to fetch user name manually
+      try {
+        const user = await getUserById(typedItem.actor);
+        if (user) {
+          actorName = user.name;
+        }
+      } catch (error) {
+        console.warn('Failed to fetch user name for actor:', typedItem.actor, error);
+      }
+    }
+    
     return {
       _id: (typedItem._id as string).toString(),
       collectionName: typedItem.collectionName as string,
@@ -81,13 +115,10 @@ export async function listHistoryForDocument(
       action: typedItem.action as string,
       before: typedItem.before as Record<string, unknown>,
       after: typedItem.after as Record<string, unknown>,
-      actor:
-        typedItem.actor && typeof typedItem.actor === 'object' && 'name' in typedItem.actor
-          ? (typedItem.actor as { name: string }).name
-          : 'Unknown',
+      actor: actorName,
       timestamp: typedItem.timestamp as Date,
     };
-  });
+  }));
 
   return items;
 }

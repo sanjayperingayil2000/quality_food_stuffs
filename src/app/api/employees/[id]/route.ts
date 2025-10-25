@@ -7,6 +7,7 @@ import { connectToDatabase } from '@/lib/db';
 import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
+import { updateEmployee } from '@/services/employee-service';
 
 const employeeUpdateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -61,33 +62,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    const employee = await Employee.findOne({ id });
-    if (!employee) {
-      return withCors(NextResponse.json({ error: 'Employee not found' }, { status: 404 }));
-    }
-    
-    const beforeData = employee.toObject();
     const updateData = {
       ...parsed.data,
       updatedBy: user?.sub,
     };
     
-    const updatedEmployee = await Employee.findOneAndUpdate(
-      { id },
-      updateData,
-      { new: true, runValidators: true }
-    );
-    
-    // Log to history
-    await History.create({
-      collectionName: 'employees',
-      documentId: employee._id,
-      action: 'update',
-      actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
-      before: beforeData,
-      after: updatedEmployee?.toObject(),
-      timestamp: new Date(),
-    });
+    const updatedEmployee = await updateEmployee(id, updateData);
     
     return withCors(NextResponse.json({ employee: updatedEmployee }, { status: 200 }));
   } catch (error) {
