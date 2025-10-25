@@ -273,7 +273,7 @@ export default function Page(): React.JSX.Element {
     setProductSearch('');
     reset({
       driverId: trip.driverId,
-      date: new Date(trip.date),
+      date: dayjs(trip.date).tz('Asia/Dubai').toDate(),
       isProductTransferred: trip.transfer.isProductTransferred,
       transferredProducts: trip.transfer.transferredProducts,
       selectedCategory: 'bakery',
@@ -493,6 +493,7 @@ export default function Page(): React.JSX.Element {
             <Select
               value={driverFilter}
               label="All Drivers"
+              displayEmpty
               onChange={(e) => setDriverFilter(e.target.value)}
             >
               <MenuItem value="">All Drivers</MenuItem>

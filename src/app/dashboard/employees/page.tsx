@@ -199,18 +199,8 @@ export default function Page(): React.JSX.Element {
 
   const handleEditSubmit = async () => {
     if (selectedEmployee && validateForm()) {
-      const updates: Partial<Employee> = {
-        name: formData.name,
-        phoneNumber: `+971${formData.phoneNumber}`,
-        email: formData.email,
-        address: formData.address,
-        designation: formData.role,
-        location: formData.role === 'driver' ? formData.location : undefined,
-        routeName: formData.role === 'driver' ? formData.routeName : undefined,
-      };
-
       try {
-        // Handle balance update for drivers
+        // Handle balance update for drivers first
         if (formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString()) {
           const newBalance = Number(formData.balance);
           const previousBalance = selectedEmployee.balance || 0;
@@ -220,6 +210,17 @@ export default function Page(): React.JSX.Element {
             await updateDriverBalance(selectedEmployee.id, newBalance, 'manual_adjustment', 'EMP-001');
           }
         }
+
+        // Update other employee fields (excluding balance for drivers)
+        const updates: Partial<Employee> = {
+          name: formData.name,
+          phoneNumber: `+971${formData.phoneNumber}`,
+          email: formData.email,
+          address: formData.address,
+          designation: formData.role,
+          location: formData.role === 'driver' ? formData.location : undefined,
+          routeName: formData.role === 'driver' ? formData.routeName : undefined,
+        };
 
         await updateEmployee(selectedEmployee.id, updates);
         showSuccess('Employee updated successfully!');

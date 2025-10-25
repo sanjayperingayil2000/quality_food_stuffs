@@ -37,6 +37,7 @@ import { useProducts, type Product } from '@/contexts/product-context';
 import { ExportPdfButton } from '@/components/products/export-pdf';
 import { useNotifications } from '@/contexts/notification-context';
 import { useEmployees } from '@/contexts/employee-context';
+import { useUser } from '@/hooks/use-user';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -57,7 +58,7 @@ const productSchema = zod.object({
   name: zod.string().min(1, 'Product name is required'),
   price: zod
     .number({ invalid_type_error: 'Price must be a number' })
-    .gt(0, 'Price must be greater than 0'),
+    .min(0, 'Price must be 0 or greater'),
   category: zod.enum(['bakery', 'fresh'], { required_error: 'Category is required' }),
 });
 
@@ -72,6 +73,7 @@ interface PriceHistoryDialogProps {
 
 const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, product }) => {
   const { employees } = useEmployees();
+  const { user } = useUser();
   
   // Helper function to get user name from ID
   const getUserName = (userId: string | undefined): string => {
@@ -80,6 +82,11 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
     // Check if it's an employee ID
     const employee = employees.find(emp => emp.id === userId);
     if (employee) return employee.name;
+    
+    // Check if it's the current user's ID
+    if (user?.sub === userId) {
+      return user.name || 'Current User';
+    }
     
     // If it's a MongoDB ObjectId or other format, return a default
     return 'System';
@@ -382,7 +389,7 @@ export default function Page(): React.JSX.Element {
                     fullWidth
                     onChange={(e) =>
                       field.onChange(
-                        e.target.value === "" ? undefined : Number.parseFloat(e.target.value)
+                        e.target.value === "" ? 0 : Number.parseFloat(e.target.value)
                       )
                     }
                     slotProps={{
