@@ -58,8 +58,37 @@ export default function Page(): React.JSX.Element {
       profit: 0,
     });
 
-    // Calculate total driver balance from employee data
-    const totalDriverBalance = drivers.reduce((sum, driver) => sum + (driver.balance || 0), 0);
+    // Calculate total driver balance - sum of all drivers' balances on the To Date
+    // If a driver doesn't have a balance entry on the To Date, use their most recent previous balance
+    const calculateTotalDriverBalance = () => {
+      const toDate = filters.dateRange[1];
+      if (!toDate) return drivers.reduce((sum, driver) => sum + (driver.balance || 0), 0);
+      
+      return drivers.reduce((sum, driver) => {
+        // Find the most recent trip for this driver on or before the To Date
+        const driverTrips = trips.filter(trip => trip.driverId === driver.id);
+        const tripsOnOrBeforeToDate = driverTrips.filter(trip => {
+          const tripDate = dayjs(trip.date);
+          return tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate, 'day');
+        });
+        
+        if (tripsOnOrBeforeToDate.length === 0) {
+          // No trips for this driver, use their base balance
+          return sum + (driver.balance || 0);
+        }
+        
+        // Sort by date descending to get the most recent trip
+        const sortedTrips = tripsOnOrBeforeToDate.sort((a, b) => 
+          dayjs(b.date).valueOf() - dayjs(a.date).valueOf()
+        );
+        
+        // Use the balance from the most recent trip
+        const mostRecentTrip = sortedTrips[0];
+        return sum + mostRecentTrip.balance;
+      }, 0);
+    };
+    
+    const totalDriverBalance = calculateTotalDriverBalance();
 
     return {
       collectionAmount: {
