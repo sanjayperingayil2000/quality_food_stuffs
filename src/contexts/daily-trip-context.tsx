@@ -1144,85 +1144,98 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
   }, [trips, pendingTransfers, getPreviousBalance]);
 
   const updateTrip = React.useCallback(async (id: string, updates: Partial<DailyTrip>) => {
-    setTrips(prev => 
-      prev.map(trip => {
-        if (trip.id === id) {
-          const updatedTrip = { ...trip, ...updates, updatedAt: new Date().toISOString() };
-          
-          // Recalculate totals if products, accepted products, or transferred products changed
-          if (updates.products || updates.acceptedProducts || updates.transfer) {
-            const totals = calculateTotals(
-              updatedTrip.products,
-              updatedTrip.acceptedProducts,
-              updatedTrip.transfer.transferredProducts
-            );
-            updatedTrip.totalAmount = totals.overall.total;
-            updatedTrip.netTotal = totals.overall.netTotal;
-            updatedTrip.grandTotal = totals.overall.grandTotal;
+    try {
+      // Save to backend first
+      const result = await apiClient.updateDailyTrip(id, updates);
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Update local state only if API call succeeded
+      setTrips(prev => 
+        prev.map(trip => {
+          if (trip.id === id) {
+            const updatedTrip = { ...trip, ...updates, updatedAt: new Date().toISOString() };
             
-            // Get previous balance for this driver
-            const previousBalance = getPreviousBalance(updatedTrip.driverId, new Date(updatedTrip.date), prev);
+            // Recalculate totals if products, accepted products, or transferred products changed
+            if (updates.products || updates.acceptedProducts || updates.transfer) {
+              const totals = calculateTotals(
+                updatedTrip.products,
+                updatedTrip.acceptedProducts,
+                updatedTrip.transfer.transferredProducts
+              );
+              updatedTrip.totalAmount = totals.overall.total;
+              updatedTrip.netTotal = totals.overall.netTotal;
+              updatedTrip.grandTotal = totals.overall.grandTotal;
+              
+              // Get previous balance for this driver
+              const previousBalance = getPreviousBalance(updatedTrip.driverId, new Date(updatedTrip.date), prev);
+              
+              // Recalculate financial metrics
+              const financialMetrics = calculateFinancialMetrics(
+                updatedTrip.expiry,
+                updatedTrip.purchaseAmount,
+                updatedTrip.collectionAmount,
+                updatedTrip.discount,
+                totals.fresh.netTotal,
+                totals.bakery.netTotal,
+                previousBalance
+              );
+              
+              updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
+              updatedTrip.amountToBe = financialMetrics.amountToBe;
+              updatedTrip.salesDifference = financialMetrics.salesDifference;
+              updatedTrip.profit = financialMetrics.profit;
+              updatedTrip.balance = financialMetrics.balance;
+            } else if (updates.collectionAmount !== undefined || updates.purchaseAmount !== undefined || 
+                       updates.expiry !== undefined || updates.discount !== undefined) {
+              // Recalculate financial metrics if any financial field changed
+              const totals = calculateTotals(
+                updatedTrip.products,
+                updatedTrip.acceptedProducts,
+                updatedTrip.transfer.transferredProducts
+              );
+              
+              const previousBalance = getPreviousBalance(updatedTrip.driverId,  new Date(updatedTrip.date), prev);
+              
+              const financialMetrics = calculateFinancialMetrics(
+                updatedTrip.expiry,
+                updatedTrip.purchaseAmount,
+                updatedTrip.collectionAmount,
+                updatedTrip.discount,
+                totals.fresh.netTotal,
+                totals.bakery.netTotal,
+                previousBalance
+              );
+              
+              updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
+              updatedTrip.amountToBe = financialMetrics.amountToBe;
+              updatedTrip.salesDifference = financialMetrics.salesDifference;
+              updatedTrip.profit = financialMetrics.profit;
+              updatedTrip.balance = financialMetrics.balance;
+            }
             
-            // Recalculate financial metrics
-            const financialMetrics = calculateFinancialMetrics(
-              updatedTrip.expiry,
-              updatedTrip.purchaseAmount,
-              updatedTrip.collectionAmount,
-              updatedTrip.discount,
-              totals.fresh.netTotal,
-              totals.bakery.netTotal,
-              previousBalance
-            );
+            // Track balance changes to update after state change
+            if (updatedTrip.balance !== trip.balance) {
+              // Store the balance update to be processed after state update
+              balanceUpdatesRef.current.push({
+                driverId: updatedTrip.driverId,
+                balance: updatedTrip.balance,
+                reason: 'trip_update',
+                updatedBy: 'EMP-001'
+              });
+            }
             
-            updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
-            updatedTrip.amountToBe = financialMetrics.amountToBe;
-            updatedTrip.salesDifference = financialMetrics.salesDifference;
-            updatedTrip.profit = financialMetrics.profit;
-            updatedTrip.balance = financialMetrics.balance;
-          } else if (updates.collectionAmount !== undefined || updates.purchaseAmount !== undefined || 
-                     updates.expiry !== undefined || updates.discount !== undefined) {
-            // Recalculate financial metrics if any financial field changed
-            const totals = calculateTotals(
-              updatedTrip.products,
-              updatedTrip.acceptedProducts,
-              updatedTrip.transfer.transferredProducts
-            );
-            
-            const previousBalance = getPreviousBalance(updatedTrip.driverId,  new Date(updatedTrip.date), prev);
-            
-            const financialMetrics = calculateFinancialMetrics(
-              updatedTrip.expiry,
-              updatedTrip.purchaseAmount,
-              updatedTrip.collectionAmount,
-              updatedTrip.discount,
-              totals.fresh.netTotal,
-              totals.bakery.netTotal,
-              previousBalance
-            );
-            
-            updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
-            updatedTrip.amountToBe = financialMetrics.amountToBe;
-            updatedTrip.salesDifference = financialMetrics.salesDifference;
-            updatedTrip.profit = financialMetrics.profit;
-            updatedTrip.balance = financialMetrics.balance;
+            return updatedTrip;
           }
-          
-          // Track balance changes to update after state change
-          if (updatedTrip.balance !== trip.balance) {
-            // Store the balance update to be processed after state update
-            balanceUpdatesRef.current.push({
-              driverId: updatedTrip.driverId,
-              balance: updatedTrip.balance,
-              reason: 'trip_update',
-              updatedBy: 'EMP-001'
-            });
-          }
-          
-          return updatedTrip;
-        }
-        return trip;
-      })
-    );
+          return trip;
+        })
+      );
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to update trip');
+    }
   }, [getPreviousBalance]);
 
   const deleteTrip = React.useCallback(async (id: string) => {

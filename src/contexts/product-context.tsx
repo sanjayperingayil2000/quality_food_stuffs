@@ -112,9 +112,25 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
 
   const addProduct = React.useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
+      // Generate category-specific ID
+      const categoryProducts = products.filter(p => p.category === productData.category);
+      const lastId = categoryProducts.length > 0 ? categoryProducts.at(-1)?.id : null;
+      
+      let nextNumber = 1;
+      if (lastId) {
+        // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
+        const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+        if (match) {
+          nextNumber = Number.parseInt(match[2], 10) + 1;
+        }
+      }
+      
+      const prefix = productData.category === 'fresh' ? 'FRS' : 'BAK';
+      const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
+      
       const newProduct: Product = {
         ...productData,
-        id: `PRD-${String(products.length + 1).padStart(3, '0')}`,
+        id,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

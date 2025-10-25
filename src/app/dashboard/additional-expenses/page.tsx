@@ -187,6 +187,13 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = async (expenseId: string) => {
+    const expense = expenses.find(e => e.id === expenseId);
+    const expenseTitle = expense?.title || 'this expense';
+    
+    if (!confirm(`Are you sure you want to delete "${expenseTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+    
     try {
       await deleteExpense(expenseId);
       // Update filtered expenses to reflect the deletion
@@ -552,7 +559,7 @@ export default function Page(): React.JSX.Element {
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogContent>
             <Stack spacing={2} sx={{ pt: 1 }}>
-              {/* <Controller
+              <Controller
                 control={control}
                 name="date"
                 render={({ field }) => (
@@ -568,7 +575,7 @@ export default function Page(): React.JSX.Element {
                     value={field.value ? dayjs(field.value).format('YYYY-MM-DD') : ''}
                   />
                 )}
-              /> */}
+              />
 
               <Controller
                 control={control}

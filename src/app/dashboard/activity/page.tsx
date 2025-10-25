@@ -77,6 +77,12 @@ const getActionDescription = (activity: Activity): string => {
             if (before.balance !== after.balance) {
               return `${entityName} employee balance updated from ${before.balance || 0} to ${after.balance || 0}`;
             }
+            if (before.name !== after.name) {
+              return `${before.name || 'Employee'} name changed to ${after.name || 'Unknown'}`;
+            }
+            if (before.salary !== after.salary) {
+              return `${entityName} salary updated from ${before.salary || 0} to ${after.salary || 0}`;
+            }
             return `${entityName} employee details updated`;
           }
           return `${entityName} employee updated`;
@@ -100,6 +106,12 @@ const getActionDescription = (activity: Activity): string => {
             // Check for price changes
             if (before.price !== after.price) {
               return `${entityName} product unit price updated from ${before.price || 0} to ${after.price || 0}`;
+            }
+            if (before.name !== after.name) {
+              return `${before.name || 'Product'} name changed to ${after.name || 'Unknown'}`;
+            }
+            if (before.category !== after.category) {
+              return `${entityName} product category changed from ${before.category || 'Unknown'} to ${after.category || 'Unknown'}`;
             }
             return `${entityName} product details updated`;
           }
@@ -258,7 +270,7 @@ export default function Page(): React.JSX.Element {
                           {actionDescription}
                         </Typography>
                       </TableCell>
-                      <TableCell>{activity.actor || 'Satheesh Thalekkara'}</TableCell>
+                      <TableCell>{activity.actor || 'System'}</TableCell>
                       <TableCell>
                         {new Date(activity.timestamp).toLocaleDateString()}{' '}
                         {new Date(activity.timestamp).toLocaleTimeString()}

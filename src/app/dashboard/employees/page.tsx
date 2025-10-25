@@ -209,18 +209,18 @@ export default function Page(): React.JSX.Element {
         routeName: formData.role === 'driver' ? formData.routeName : undefined,
       };
 
-      // Handle balance update for drivers
-      if (formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString()) {
-        const newBalance = Number(formData.balance);
-        const previousBalance = selectedEmployee.balance || 0;
-        
-        if (newBalance !== previousBalance) {
-          // Use the updateDriverBalance method to maintain history
-          updateDriverBalance(selectedEmployee.id, newBalance, 'manual_adjustment', 'EMP-001');
-        }
-      }
-
       try {
+        // Handle balance update for drivers
+        if (formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString()) {
+          const newBalance = Number(formData.balance);
+          const previousBalance = selectedEmployee.balance || 0;
+          
+          if (newBalance !== previousBalance) {
+            // Use the updateDriverBalance method to maintain history
+            await updateDriverBalance(selectedEmployee.id, newBalance, 'manual_adjustment', 'EMP-001');
+          }
+        }
+
         await updateEmployee(selectedEmployee.id, updates);
         showSuccess('Employee updated successfully!');
         setEditDialogOpen(false);

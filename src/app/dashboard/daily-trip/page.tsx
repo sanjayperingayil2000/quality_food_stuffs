@@ -326,6 +326,15 @@ export default function Page(): React.JSX.Element {
       });
     }
 
+    // Sort by date descending (newest first), then by createdAt descending
+    filtered = filtered.sort((a, b) => {
+      const dateComparison = dayjs(b.date).valueOf() - dayjs(a.date).valueOf();
+      if (dateComparison !== 0) return dateComparison;
+      
+      // If dates are the same, sort by createdAt (newest first)
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
     setFilteredTrips(filtered);
   }, [trips, driverFilter, dateFrom, dateTo]);
 
@@ -483,7 +492,7 @@ export default function Page(): React.JSX.Element {
             <InputLabel>All Drivers</InputLabel>
             <Select
               value={driverFilter}
-              label={driverFilter ? drivers.find(d => d.id === driverFilter)?.name || 'All Drivers' : 'All Drivers'}
+              label="All Drivers"
               onChange={(e) => setDriverFilter(e.target.value)}
             >
               <MenuItem value="">All Drivers</MenuItem>

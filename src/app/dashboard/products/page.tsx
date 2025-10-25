@@ -36,6 +36,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { useProducts, type Product } from '@/contexts/product-context';
 import { ExportPdfButton } from '@/components/products/export-pdf';
 import { useNotifications } from '@/contexts/notification-context';
+import { useEmployees } from '@/contexts/employee-context';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -70,6 +71,20 @@ interface PriceHistoryDialogProps {
 }
 
 const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, product }) => {
+  const { employees } = useEmployees();
+  
+  // Helper function to get user name from ID
+  const getUserName = (userId: string | undefined): string => {
+    if (!userId) return 'Unknown';
+    
+    // Check if it's an employee ID
+    const employee = employees.find(emp => emp.id === userId);
+    if (employee) return employee.name;
+    
+    // If it's a MongoDB ObjectId or other format, return a default
+    return 'System';
+  };
+  
   if (!product) return null;
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -80,6 +95,7 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
             <TableRow>
               <TableCell>Old Price (AED)</TableCell>
               <TableCell>Updated At</TableCell>
+              <TableCell>Updated By</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -87,7 +103,7 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
               <TableRow key={history.version}>
                 <TableCell>{history.price.toFixed(2)}</TableCell>
                 <TableCell>{dayjs(history.updatedAt).format('MMM D, YYYY h:mm A')}</TableCell>
-                <TableCell>{history.updatedBy}</TableCell>
+                <TableCell>{getUserName(history.updatedBy)}</TableCell>
               </TableRow>
             ))}
 
@@ -183,6 +199,13 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = async (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    const productName = product?.name || 'this product';
+    
+    if (!confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
+      return;
+    }
+    
     try {
       await deleteProduct(productId);
       showSuccess('Product deleted successfully!');
