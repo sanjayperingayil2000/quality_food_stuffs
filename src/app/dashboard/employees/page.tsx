@@ -211,7 +211,7 @@ export default function Page(): React.JSX.Element {
           }
         }
 
-        // Update other employee fields (excluding balance for drivers)
+        // Update other employee fields (excluding balance for drivers, as it's handled by updateDriverBalance)
         const updates: Partial<Employee> = {
           name: formData.name,
           phoneNumber: `+971${formData.phoneNumber}`,
@@ -220,6 +220,7 @@ export default function Page(): React.JSX.Element {
           designation: formData.role,
           location: formData.role === 'driver' ? formData.location : undefined,
           routeName: formData.role === 'driver' ? formData.routeName : undefined,
+          // Balance is intentionally excluded here as it's handled by updateDriverBalance
         };
 
         await updateEmployee(selectedEmployee.id, updates);

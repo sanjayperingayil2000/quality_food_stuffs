@@ -108,6 +108,8 @@ export default function Page(): React.JSX.Element {
   const { employees } = useEmployees();
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [expenseToDelete, setExpenseToDelete] = React.useState<Expense | null>(null);
   const [filteredExpenses, setFilteredExpenses] = React.useState<Expense[]>([]);
   const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(30, 'day').format('YYYY-MM-DD'));
   const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
@@ -188,19 +190,29 @@ export default function Page(): React.JSX.Element {
 
   const handleDelete = async (expenseId: string) => {
     const expense = expenses.find(e => e.id === expenseId);
-    const expenseTitle = expense?.title || 'this expense';
-    
-    if (!confirm(`Are you sure you want to delete "${expenseTitle}"? This action cannot be undone.`)) {
-      return;
+    if (expense) {
+      setExpenseToDelete(expense);
+      setDeleteDialogOpen(true);
     }
-    
-    try {
-      await deleteExpense(expenseId);
-      // Update filtered expenses to reflect the deletion
-      setFilteredExpenses(prev => prev.filter(e => e.id !== expenseId));
-    } catch (error) {
-      console.error('Failed to delete expense:', error);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (expenseToDelete) {
+      try {
+        await deleteExpense(expenseToDelete.id);
+        // Update filtered expenses to reflect the deletion
+        setFilteredExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id));
+        setDeleteDialogOpen(false);
+        setExpenseToDelete(null);
+      } catch (error) {
+        console.error('Failed to delete expense:', error);
+      }
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setExpenseToDelete(null);
   };
 
   const applyFilters = React.useCallback(() => {
@@ -678,6 +690,22 @@ export default function Page(): React.JSX.Element {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
       </Dialog>
     </Stack>
   );

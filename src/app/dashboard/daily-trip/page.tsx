@@ -157,6 +157,8 @@ export default function Page(): React.JSX.Element {
   const { showSuccess, showError } = useNotifications();
   const [open, setOpen] = React.useState(false);
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [tripToDelete, setTripToDelete] = React.useState<DailyTrip | null>(null);
   const [filteredTrips, setFilteredTrips] = React.useState<DailyTrip[]>([]);
   const [driverFilter, setDriverFilter] = React.useState<string>('');
   const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(9, 'day').format('YYYY-MM-DD'));
@@ -301,12 +303,24 @@ export default function Page(): React.JSX.Element {
     console.log('Frontend handleDelete called with trip ID:', tripId);
     console.log('Trip ID type:', typeof tripId);
     
-    // Show confirmation dialog
-    if (!confirm('Are you sure you want to delete this daily trip? This action cannot be undone.')) {
-      return;
+    const trip = trips.find(t => t.id === tripId);
+    if (trip) {
+      setTripToDelete(trip);
+      setDeleteDialogOpen(true);
     }
-    
-    deleteTrip(tripId);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (tripToDelete) {
+      deleteTrip(tripToDelete.id);
+      setDeleteDialogOpen(false);
+      setTripToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setTripToDelete(null);
   };
 
   const handleApplyFilter = React.useCallback(() => {
@@ -421,7 +435,7 @@ export default function Page(): React.JSX.Element {
   const onSubmit = async (data: TripFormData) => {
     // Check if this is a new trip and if driver already has a trip for this date
     if (!editingTrip && !canAddTripForDriver(data.driverId, data.date.toISOString().split('T')[0])) {
-      alert(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
+      showError(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
       return;
     }
 
@@ -1594,6 +1608,22 @@ export default function Page(): React.JSX.Element {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
       </Dialog>
     </Stack>
   );

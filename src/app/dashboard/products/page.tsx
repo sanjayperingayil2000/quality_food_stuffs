@@ -84,8 +84,8 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
     if (employee) return employee.name;
     
     // Check if it's the current user's ID
-    if (user?.sub === userId) {
-      return user.name || 'Current User';
+    if (user?.id === userId) {
+      return user.name || user.firstName || 'Current User';
     }
     
     // If it's a MongoDB ObjectId or other format, return a default
