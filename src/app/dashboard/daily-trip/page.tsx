@@ -1263,8 +1263,7 @@ export default function Page(): React.JSX.Element {
                             
                             // console.log('Rendering', availableDrivers.length, 'MenuItems for drivers');
                             
-                            return availableDrivers.map((driver, index) => {
-                              // console.log(`Rendering MenuItem ${index + 1}:`, driver.name);
+                            return availableDrivers.map((driver) => {
                               return (
                                 <MenuItem key={driver.id} value={driver.id}>
                                   <Box>
