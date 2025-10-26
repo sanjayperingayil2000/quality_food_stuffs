@@ -345,14 +345,16 @@ export default function Page(): React.JSX.Element {
       filtered = filtered.filter(trip => trip.driverId === driverFilter);
     }
 
-    // Filter by date range
+    // Filter by date range (inclusive of both from and to dates)
     if (dateFrom && dateTo) {
       const fromDate = dayjs(dateFrom).startOf('day').utc();
       const toDate = dayjs(dateTo).endOf('day').utc();
 
       filtered = filtered.filter(trip => {
         const tripDate = dayjs(trip.date).utc();
-        return tripDate.isAfter(fromDate) && tripDate.isBefore(toDate);
+        // Check if trip date is on or after fromDate and on or before toDate (inclusive)
+        return (tripDate.isAfter(fromDate) || tripDate.isSame(fromDate)) && 
+               (tripDate.isBefore(toDate) || tripDate.isSame(toDate));
       });
     }
 
@@ -451,7 +453,7 @@ export default function Page(): React.JSX.Element {
     // console.log('editingTrip:', editingTrip);
     
     // Check if this is a new trip and if driver already has a trip for this date
-    if (!editingTrip && !canAddTripForDriver(data.driverId, data.date.toISOString().split('T')[0])) {
+    if (!editingTrip && !canAddTripForDriver(data.driverId, dayjs(data.date).format('YYYY-MM-DD'))) {
       showError(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
       return;
     }
@@ -475,7 +477,7 @@ export default function Page(): React.JSX.Element {
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
       driverName: driver?.name || '',
-      date: data.date.toISOString().split('T')[0],
+      date: dayjs(data.date).format('YYYY-MM-DD'),
       products: filteredProducts,
       transfer,
       acceptedProducts: [], // Will be populated by context when products are transferred to this driver
