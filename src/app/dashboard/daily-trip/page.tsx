@@ -732,7 +732,7 @@ export default function Page(): React.JSX.Element {
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Typography variant="body2" color="text.secondary">Balance</Typography>
-                    <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance)}</Typography>
+                    <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance ?? 0)}</Typography>
                   </Grid>
                 </Grid>
               </Paper>
@@ -743,28 +743,28 @@ export default function Page(): React.JSX.Element {
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
-                    <Typography variant="h6" color="warning.dark">AED {trip.expiryAfterTax.toFixed(2)}</Typography>
+                    <Typography variant="h6" color="warning.dark">AED {(trip.expiryAfterTax ?? 0).toFixed(2)}</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Amount To Be</Typography>
-                    <Typography variant="h6" color="info.dark">AED {trip.amountToBe.toFixed(2)}</Typography>
+                    <Typography variant="h6" color="info.dark">AED {(trip.amountToBe ?? 0).toFixed(2)}</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
-                    <Typography variant="h6" color={trip.salesDifference >= 0 ? 'success.dark' : 'error.dark'}>
-                      AED {trip.salesDifference.toFixed(2)}
+                    <Typography variant="h6" color={(trip.salesDifference ?? 0) >= 0 ? 'success.dark' : 'error.dark'}>
+                      AED {(trip.salesDifference ?? 0).toFixed(2)}
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Profit</Typography>
-                    <Typography variant="h6" color={trip.profit >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
-                      AED {trip.profit.toFixed(2)}
+                    <Typography variant="h6" color={(trip.profit ?? 0) >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
+                      AED {(trip.profit ?? 0).toFixed(2)}
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Calculated Balance</Typography>
                     <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
-                      AED {roundBalance(trip.balance)}
+                      AED {roundBalance(trip.balance ?? 0)}
                     </Typography>
                   </Grid>
                 </Grid>
