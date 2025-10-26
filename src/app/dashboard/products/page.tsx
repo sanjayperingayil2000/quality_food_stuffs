@@ -27,7 +27,7 @@ import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { TableIcon } from '@phosphor-icons/react/dist/ssr/Table';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
-import { ClockClockwiseIcon } from '@phosphor-icons/react/dist/ssr';
+import { ClockClockwiseIcon, CaretUpIcon, CaretDownIcon } from '@phosphor-icons/react';
 import { Tooltip } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -157,6 +157,10 @@ export default function Page(): React.JSX.Element {
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [historyProduct, setHistoryProduct] = React.useState<ProductWithHistory | null>(null);
   
+  // Sorting state
+  const [sortField, setSortField] = React.useState<string | null>(null);
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+  
   // Loading states for actions
   const [isSaving, setIsSaving] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -195,8 +199,51 @@ export default function Page(): React.JSX.Element {
       });
     }
 
+    // Apply sorting
+    if (sortField) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue: string | number;
+        let bValue: string | number;
+
+        switch (sortField) {
+          case 'name': {
+            aValue = a.name.toLowerCase();
+            bValue = b.name.toLowerCase();
+            break;
+          }
+          case 'id': {
+            aValue = a.id;
+            bValue = b.id;
+            break;
+          }
+          case 'price': {
+            aValue = a.price;
+            bValue = b.price;
+            break;
+          }
+          case 'updatedAt': {
+            aValue = dayjs(a.updatedAt).valueOf();
+            bValue = dayjs(b.updatedAt).valueOf();
+            break;
+          }
+          case 'createdAt': {
+            aValue = dayjs(a.createdAt).valueOf();
+            bValue = dayjs(b.createdAt).valueOf();
+            break;
+          }
+          default: {
+            return 0;
+          }
+        }
+
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     setFilteredProducts(filtered);
-  }, [products, categoryFilter, searchQuery]);
+  }, [products, categoryFilter, searchQuery, sortField, sortDirection]);
 
   const {
     control,
@@ -322,6 +369,17 @@ export default function Page(): React.JSX.Element {
     link.remove();
   };
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle sort direction
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new sort field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
 
 
   return (
@@ -352,12 +410,37 @@ export default function Page(): React.JSX.Element {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell align="center">Product name</TableCell>
-            <TableCell align="center">Price</TableCell>
+            <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('name')}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                Product name
+                {sortField === 'name' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+              </Box>
+            </TableCell>
+            <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('price')}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                Price
+                {sortField === 'price' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+              </Box>
+            </TableCell>
             <TableCell align="center">Category</TableCell>
-            <TableCell align="center">Product ID</TableCell>
-            <TableCell align="center">Last edited</TableCell>
-            <TableCell align="center">Created</TableCell>
+            <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('id')}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                Product ID
+                {sortField === 'id' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+              </Box>
+            </TableCell>
+            <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('updatedAt')}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                Last edited
+                {sortField === 'updatedAt' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+              </Box>
+            </TableCell>
+            <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('createdAt')}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                Created
+                {sortField === 'createdAt' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+              </Box>
+            </TableCell>
             <TableCell align="center">Actions</TableCell>
           </TableRow>
         </TableHead>
