@@ -63,132 +63,49 @@ const getActionColor = (
   return 'info';
 };
 
+// Map collection names to display names
+const getCollectionType = (collection: string): string => {
+  switch (collection) {
+    case 'employees': {
+      return 'employee';
+    }
+    case 'products': {
+      return 'product';
+    }
+    case 'additional_expenses': {
+      return 'additionalExpense';
+    }
+    case 'daily_trips': {
+      return 'dailyTrip';
+    }
+    default: {
+      return collection;
+    }
+  }
+};
+
 const getActionDescription = (activity: EnrichedActivity): string => {
-  const { action, collectionName, before, after } = activity;
+  const { action, collectionName } = activity;
   const actionLower = action.toLowerCase();
   
   // Use enriched entity name or fallback to snapshot data
-  const entityName = activity.entityName || after?.name || before?.name || after?.title || before?.title || 'Unknown Entity';
+  const entityName = activity.entityName || 'Unknown Entity';
+
+  // Map action to description format: action entityName collectionType
+  const collectionType = getCollectionType(collectionName);
   
-  
-  switch (collectionName) {
-    case 'employees': {
-      switch (actionLower) {
-        case 'created': {
-          return `${entityName} named employee added`;
-        }
-        case 'updated': {
-          if (before && after) {
-            // Check for specific field changes
-            if (before.balance !== after.balance) {
-              return `${entityName} employee balance updated from ${before.balance || 0} to ${after.balance || 0}`;
-            }
-            if (before.name !== after.name) {
-              return `${before.name || 'Employee'} name changed to ${after.name || 'Unknown'}`;
-            }
-            if (before.salary !== after.salary) {
-              return `${entityName} salary updated from ${before.salary || 0} to ${after.salary || 0}`;
-            }
-            return `${entityName} employee details updated`;
-          }
-          return `${entityName} employee updated`;
-        }
-        case 'deleted': {
-          return `${entityName} named employee has been deleted`;
-        }
-        default: {
-          return `${action} ${entityName} employee`;
-        }
-      }
+  switch (actionLower) {
+    case 'created': {
+      return `create ${entityName} ${collectionType}`;
     }
-      
-    case 'products': {
-      switch (actionLower) {
-        case 'created': {
-          return `${entityName} named product added`;
-        }
-        case 'updated': {
-          if (before && after) {
-            // Check for price changes
-            if (before.price !== after.price) {
-              return `${entityName} product unit price updated from ${before.price || 0} to ${after.price || 0}`;
-            }
-            if (before.name !== after.name) {
-              return `${before.name || 'Product'} name changed to ${after.name || 'Unknown'}`;
-            }
-            if (before.category !== after.category) {
-              return `${entityName} product category changed from ${before.category || 'Unknown'} to ${after.category || 'Unknown'}`;
-            }
-            return `${entityName} product details updated`;
-          }
-          return `${entityName} product updated`;
-        }
-        case 'deleted': {
-          return `${entityName} product has been deleted`;
-        }
-        default: {
-          return `${action} ${entityName} product`;
-        }
-      }
+    case 'updated': {
+      return `update ${entityName} ${collectionType}`;
     }
-      
-    case 'daily_trips': {
-      switch (actionLower) {
-        case 'created': {
-          return `${entityName} daily trip added`;
-        }
-        case 'updated': {
-          if (before && after) {
-            return `${entityName} daily trip (quantity and financial details) updated`;
-          }
-          return `${entityName} daily trip updated`;
-        }
-        case 'deleted': {
-          return `${entityName} daily trip has been deleted`;
-        }
-        default: {
-          return `${action} ${entityName} daily trip`;
-        }
-      }
+    case 'deleted': {
+      return `delete ${entityName} ${collectionType}`;
     }
-      
-    case 'additional_expenses': {
-      // Try to get expense details from before/after snapshots
-      const expenseData = after || before;
-      const driverName = expenseData?.driverName || expenseData?.name || 'Unknown Employee';
-      const expenseType = expenseData?.category || expenseData?.type || 'expense';
-      
-      switch (actionLower) {
-        case 'created': {
-          return `${driverName} ${expenseType} expense added`;
-        }
-        case 'updated': {
-          return `${driverName} ${expenseType} expense updated`;
-        }
-        case 'deleted': {
-          return `${driverName} ${expenseType} expense has been deleted`;
-        }
-        default: {
-          return `${action} ${driverName} ${expenseType} expense`;
-        }
-      }
-    }
-      
     default: {
-      switch (actionLower) {
-        case 'created': {
-          return `${entityName} named ${collectionName} added`;
-        }
-        case 'updated': {
-          return `${entityName} ${collectionName} updated`;
-        }
-        case 'deleted': {
-          return `${entityName} ${collectionName} has been deleted`;
-        }
-        default: {
-          return `${action} ${entityName} ${collectionName}`;
-        }
-      }
+      return `${action} ${entityName} ${collectionType}`;
     }
   }
 };
@@ -215,16 +132,16 @@ const fetchEntityName = async (
       case 'additional_expenses': {
         const expense = await apiClient.getAdditionalExpense(documentId);
         if (expense.data?.expense) {
-          return expense.data.expense.title || expense.data.expense.driverName || 'Expense';
+          return expense.data.expense.driverName || 'Unknown Employee';
         }
-        return 'Unknown Expense';
+        return 'Unknown Employee';
       }
       case 'daily_trips': {
         const trip = await apiClient.getDailyTrip(documentId);
         if (trip.data?.trip) {
-          return `${trip.data.trip.driverName || 'Unknown Driver'}'s trip on ${new Date(trip.data.trip.date).toLocaleDateString()}`;
+          return trip.data.trip.driverName || 'Unknown Employee';
         }
-        return 'Unknown Trip';
+        return 'Unknown Employee';
       }
       default: {
         return documentId;
