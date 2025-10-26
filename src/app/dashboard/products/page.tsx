@@ -129,7 +129,7 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
 const ProductTableSkeleton: React.FC = () => {
   return (
     <>
-      {[...Array(5)].map((_, index) => (
+      {Array.from({ length: 5 }).map((_, index) => (
         <TableRow key={index}>
           <TableCell><Skeleton variant="text" /></TableCell>
           <TableCell><Skeleton variant="text" /></TableCell>
