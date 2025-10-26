@@ -15,8 +15,6 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useUser } from '@/hooks/use-user';
 import { apiClient } from '@/lib/api-client';
-import { useEmployees, type Employee } from '@/contexts/employee-context';
-import { useProducts, type Product } from '@/contexts/product-context';
 
 // ---------- Types ----------
 interface Snapshot {
@@ -49,13 +47,13 @@ const getActionColor = (
   const actionLower = action.toLowerCase();
   
   // Handle various possible action values
-  if (actionLower.includes('create') || actionLower === 'create') {
+  if (actionLower === 'create' || actionLower === 'created') {
     return 'success'; // Green
   }
-  if (actionLower.includes('update') || actionLower === 'update') {
+  if (actionLower === 'update' || actionLower === 'updated') {
     return 'primary'; // Blue
   }
-  if (actionLower.includes('delete') || actionLower === 'delete') {
+  if (actionLower === 'delete' || actionLower === 'deleted') {
     return 'error'; // Red
   }
   
@@ -72,10 +70,12 @@ const getCollectionType = (collection: string): string => {
     case 'products': {
       return 'product';
     }
-    case 'additional_expenses': {
+    case 'additional_expenses':
+    case 'additionalExpenses': {
       return 'additionalExpense';
     }
-    case 'daily_trips': {
+    case 'daily_trips':
+    case 'dailyTrips': {
       return 'dailyTrip';
     }
     default: {
@@ -95,12 +95,15 @@ const getActionDescription = (activity: EnrichedActivity): string => {
   const collectionType = getCollectionType(collectionName);
   
   switch (actionLower) {
+    case 'create':
     case 'created': {
       return `create ${entityName} ${collectionType}`;
     }
+    case 'update':
     case 'updated': {
       return `update ${entityName} ${collectionType}`;
     }
+    case 'delete':
     case 'deleted': {
       return `delete ${entityName} ${collectionType}`;
     }
@@ -110,54 +113,55 @@ const getActionDescription = (activity: EnrichedActivity): string => {
   }
 };
 
-// ---------- Helper Function to Fetch Entity Names ----------
-const fetchEntityName = async (
-  collectionName: string,
-  documentId: string | undefined,
-  employees: Employee[],
-  products: Product[]
-): Promise<string> => {
-  if (!documentId) return 'Unknown Entity';
+// ---------- Helper Function to Extract Entity Name from History Snapshots ----------
+const extractEntityName = (
+  activity: Activity
+): string => {
+  const { collectionName, before, after } = activity;
+  
+  // Try to extract name from the snapshot data
+  // For 'create' actions, use 'after'
+  // For 'delete' actions, use 'before'
+  // For 'update' actions, prefer 'after' (current state)
+  const snapshot = after || before;
+  
+  if (!snapshot) {
+    return 'Unknown Entity';
+  }
 
   try {
     switch (collectionName) {
       case 'employees': {
-        const employee = employees.find(emp => emp.id === documentId);
-        return employee?.name || 'Unknown Employee';
+        return (snapshot as { name?: string }).name || 'Unknown Employee';
       }
       case 'products': {
-        const product = products.find(prod => prod.id === documentId);
-        return product?.name || 'Unknown Product';
+        return (snapshot as { name?: string }).name || 'Unknown Product';
       }
       case 'additional_expenses': {
-        const expense = await apiClient.getAdditionalExpense(documentId);
-        if (expense.data?.expense) {
-          return expense.data.expense.driverName || 'Unknown Employee';
-        }
-        return 'Unknown Employee';
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
       }
       case 'daily_trips': {
-        const trip = await apiClient.getDailyTrip(documentId);
-        if (trip.data?.trip) {
-          return trip.data.trip.driverName || 'Unknown Employee';
-        }
-        return 'Unknown Employee';
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      case 'dailyTrips': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      case 'additionalExpenses': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
       }
       default: {
-        return documentId;
+        return 'Unknown Entity';
       }
     }
   } catch (error) {
-    console.error(`Failed to fetch entity name for ${collectionName}:`, error);
-    return documentId;
+    console.error(`Failed to extract entity name for ${collectionName}:`, error);
+    return 'Unknown Entity';
   }
 };
 
 // ---------- Component ----------
 export default function Page(): React.JSX.Element {
   const { user } = useUser();
-  const { employees } = useEmployees();
-  const { products } = useProducts();
   const [activities, setActivities] = React.useState<EnrichedActivity[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -173,18 +177,11 @@ export default function Page(): React.JSX.Element {
           actor: item.actor || 'Unknown',
         }));
 
-        // Enrich activities with entity names
-        const enriched: EnrichedActivity[] = await Promise.all(
-          mapped.map(async (activity) => {
-            const entityName = await fetchEntityName(
-              activity.collectionName,
-              activity.documentId,
-              employees,
-              products
-            );
-            return { ...activity, entityName };
-          })
-        );
+        // Enrich activities with entity names from stored snapshots
+        const enriched: EnrichedActivity[] = mapped.map((activity) => {
+          const entityName = extractEntityName(activity);
+          return { ...activity, entityName };
+        });
 
         setActivities(enriched);
       } catch (error) {
@@ -195,7 +192,7 @@ export default function Page(): React.JSX.Element {
     };
 
     fetchActivities();
-  }, [employees, products]);
+  }, []);
 
   // Access control
   if (!user?.roles?.includes('super_admin')) {
