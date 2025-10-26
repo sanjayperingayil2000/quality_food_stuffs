@@ -6,6 +6,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { apiClient } from '@/lib/api-client';
 import { useNotifications } from './notification-context';
+import { useUser } from '@/hooks/use-user';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -226,12 +227,18 @@ const AdditionalExpenseContext = React.createContext<AdditionalExpenseContextTyp
 // ];
 
 export function AdditionalExpenseProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { user, isLoading: userLoading } = useUser();
   const [expenses, setExpenses] = React.useState<AdditionalExpense[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const { showSuccess, showError } = useNotifications();
 
   const refreshExpenses = React.useCallback(async () => {
+    // Don't load data if user is not authenticated yet
+    if (userLoading || !user) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -256,7 +263,7 @@ export function AdditionalExpenseProvider({ children }: { children: React.ReactN
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user, userLoading]);
 
   React.useEffect(() => {
     refreshExpenses();
