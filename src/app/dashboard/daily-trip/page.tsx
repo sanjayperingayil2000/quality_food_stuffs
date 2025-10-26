@@ -433,6 +433,9 @@ export default function Page(): React.JSX.Element {
   };
 
   const onSubmit = async (data: TripFormData) => {
+    console.log('onSubmit called with data:', data);
+    console.log('editingTrip:', editingTrip);
+    
     // Check if this is a new trip and if driver already has a trip for this date
     if (!editingTrip && !canAddTripForDriver(data.driverId, data.date.toISOString().split('T')[0])) {
       showError(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
@@ -471,11 +474,16 @@ export default function Page(): React.JSX.Element {
     };
 
     try {
+      console.log('About to call updateTrip/addTrip with tripData:', tripData);
       if (editingTrip) {
+        console.log('Calling updateTrip for trip ID:', editingTrip.id);
         await updateTrip(editingTrip.id, tripData);
+        console.log('updateTrip succeeded');
         showSuccess('Daily trip updated successfully!');
       } else {
+        console.log('Calling addTrip');
         await addTrip(tripData);
+        console.log('addTrip succeeded');
         showSuccess('Daily trip created successfully!');
       }
       handleClose();
@@ -1603,7 +1611,14 @@ export default function Page(): React.JSX.Element {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">
+            <Button 
+              type="submit" 
+              variant="contained"
+              onClick={(e) => {
+                console.log('Save button clicked');
+                console.log('Form errors:', errors);
+              }}
+            >
               Save
             </Button>
           </DialogActions>
