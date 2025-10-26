@@ -1614,7 +1614,7 @@ export default function Page(): React.JSX.Element {
             <Button 
               type="submit" 
               variant="contained"
-              onClick={(e) => {
+              onClick={() => {
                 console.log('Save button clicked');
                 console.log('Form errors:', errors);
               }}
