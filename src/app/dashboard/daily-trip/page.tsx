@@ -16,6 +16,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
+import CircularProgress from '@mui/material/CircularProgress';
+import Backdrop from '@mui/material/Backdrop';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -161,6 +163,7 @@ export default function Page(): React.JSX.Element {
   const [tripToDelete, setTripToDelete] = React.useState<DailyTrip | null>(null);
   const [filteredTrips, setFilteredTrips] = React.useState<DailyTrip[]>([]);
   const [driverFilter, setDriverFilter] = React.useState<string>('');
+  const [isSaving, setIsSaving] = React.useState(false);
   const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(9, 'day').format('YYYY-MM-DD'));
   const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
   const [mounted, setMounted] = React.useState(false);
@@ -496,6 +499,7 @@ export default function Page(): React.JSX.Element {
       profit: 0, // Will be calculated in context
     };
 
+    setIsSaving(true);
     try {
       // console.log('About to call updateTrip/addTrip with tripData:', tripData);
       if (editingTrip) {
@@ -513,6 +517,8 @@ export default function Page(): React.JSX.Element {
     } catch (error) {
       console.error('Failed to save trip:', error);
       showError('Failed to save daily trip. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -577,7 +583,17 @@ export default function Page(): React.JSX.Element {
         </Stack>
 
       <Stack spacing={2}>
-        {filteredTrips.map((trip, index) => (
+        {filteredTrips.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 2 }}>
+            <Typography variant="h6" color="text.secondary">
+              No records available at this time
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Try adjusting your date range or driver filter
+            </Typography>
+          </Paper>
+        ) : (
+          filteredTrips.map((trip, index) => (
           <Card key={trip.id} sx={{ 
             p: 2, 
             bgcolor: index % 2 === 0 ? 'blue.50' : 'white',
@@ -851,7 +867,7 @@ export default function Page(): React.JSX.Element {
               )}
             </Stack>
           </Card>
-        ))}
+        )))}
       </Stack>
 
       <Dialog 
@@ -1632,18 +1648,26 @@ export default function Page(): React.JSX.Element {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
+            <Button onClick={handleClose} disabled={isSaving}>Cancel</Button>
             <Button 
               type="submit" 
               variant="contained"
+              disabled={isSaving}
+              startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : null}
               onClick={() => {
                 // console.log('Save button clicked');
                 // console.log('Form errors:', errors);
               }}
             >
-              Save
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
           </DialogActions>
+          <Backdrop
+            sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+            open={isSaving}
+          >
+            <CircularProgress color="inherit" />
+          </Backdrop>
         </form>
       </Dialog>
 

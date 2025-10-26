@@ -189,8 +189,11 @@ export function Sales({ trips, drivers, sx }: SalesProps): React.JSX.Element {
               label="Date"
               value={selectedDate}
               onChange={handleDateChange}
-              slotProps={{
-                inputLabel: { shrink: true },
+              InputLabelProps={{ 
+                shrink: true 
+              }}
+              inputProps={{
+                style: { fontSize: '0.875rem' }
               }}
             />
           </Box>
