@@ -40,25 +40,61 @@ export default function Page(): React.JSX.Element {
     }
 
     // Calculate totals for the filtered trips
-    const totals = filteredTrips.reduce((acc, trip) => ({
+    const baseTotals = filteredTrips.reduce((acc, trip) => ({
       collectionAmount: acc.collectionAmount + trip.collectionAmount,
       purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
       discount: acc.discount + trip.discount,
-      amountToBe: acc.amountToBe + trip.amountToBe,
       petrol: acc.petrol + trip.petrol,
-      balance: acc.balance + trip.balance,
       expiry: acc.expiry + trip.expiry,
-      profit: acc.profit + trip.profit,
     }), {
       collectionAmount: 0,
       purchaseAmount: 0,
       discount: 0,
-      amountToBe: 0,
       petrol: 0,
-      balance: 0,
       expiry: 0,
-      profit: 0,
     });
+
+    // Calculate Amount to be and Profit dynamically
+    // Expiry after tax = ((expiry + 5%) - 13%)
+    const expiryAfterTax = Math.floor(baseTotals.expiry * 1.05 * 0.87);
+    
+    // Amount to be = Purchase amount - Expiry after tax
+    const amountToBe = baseTotals.purchaseAmount - expiryAfterTax;
+    
+    // For profit calculation, we need to calculate for each trip and sum
+    const calculatedProfit = filteredTrips.reduce((sum, trip) => {
+      // Calculate expiry after tax for this trip
+      const tripExpiryAfterTax = Math.floor(trip.expiry * 1.05 * 0.87);
+      
+      // Calculate fresh and bakery totals for this trip
+      const freshProductsTotal = trip.products.filter(p => p.category === 'fresh')
+        .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+      const bakeryProductsTotal = trip.products.filter(p => p.category === 'bakery')
+        .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+      const totalProductsValue = freshProductsTotal + bakeryProductsTotal;
+      
+      // Skip if no products
+      if (totalProductsValue === 0) return sum;
+      
+      // Calculate fresh net total
+      const freshNetTotal = freshProductsTotal * 0.885; // 11.5% reduction
+      
+      // Calculate bakery net total
+      const bakeryNetTotal = bakeryProductsTotal * 0.84; // 16% reduction
+      
+      // Profit = (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
+      const freshProfit = (freshNetTotal - tripExpiryAfterTax) * 0.135;
+      const bakeryProfit = bakeryNetTotal * 0.195;
+      const tripProfit = freshProfit + bakeryProfit - trip.discount;
+      
+      return sum + tripProfit;
+    }, 0);
+
+    const totals = {
+      ...baseTotals,
+      amountToBe,
+      profit: calculatedProfit,
+    };
 
     // Calculate total driver balance - sum of all drivers' balances on the To Date
     // If a driver doesn't have a balance entry on the To Date, use their most recent previous balance
