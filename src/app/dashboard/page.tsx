@@ -96,37 +96,62 @@ export default function Page(): React.JSX.Element {
       profit: calculatedProfit,
     };
 
-    // Calculate total driver balance - sum of all drivers' balances on the To Date
-    // If a driver doesn't have a balance entry on the To Date, use their most recent previous balance
-    const calculateTotalDriverBalance = () => {
-      const toDate = filters.dateRange[1];
-      if (!toDate) return drivers.reduce((sum, driver) => sum + (driver.balance || 0), 0);
-      
-      return drivers.reduce((sum, driver) => {
-        // Find the most recent trip for this driver on or before the To Date
-        const driverTrips = trips.filter(trip => trip.driverId === driver.id);
-        const tripsOnOrBeforeToDate = driverTrips.filter(trip => {
-          const tripDate = dayjs(trip.date);
-          return tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate, 'day');
-        });
-        
-        if (tripsOnOrBeforeToDate.length === 0) {
-          // No trips for this driver, use their base balance
-          return sum + (driver.balance || 0);
+    // Calculate balance based on the selected driver or aggregated balance from filtered trips
+    const calculateDriverBalance = () => {
+      // If a driver is selected, show only that driver's balance
+      if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+        const selectedDriver = drivers.find(driver => driver.name === filters.driver);
+        if (selectedDriver && filteredTrips.length > 0) {
+          // Find the most recent trip for this driver in the filtered range
+          const driverTrips = filteredTrips.filter(trip => trip.driverId === selectedDriver.id);
+          if (driverTrips.length > 0) {
+            const sortedTrips = driverTrips.sort((a, b) => 
+              dayjs(b.date).valueOf() - dayjs(a.date).valueOf()
+            );
+            return sortedTrips[0].balance || 0;
+          }
+          return selectedDriver.balance || 0;
         }
-        
-        // Sort by date descending to get the most recent trip
-        const sortedTrips = tripsOnOrBeforeToDate.sort((a, b) => 
-          dayjs(b.date).valueOf() - dayjs(a.date).valueOf()
-        );
-        
-        // Use the balance from the most recent trip
-        const mostRecentTrip = sortedTrips[0];
-        return sum + mostRecentTrip.balance;
+        return 0;
+      }
+      
+      // If no specific driver selected, calculate aggregate balance from all trips in date range
+      if (filteredTrips.length === 0) return 0;
+      
+      // For aggregate view, find the most recent balance for each driver in the filtered trips
+      // and sum them (since balance is per-driver)
+      const driverBalances = new Map<string, number>();
+      
+      // Sort trips by date to process them chronologically
+      const sortedFilteredTrips = [...filteredTrips].sort((a, b) => 
+        dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
+      );
+      
+      // For each driver, find their most recent trip's balance in the date range
+      for (const trip of sortedFilteredTrips) {
+        // Update balance for this driver (most recent trip for each driver)
+        driverBalances.set(trip.driverId, trip.balance || 0);
+      }
+      
+      // If we have driver balances, return their sum
+      if (driverBalances.size > 0) {
+        return [...driverBalances.values()].reduce((sum, balance) => sum + balance, 0);
+      }
+      
+      // Fallback: if no trips in range, check all drivers' most recent balance from all trips
+      return drivers.reduce((sum, driver) => {
+        const driverTrips = trips.filter(trip => trip.driverId === driver.id);
+        if (driverTrips.length > 0) {
+          const sortedTrips = driverTrips.sort((a, b) => 
+            dayjs(b.date).valueOf() - dayjs(a.date).valueOf()
+          );
+          return sum + (sortedTrips[0].balance || 0);
+        }
+        return sum + (driver.balance || 0);
       }, 0);
     };
     
-    const totalDriverBalance = calculateTotalDriverBalance();
+    const totalDriverBalance = calculateDriverBalance();
 
     return {
       collectionAmount: {
