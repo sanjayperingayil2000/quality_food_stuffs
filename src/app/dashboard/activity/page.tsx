@@ -15,6 +15,8 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useUser } from '@/hooks/use-user';
 import { apiClient } from '@/lib/api-client';
+import { useEmployees } from '@/contexts/employee-context';
+import { useProducts } from '@/contexts/product-context';
 
 // ---------- Types ----------
 interface Snapshot {
@@ -34,6 +36,10 @@ export interface Activity {
   after?: Snapshot;
   actor?: string; // populated actor name
   timestamp: string;
+}
+
+export interface EnrichedActivity extends Activity {
+  entityName?: string; // populated entity name
 }
 
 // ---------- Helpers ----------
@@ -57,12 +63,12 @@ const getActionColor = (
   return 'info';
 };
 
-const getActionDescription = (activity: Activity): string => {
-  const { action, collectionName, before, after, documentId } = activity;
+const getActionDescription = (activity: EnrichedActivity): string => {
+  const { action, collectionName, before, after } = activity;
   const actionLower = action.toLowerCase();
   
-  // Get entity name from after, before, or documentId
-  const entityName = after?.name || before?.name || documentId || 'Unknown';
+  // Use enriched entity name or fallback to snapshot data
+  const entityName = activity.entityName || after?.name || before?.name || after?.title || before?.title || 'Unknown Entity';
   
   
   switch (collectionName) {
@@ -187,10 +193,54 @@ const getActionDescription = (activity: Activity): string => {
   }
 };
 
+// ---------- Helper Function to Fetch Entity Names ----------
+const fetchEntityName = async (
+  collectionName: string,
+  documentId: string | undefined,
+  employees: any[],
+  products: any[]
+): Promise<string> => {
+  if (!documentId) return 'Unknown Entity';
+
+  try {
+    switch (collectionName) {
+      case 'employees': {
+        const employee = employees.find(emp => emp.id === documentId);
+        return employee?.name || 'Unknown Employee';
+      }
+      case 'products': {
+        const product = products.find(prod => prod.id === documentId);
+        return product?.name || 'Unknown Product';
+      }
+      case 'additional_expenses': {
+        const expense = await apiClient.getAdditionalExpense(documentId);
+        if (expense.data?.expense) {
+          return expense.data.expense.title || expense.data.expense.driverName || 'Expense';
+        }
+        return 'Unknown Expense';
+      }
+      case 'daily_trips': {
+        const trip = await apiClient.getDailyTrip(documentId);
+        if (trip.data?.trip) {
+          return `${trip.data.trip.driverName || 'Unknown Driver'}'s trip on ${new Date(trip.data.trip.date).toLocaleDateString()}`;
+        }
+        return 'Unknown Trip';
+      }
+      default:
+        return documentId;
+    }
+  } catch (error) {
+    console.error(`Failed to fetch entity name for ${collectionName}:`, error);
+    return documentId;
+  }
+};
+
 // ---------- Component ----------
 export default function Page(): React.JSX.Element {
   const { user } = useUser();
-  const [activities, setActivities] = React.useState<Activity[]>([]);
+  const { employees } = useEmployees();
+  const { products } = useProducts();
+  const [activities, setActivities] = React.useState<EnrichedActivity[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -205,7 +255,20 @@ export default function Page(): React.JSX.Element {
           actor: item.actor || 'Unknown',
         }));
 
-        setActivities(mapped);
+        // Enrich activities with entity names
+        const enriched: EnrichedActivity[] = await Promise.all(
+          mapped.map(async (activity) => {
+            const entityName = await fetchEntityName(
+              activity.collectionName,
+              activity.documentId,
+              employees,
+              products
+            );
+            return { ...activity, entityName };
+          })
+        );
+
+        setActivities(enriched);
       } catch (error) {
         console.error('Failed to load histories', error);
       } finally {
@@ -214,7 +277,7 @@ export default function Page(): React.JSX.Element {
     };
 
     fetchActivities();
-  }, []);
+  }, [employees, products]);
 
   // Access control
   if (!user?.roles?.includes('super_admin')) {

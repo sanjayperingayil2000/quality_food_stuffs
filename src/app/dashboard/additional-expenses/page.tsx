@@ -21,6 +21,8 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
 import { FilePdfIcon } from '@phosphor-icons/react/dist/ssr/FilePdf';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
@@ -115,6 +117,10 @@ export default function Page(): React.JSX.Element {
   const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
   const [expenseTypeFilter, setExpenseTypeFilter] = React.useState<string>('allTypes');
   const [employeeFilter, setEmployeeFilter] = React.useState<string>('allEmployees');
+  
+  // Loading states for actions
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // Map context expenses to display format
   const mappedExpenses = React.useMemo(() => {
@@ -186,6 +192,7 @@ export default function Page(): React.JSX.Element {
     setOpen(false);
     setEditingExpense(null);
     reset();
+    setIsSaving(false);
   };
 
   const handleDelete = async (expenseId: string) => {
@@ -198,6 +205,7 @@ export default function Page(): React.JSX.Element {
 
   const handleDeleteConfirm = async () => {
     if (expenseToDelete) {
+      setIsDeleting(true);
       try {
         await deleteExpense(expenseToDelete.id);
         // Update filtered expenses to reflect the deletion
@@ -206,6 +214,8 @@ export default function Page(): React.JSX.Element {
         setExpenseToDelete(null);
       } catch (error) {
         console.error('Failed to delete expense:', error);
+      } finally {
+        setIsDeleting(false);
       }
     }
   };
@@ -213,6 +223,7 @@ export default function Page(): React.JSX.Element {
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
     setExpenseToDelete(null);
+    setIsDeleting(false);
   };
 
   const applyFilters = React.useCallback(() => {
@@ -379,6 +390,7 @@ export default function Page(): React.JSX.Element {
   };
 
   const onSubmit = async (data: ExpenseFormData) => {
+    setIsSaving(true);
     try {
       const employee = employees.find(emp => emp.id === data.employeeId);
 
@@ -423,6 +435,8 @@ export default function Page(): React.JSX.Element {
       handleClose();
     } catch (error) {
       console.error('Failed to save expense:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -566,10 +580,28 @@ export default function Page(): React.JSX.Element {
         </Typography>
       )}
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={isSaving ? undefined : handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingExpense ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogContent>
+          <DialogContent sx={{ position: 'relative' }}>
+            {isSaving && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'rgba(255, 255, 255, 0.8)',
+                  zIndex: 1,
+                }}
+              >
+                <CircularProgress />
+              </Box>
+            )}
             <Stack spacing={2} sx={{ pt: 1 }}>
               <Controller
                 control={control}
@@ -684,26 +716,59 @@ export default function Page(): React.JSX.Element {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              Save
+            <Button onClick={handleClose} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={isSaving}
+              startIcon={isSaving ? <CircularProgress size={16} /> : (editingExpense ? <PencilIcon /> : <PlusIcon />)}
+            >
+              {isSaving ? (editingExpense ? 'Updating...' : 'Adding...') : 'Save'}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+      <Dialog open={deleteDialogOpen} onClose={isDeleting ? undefined : handleDeleteCancel}>
         <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ position: 'relative' }}>
+          {isDeleting && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                zIndex: 1,
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          )}
           <Typography>
-            Are you sure you want to delete this?
+            {`Are you sure you want to delete this expense? This action cannot be undone.`}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteCancel}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
+          <Button onClick={handleDeleteCancel} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <TrashIcon />}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
