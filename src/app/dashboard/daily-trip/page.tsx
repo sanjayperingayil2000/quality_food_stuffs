@@ -217,15 +217,15 @@ export default function Page(): React.JSX.Element {
   // Debug logging for drivers
   const currentDriverId = watch('driverId');
   React.useEffect(() => {
-    console.log('=== DRIVER DEBUG INFO ===');
-    console.log('Available drivers:', drivers);
-    console.log('Drivers length:', drivers.length);
-    console.log('Current driver ID:', currentDriverId);
-    console.log('Current driver ID type:', typeof currentDriverId);
-    console.log('Filtered drivers for transfer:', drivers.filter(d => d.id !== currentDriverId));
-    console.log('Filtered drivers count:', drivers.filter(d => d.id !== currentDriverId).length);
-    console.log('Transfer form receiving driver ID:', transferForm.receivingDriverId);
-    console.log('========================');
+    // console.log('=== DRIVER DEBUG INFO ===');
+    // console.log('Available drivers:', drivers);
+    // console.log('Drivers length:', drivers.length);
+    // console.log('Current driver ID:', currentDriverId);
+    // console.log('Current driver ID type:', typeof currentDriverId);
+    // console.log('Filtered drivers for transfer:', drivers.filter(d => d.id !== currentDriverId));
+    // console.log('Filtered drivers count:', drivers.filter(d => d.id !== currentDriverId).length);
+    // console.log('Transfer form receiving driver ID:', transferForm.receivingDriverId);
+    // console.log('========================');
   }, [drivers, currentDriverId, transferForm.receivingDriverId]);
 
   // Filter products based on search
@@ -272,14 +272,14 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleEdit = (trip: DailyTrip) => {
-    console.log('handleEdit called with trip:', trip);
+    // console.log('handleEdit called with trip:', trip);
     setEditingTrip(trip);
     setSelectedDriverId(trip.driverId);
     setProductSearch('');
     
     const tripDate = dayjs(trip.date).toDate();
-    console.log('Original date:', trip.date);
-    console.log('Converted date:', tripDate);
+    // console.log('Original date:', trip.date);
+    // console.log('Converted date:', tripDate);
     
     // Ensure all numeric fields have valid values
     const safeBalance = typeof trip.balance === 'number' ? trip.balance : 0;
@@ -314,8 +314,8 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = (tripId: string) => {
-    console.log('Frontend handleDelete called with trip ID:', tripId);
-    console.log('Trip ID type:', typeof tripId);
+    // console.log('Frontend handleDelete called with trip ID:', tripId);
+    // console.log('Trip ID type:', typeof tripId);
     
     const trip = trips.find(t => t.id === tripId);
     if (trip) {
@@ -447,8 +447,8 @@ export default function Page(): React.JSX.Element {
   };
 
   const onSubmit = async (data: TripFormData) => {
-    console.log('onSubmit called with data:', data);
-    console.log('editingTrip:', editingTrip);
+    // console.log('onSubmit called with data:', data);
+    // console.log('editingTrip:', editingTrip);
     
     // Check if this is a new trip and if driver already has a trip for this date
     if (!editingTrip && !canAddTripForDriver(data.driverId, data.date.toISOString().split('T')[0])) {
@@ -465,6 +465,13 @@ export default function Page(): React.JSX.Element {
       transferredProducts: filteredTransferredProducts,
     };
 
+    // Calculate totals for financial metrics
+    const totals = calculateTotals(
+      filteredProducts,
+      [],
+      filteredTransferredProducts
+    );
+
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
       driverName: driver?.name || '',
@@ -478,9 +485,9 @@ export default function Page(): React.JSX.Element {
       discount: data.discount,
       petrol: data.petrol,
       balance: roundBalance(data.balance),
-      totalAmount: 0, // Will be calculated in context
-      netTotal: 0, // Will be calculated in context
-      grandTotal: 0, // Will be calculated in context
+      totalAmount: totals.overall.total,
+      netTotal: totals.overall.netTotal,
+      grandTotal: totals.overall.grandTotal,
       expiryAfterTax: 0, // Will be calculated in context
       amountToBe: 0, // Will be calculated in context
       salesDifference: 0, // Will be calculated in context
@@ -488,16 +495,16 @@ export default function Page(): React.JSX.Element {
     };
 
     try {
-      console.log('About to call updateTrip/addTrip with tripData:', tripData);
+      // console.log('About to call updateTrip/addTrip with tripData:', tripData);
       if (editingTrip) {
-        console.log('Calling updateTrip for trip ID:', editingTrip.id);
+        // console.log('Calling updateTrip for trip ID:', editingTrip.id);
         await updateTrip(editingTrip.id, tripData);
-        console.log('updateTrip succeeded');
+        // console.log('updateTrip succeeded');
         showSuccess('Daily trip updated successfully!');
       } else {
-        console.log('Calling addTrip');
+        // console.log('Calling addTrip');
         await addTrip(tripData);
-        console.log('addTrip succeeded');
+        // console.log('addTrip succeeded');
         showSuccess('Daily trip created successfully!');
       }
       handleClose();
@@ -1019,7 +1026,7 @@ export default function Page(): React.JSX.Element {
                         format="MMM D, YYYY"
                         value={field.value ? dayjs(field.value) : null}
                         onChange={(newValue) => {
-                          console.log('Date picker changed to:', newValue?.format('YYYY-MM-DD'));
+                          // console.log('Date picker changed to:', newValue?.format('YYYY-MM-DD'));
                           field.onChange(newValue?.toDate());
                         }}
                         maxDate={dayjs()} // Prevent future dates
@@ -1214,7 +1221,7 @@ export default function Page(): React.JSX.Element {
                         <Select
                           value={transferForm.receivingDriverId}
                           onChange={(e) => {
-                            console.log('Transfer driver dropdown changed to:', e.target.value);
+                            // console.log('Transfer driver dropdown changed to:', e.target.value);
                             setTransferForm(prev => ({ ...prev, receivingDriverId: e.target.value }));
                           }}
                           label="Select Receiving Driver"
@@ -1233,16 +1240,16 @@ export default function Page(): React.JSX.Element {
                             }
                           }}
                           onClick={() => {
-                            console.log('Transfer driver dropdown clicked');
-                            console.log('Current drivers state:', drivers);
-                            console.log('Current driver ID:', currentDriverId);
-                            console.log('Available drivers:', currentDriverId ? drivers.filter(d => d.id !== currentDriverId) : drivers);
+                            // console.log('Transfer driver dropdown clicked');
+                            // console.log('Current drivers state:', drivers);
+                            // console.log('Current driver ID:', currentDriverId);
+                            // console.log('Available drivers:', currentDriverId ? drivers.filter(d => d.id !== currentDriverId) : drivers);
                           }}
                           onOpen={() => {
-                            console.log('Transfer driver dropdown opened');
+                            // console.log('Transfer driver dropdown opened');
                           }}
                           onClose={() => {
-                            console.log('Transfer driver dropdown closed');
+                            // console.log('Transfer driver dropdown closed');
                           }}
                         >
                           {(() => {
@@ -1254,10 +1261,10 @@ export default function Page(): React.JSX.Element {
                               ? drivers.filter(d => d.id !== currentDriverId)
                               : drivers;
                             
-                            console.log('Rendering', availableDrivers.length, 'MenuItems for drivers');
+                            // console.log('Rendering', availableDrivers.length, 'MenuItems for drivers');
                             
                             return availableDrivers.map((driver, index) => {
-                              console.log(`Rendering MenuItem ${index + 1}:`, driver.name);
+                              // console.log(`Rendering MenuItem ${index + 1}:`, driver.name);
                               return (
                                 <MenuItem key={driver.id} value={driver.id}>
                                   <Box>
@@ -1629,8 +1636,8 @@ export default function Page(): React.JSX.Element {
               type="submit" 
               variant="contained"
               onClick={() => {
-                console.log('Save button clicked');
-                console.log('Form errors:', errors);
+                // console.log('Save button clicked');
+                // console.log('Form errors:', errors);
               }}
             >
               Save
