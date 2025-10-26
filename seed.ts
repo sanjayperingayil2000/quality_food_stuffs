@@ -5,6 +5,8 @@ import bcrypt from 'bcryptjs';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
+import fs from 'fs';
+import path from 'path';
 import { User } from './src/models/user';
 // import { freshProducts } from './data/fresh-products.ts';
 // import { bakeryProducts } from './data/bakery-products.ts';
@@ -2619,6 +2621,27 @@ async function seedDefaultData(): Promise<void> {
     priceHistory: [
       { version: 1, price: 5.78, updatedAt: new Date(), updatedBy: 'Admin' }
     ]
+  },
+  {
+    id: 'PRD-FRS-070',
+    name: '4424 UHT MILK STRAWBERRY',
+    category: 'fresh',
+    price: 7.2,
+    description: 'UHT Milk Strawberry',
+    sku: 'FR-UHT-070',
+    unit: 'kg',
+    minimumQuantity: 1,
+    maximumQuantity: 30,
+    isActive: true,
+    expiryDays: 21,
+    supplier: 'Fresh Dairy Co.',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdBy: 'EMP-001',
+    updatedBy: 'EMP-001',
+    priceHistory: [
+      { version: 1, price: 7.2, updatedAt: new Date(), updatedBy: 'Admin' }
+    ]
   }
   ]
 
@@ -2807,6 +2830,85 @@ async function seedDefaultData(): Promise<void> {
   }
 
   console.log('Additional expenses seeded');
+
+  // Daily Trips - check if already seeded
+  const existingTripCount = await DailyTrip.countDocuments();
+  if (existingTripCount > 0) {
+    console.log('Daily trips already exist, skipping...');
+  } else {
+    await seedDailyTrips();
+  }
+}
+
+async function seedDailyTrips(): Promise<void> {
+  // Load data from daily_trips.json
+  const jsonFilePath = path.join(process.cwd(), 'daily_trips.json');
+  
+  if (!fs.existsSync(jsonFilePath)) {
+    console.log('daily_trips.json not found, skipping...');
+    return;
+  }
+  
+  const jsonData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
+  
+  // Parse JSON data and convert to IDailyTrip format
+  for (const tripData of jsonData) {
+    // Convert MongoDB date format to Date object
+    const tripDate = tripData.date?.$date ? new Date(tripData.date.$date) : new Date(tripData.date);
+    const createdAt = tripData.createdAt?.$date ? new Date(tripData.createdAt.$date) : new Date();
+    const updatedAt = tripData.updatedAt?.$date ? new Date(tripData.updatedAt.$date) : new Date();
+    
+    // Clean products array (remove _id field)
+    const products = tripData.products.map((p: any) => ({
+      productId: p.productId,
+      productName: p.productName,
+      category: p.category,
+      quantity: p.quantity,
+      unitPrice: p.unitPrice,
+    }));
+    
+    // Clean transfer data
+    const transfer = tripData.transfer || {
+      isProductTransferred: false,
+      transferredProducts: [],
+    };
+    
+    // Clean acceptedProducts array
+    const acceptedProducts = (tripData.acceptedProducts || []).map((p: any) => ({
+      productId: p.productId,
+      productName: p.productName,
+      category: p.category,
+      quantity: p.quantity,
+      unitPrice: p.unitPrice,
+    }));
+    
+    const trip: Partial<IDailyTrip> = {
+      id: tripData.id,
+      driverId: tripData.driverId,
+      driverName: tripData.driverName,
+      date: tripDate,
+      products,
+      transfer,
+      acceptedProducts,
+      collectionAmount: tripData.collectionAmount || 0,
+      purchaseAmount: tripData.purchaseAmount || 0,
+      expiry: tripData.expiry || 0,
+      discount: tripData.discount || 0,
+      petrol: tripData.petrol || 0,
+      totalAmount: tripData.totalAmount || 0,
+      netTotal: tripData.netTotal || 0,
+      grandTotal: tripData.grandTotal || 0,
+      profit: tripData.profit || 0,
+      createdAt,
+      updatedAt,
+      createdBy: tripData.createdBy,
+      updatedBy: tripData.updatedBy || tripData.createdBy,
+    };
+    
+    await DailyTrip.create(trip);
+  }
+
+  console.log(`Daily trips seeded from JSON (${jsonData.length} trips)`);
 }
 
 // ----------------------
