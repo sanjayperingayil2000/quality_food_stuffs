@@ -26,7 +26,9 @@ export default function Page(): React.JSX.Element {
       
       if (!fromDate || !toDate) return true;
       
-      return tripDate.isAfter(fromDate.subtract(1, 'day')) && tripDate.isBefore(toDate.add(1, 'day'));
+      // Inclusive date range filtering
+      return (tripDate.isSame(fromDate, 'day') || tripDate.isAfter(fromDate)) && 
+             (tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate));
     });
 
     // Filter trips based on driver selection
