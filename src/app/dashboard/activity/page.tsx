@@ -15,8 +15,8 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useUser } from '@/hooks/use-user';
 import { apiClient } from '@/lib/api-client';
-import { useEmployees } from '@/contexts/employee-context';
-import { useProducts } from '@/contexts/product-context';
+import { useEmployees, type Employee } from '@/contexts/employee-context';
+import { useProducts, type Product } from '@/contexts/product-context';
 
 // ---------- Types ----------
 interface Snapshot {
@@ -197,8 +197,8 @@ const getActionDescription = (activity: EnrichedActivity): string => {
 const fetchEntityName = async (
   collectionName: string,
   documentId: string | undefined,
-  employees: any[],
-  products: any[]
+  employees: Employee[],
+  products: Product[]
 ): Promise<string> => {
   if (!documentId) return 'Unknown Entity';
 
@@ -226,8 +226,9 @@ const fetchEntityName = async (
         }
         return 'Unknown Trip';
       }
-      default:
+      default: {
         return documentId;
+      }
     }
   } catch (error) {
     console.error(`Failed to fetch entity name for ${collectionName}:`, error);
