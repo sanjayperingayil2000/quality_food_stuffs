@@ -12,6 +12,8 @@ import Link from '@mui/material/Link';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Backdrop from '@mui/material/Backdrop';
 import { EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 import { Controller, useForm } from 'react-hook-form';
@@ -70,16 +72,23 @@ export function SignInForm(): React.JSX.Element {
   );
 
   return (
-    <Stack spacing={4} sx={{ maxWidth: 400, mx: 'auto', mt: 6 }}>
-      {/* Header */}
-      <Stack spacing={1}>
-        <Typography variant="h4" textAlign="center">
-          Sign In
-        </Typography>
-        <Typography color="text.secondary" variant="body2" textAlign="center">
-          Contact your administrator for account access.
-        </Typography>
-      </Stack>
+    <>
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+        open={isPending}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+      <Stack spacing={4} sx={{ maxWidth: 400, mx: 'auto', mt: 6 }}>
+        {/* Header */}
+        <Stack spacing={1}>
+          <Typography variant="h4" textAlign="center">
+            Sign In
+          </Typography>
+          <Typography color="text.secondary" variant="body2" textAlign="center">
+            Contact your administrator for account access.
+          </Typography>
+        </Stack>
 
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -152,11 +161,12 @@ export function SignInForm(): React.JSX.Element {
           {errors.root && <Alert color="error">{errors.root.message}</Alert>}
 
           {/* Submit button */}
-          <Button disabled={isPending} type="submit" variant="contained" fullWidth>
+          <Button disabled={isPending} type="submit" variant="contained" fullWidth startIcon={isPending ? <CircularProgress size={16} color="inherit" /> : null}>
             {isPending ? 'Signing in...' : 'Sign In'}
           </Button>
         </Stack>
       </form>
-    </Stack>
+      </Stack>
+    </>
   );
 }

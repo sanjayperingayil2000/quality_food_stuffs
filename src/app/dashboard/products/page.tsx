@@ -27,7 +27,7 @@ import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { TableIcon } from '@phosphor-icons/react/dist/ssr/Table';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
-import { ClockClockwiseIcon, CaretUpIcon, CaretDownIcon } from '@phosphor-icons/react';
+import { ClockClockwiseIcon, CaretUpIcon, CaretDownIcon, ArrowClockwiseIcon } from '@phosphor-icons/react';
 import { Tooltip } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -380,6 +380,13 @@ export default function Page(): React.JSX.Element {
     }
   };
 
+  const handleResetFilters = () => {
+    setCategoryFilter('allCategories');
+    setSearchQuery('');
+    setSortField(null);
+    setSortDirection('asc');
+  };
+
 
 
   return (
@@ -405,6 +412,12 @@ export default function Page(): React.JSX.Element {
         </FormControl>
 
         <TextField size="small" label="Search by Name or ID" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} sx={{ minWidth: 250 }} />
+        
+        <Tooltip title="Reset Filters">
+          <IconButton onClick={handleResetFilters} color="primary">
+            <ArrowClockwiseIcon />
+          </IconButton>
+        </Tooltip>
       </Stack>
 
       <Table>
@@ -413,32 +426,47 @@ export default function Page(): React.JSX.Element {
             <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('name')}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                 Product name
-                {sortField === 'name' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 16 }}>
+                  <CaretUpIcon size={12} style={{ opacity: sortField === 'name' && sortDirection === 'asc' ? 1 : 0.3 }} />
+                  <CaretDownIcon size={12} style={{ opacity: sortField === 'name' && sortDirection === 'desc' ? 1 : 0.3 }} />
+                </Box>
               </Box>
             </TableCell>
             <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('price')}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                 Price
-                {sortField === 'price' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 16 }}>
+                  <CaretUpIcon size={12} style={{ opacity: sortField === 'price' && sortDirection === 'asc' ? 1 : 0.3 }} />
+                  <CaretDownIcon size={12} style={{ opacity: sortField === 'price' && sortDirection === 'desc' ? 1 : 0.3 }} />
+                </Box>
               </Box>
             </TableCell>
             <TableCell align="center">Category</TableCell>
             <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('id')}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                 Product ID
-                {sortField === 'id' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 16 }}>
+                  <CaretUpIcon size={12} style={{ opacity: sortField === 'id' && sortDirection === 'asc' ? 1 : 0.3 }} />
+                  <CaretDownIcon size={12} style={{ opacity: sortField === 'id' && sortDirection === 'desc' ? 1 : 0.3 }} />
+                </Box>
               </Box>
             </TableCell>
             <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('updatedAt')}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                 Last edited
-                {sortField === 'updatedAt' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 16 }}>
+                  <CaretUpIcon size={12} style={{ opacity: sortField === 'updatedAt' && sortDirection === 'asc' ? 1 : 0.3 }} />
+                  <CaretDownIcon size={12} style={{ opacity: sortField === 'updatedAt' && sortDirection === 'desc' ? 1 : 0.3 }} />
+                </Box>
               </Box>
             </TableCell>
             <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('createdAt')}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                 Created
-                {sortField === 'createdAt' && (sortDirection === 'asc' ? <CaretUpIcon size={16} /> : <CaretDownIcon size={16} />)}
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 16 }}>
+                  <CaretUpIcon size={12} style={{ opacity: sortField === 'createdAt' && sortDirection === 'asc' ? 1 : 0.3 }} />
+                  <CaretDownIcon size={12} style={{ opacity: sortField === 'createdAt' && sortDirection === 'desc' ? 1 : 0.3 }} />
+                </Box>
               </Box>
             </TableCell>
             <TableCell align="center">Actions</TableCell>
