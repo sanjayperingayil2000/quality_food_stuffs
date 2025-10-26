@@ -215,20 +215,40 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
 
   const updateDriverBalance = React.useCallback(async (driverId: string, newBalance: number, reason: string, updatedBy?: string) => {
     try {
+      // Get the current employee to build proper history
+      const currentEmployee = employees.find(emp => emp.id === driverId && emp.designation === 'driver');
+      if (!currentEmployee) {
+        throw new Error('Driver not found');
+      }
+
+      const roundedNewBalance = Math.round(newBalance);
+      
+      const newHistoryEntry: BalanceHistoryEntry = {
+        version: (currentEmployee.balanceHistory?.length || 0) + 1,
+        balance: roundedNewBalance,
+        updatedAt: new Date(),
+        reason,
+        updatedBy,
+      };
+
+      const updatedBalanceHistory = [...(currentEmployee.balanceHistory || []), newHistoryEntry];
+
+      // Build the update payload with balance history
+      const updatePayload = {
+        balance: newBalance,
+        balanceHistory: updatedBalanceHistory.map(entry => ({
+          version: entry.version,
+          balance: entry.balance,
+          updatedAt: entry.updatedAt.toISOString(),
+          reason: entry.reason,
+          updatedBy: entry.updatedBy,
+        })),
+        updatedBy
+      };
+
+      // Update local state immediately for better UX
       const updatedEmployees = employees.map(emp => {
         if (emp.id === driverId && emp.designation === 'driver') {
-          const roundedNewBalance = Math.round(newBalance);
-          
-          const newHistoryEntry: BalanceHistoryEntry = {
-            version: (emp.balanceHistory?.length || 0) + 1,
-            balance: roundedNewBalance,
-            updatedAt: new Date(),
-            reason,
-            updatedBy,
-          };
-
-          const updatedBalanceHistory = [...(emp.balanceHistory || []), newHistoryEntry];
-
           return {
             ...emp,
             balance: roundedNewBalance,
@@ -239,15 +259,10 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
         }
         return emp;
       });
-      
-      // Update local state immediately
       setEmployees(updatedEmployees);
       
-      // Save to backend - the API will handle balance history
-      const result = await apiClient.updateEmployee(driverId, { 
-        balance: newBalance,
-        updatedBy
-      });
+      // Save to backend with full balance history
+      const result = await apiClient.updateEmployee(driverId, updatePayload);
       
       if (result.error) {
         // Revert local state on error

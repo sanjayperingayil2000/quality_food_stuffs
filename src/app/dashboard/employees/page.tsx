@@ -20,6 +20,8 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
@@ -29,7 +31,7 @@ import { useNotifications } from '@/contexts/notification-context';
 import { Tooltip } from '@mui/material';
 
 export default function Page(): React.JSX.Element {
-  const { employees, addEmployee, updateEmployee, deleteEmployee, updateDriverBalance } = useEmployees();
+  const { employees, addEmployee, updateEmployee, deleteEmployee, updateDriverBalance, refreshEmployees } = useEmployees();
   const { showSuccess, showError } = useNotifications();
 
   // Dialog states
@@ -64,6 +66,11 @@ export default function Page(): React.JSX.Element {
 
   // Validation errors
   const [formErrors, setFormErrors] = React.useState<FormErrors>({});
+
+  // Loading states
+  const [isAdding, setIsAdding] = React.useState(false);
+  const [isUpdating, setIsUpdating] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const handleAddClick = () => {
     setFormData({ name: '', phoneNumber: '', email: '', address: '', role: 'driver', location: '', routeName: '', balance: '' });
@@ -166,6 +173,7 @@ export default function Page(): React.JSX.Element {
 
   const handleAddSubmit = async () => {
     if (validateForm() && formData.name && formData.phoneNumber) {
+      setIsAdding(true);
       const newEmployee: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'> = {
         name: formData.name,
         designation: formData.role,
@@ -193,12 +201,15 @@ export default function Page(): React.JSX.Element {
         setAddDialogOpen(false);
       } catch {
         showError('Failed to add employee. Please try again.');
+      } finally {
+        setIsAdding(false);
       }
     }
   };
 
   const handleEditSubmit = async () => {
     if (selectedEmployee && validateForm()) {
+      setIsUpdating(true);
       try {
         // Handle balance update for drivers first
         if (formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString()) {
@@ -208,6 +219,8 @@ export default function Page(): React.JSX.Element {
           if (newBalance !== previousBalance) {
             // Use the updateDriverBalance method to maintain history
             await updateDriverBalance(selectedEmployee.id, newBalance, 'manual_adjustment', 'EMP-001');
+            // Refresh employees to get updated data
+            await refreshEmployees();
           }
         }
 
@@ -224,24 +237,33 @@ export default function Page(): React.JSX.Element {
         };
 
         await updateEmployee(selectedEmployee.id, updates);
+        
+        // Refresh to get the latest data including balance history
+        await refreshEmployees();
+        
         showSuccess('Employee updated successfully!');
         setEditDialogOpen(false);
         setSelectedEmployee(null);
       } catch {
         showError('Failed to update employee. Please try again.');
+      } finally {
+        setIsUpdating(false);
       }
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (selectedEmployee) {
+      setIsDeleting(true);
       try {
-        deleteEmployee(selectedEmployee.id);
+        await deleteEmployee(selectedEmployee.id);
         showSuccess('Employee deleted successfully!');
         setDeleteDialogOpen(false);
         setSelectedEmployee(null);
       } catch {
         showError('Failed to delete employee. Please try again.');
+      } finally {
+        setIsDeleting(false);
       }
     }
   };
@@ -253,6 +275,9 @@ export default function Page(): React.JSX.Element {
     setBalanceHistoryDialogOpen(false);
     setSelectedEmployee(null);
     setFormErrors({});
+    setIsAdding(false);
+    setIsUpdating(false);
+    setIsDeleting(false);
   };
 
   // Display employees sorted by role (CEO first, then drivers, then staff)
@@ -348,9 +373,27 @@ export default function Page(): React.JSX.Element {
       </Table>
 
       {/* Add Employee Dialog */}
-      <Dialog open={addDialogOpen} onClose={handleCloseDialogs} maxWidth="sm" fullWidth>
+      <Dialog open={addDialogOpen} onClose={isAdding ? undefined : handleCloseDialogs} maxWidth="sm" fullWidth>
         <DialogTitle>Add New Employee</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ position: 'relative' }}>
+          {isAdding && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                zIndex: 1,
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          )}
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Name"
@@ -442,15 +485,42 @@ export default function Page(): React.JSX.Element {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialogs}>Cancel</Button>
-          <Button onClick={handleAddSubmit} variant="contained">Add Employee</Button>
+          <Button onClick={handleCloseDialogs} disabled={isAdding}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleAddSubmit} 
+            variant="contained" 
+            disabled={isAdding}
+            startIcon={isAdding ? <CircularProgress size={16} /> : <PlusIcon />}
+          >
+            {isAdding ? 'Adding...' : 'Add Employee'}
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Edit Employee Dialog */}
-      <Dialog open={editDialogOpen} onClose={handleCloseDialogs} maxWidth="sm" fullWidth>
+      <Dialog open={editDialogOpen} onClose={isUpdating ? undefined : handleCloseDialogs} maxWidth="sm" fullWidth>
         <DialogTitle>Edit Employee</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ position: 'relative' }}>
+          {isUpdating && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                zIndex: 1,
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          )}
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Name"
@@ -541,23 +611,58 @@ export default function Page(): React.JSX.Element {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialogs}>Cancel</Button>
-          <Button onClick={handleEditSubmit} variant="contained">Update Employee</Button>
+          <Button onClick={handleCloseDialogs} disabled={isUpdating}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleEditSubmit} 
+            variant="contained"
+            disabled={isUpdating}
+            startIcon={isUpdating ? <CircularProgress size={16} /> : <PencilIcon />}
+          >
+            {isUpdating ? 'Updating...' : 'Update Employee'}
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={handleCloseDialogs}>
+      <Dialog open={deleteDialogOpen} onClose={isDeleting ? undefined : handleCloseDialogs}>
         <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ position: 'relative' }}>
+          {isDeleting && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                zIndex: 1,
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          )}
           <Typography>
             {`Are you sure you want to delete employee "${selectedEmployee?.name}"? This action cannot be undone.`}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialogs}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} variant="contained" color="error">
-            Delete
+          <Button onClick={handleCloseDialogs} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            variant="contained" 
+            color="error"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <TrashIcon />}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -587,29 +692,38 @@ export default function Page(): React.JSX.Element {
                   {selectedEmployee.balanceHistory && selectedEmployee.balanceHistory.length > 0 ? (
                     selectedEmployee.balanceHistory
                       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                      .map((entry, index) => (
-                        <TableRow key={`${entry.version}-${index}`}>
-                          <TableCell>
-                            {new Date(entry.updatedAt).toLocaleDateString()} {new Date(entry.updatedAt).toLocaleTimeString()}
-                          </TableCell>
-                          <TableCell>AED {index > 0 ? (selectedEmployee.balanceHistory![index - 1].balance || 0).toFixed(2) : '0.00'}</TableCell>
-                          <TableCell>
-                            <Typography 
-                              variant="body2" 
-                              color={(entry.balance || 0) >= (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance || 0 : 0) ? 'success.main' : 'error.main'}
-                              sx={{ fontWeight: 600 }}
-                            >
-                              {(entry.balance || 0) >= (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance || 0 : 0) ? '+' : ''}AED {((entry.balance || 0) - (index > 0 ? selectedEmployee.balanceHistory![index - 1].balance || 0 : 0)).toFixed(2)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>AED {entry.balance?.toFixed(2) || '0.00'}</TableCell>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                              {entry.reason?.replace('_', ' ') || 'N/A'}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      .map((entry, index) => {
+                        // Get the sorted array for previous balance calculation
+                        const sortedHistory = [...selectedEmployee.balanceHistory!]
+                          .sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
+                        const previousIndex = sortedHistory.findIndex(e => e.version === entry.version) - 1;
+                        const previousBalance = previousIndex >= 0 ? sortedHistory[previousIndex].balance : 0;
+                        const changeAmount = (entry.balance || 0) - previousBalance;
+                        
+                        return (
+                          <TableRow key={`${entry.version}-${index}`}>
+                            <TableCell>
+                              {new Date(entry.updatedAt).toLocaleDateString()} {new Date(entry.updatedAt).toLocaleTimeString()}
+                            </TableCell>
+                            <TableCell>AED {previousBalance.toFixed(2)}</TableCell>
+                            <TableCell>
+                              <Typography 
+                                variant="body2" 
+                                color={changeAmount >= 0 ? 'success.main' : 'error.main'}
+                                sx={{ fontWeight: 600 }}
+                              >
+                                {changeAmount >= 0 ? '+' : ''}AED {changeAmount.toFixed(2)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>AED {entry.balance?.toFixed(2) || '0.00'}</TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                                {entry.reason?.replace('_', ' ') || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} align="center">
