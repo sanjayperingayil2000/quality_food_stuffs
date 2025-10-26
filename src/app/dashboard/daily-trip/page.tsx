@@ -555,7 +555,7 @@ export default function Page(): React.JSX.Element {
           }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
               <Typography variant="h6">
-                {trip.driverName} - {dayjs(trip.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST
+                {trip.driverName} - {dayjs(trip.date).format('MMM D, YYYY')}
               </Typography>
               <Stack direction="row" spacing={1}>
                 <IconButton onClick={() => handleEdit(trip)} size="small">
