@@ -272,22 +272,36 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleEdit = (trip: DailyTrip) => {
+    console.log('handleEdit called with trip:', trip);
     setEditingTrip(trip);
     setSelectedDriverId(trip.driverId);
     setProductSearch('');
+    
+    const tripDate = dayjs(trip.date).toDate();
+    console.log('Original date:', trip.date);
+    console.log('Converted date:', tripDate);
+    
+    // Ensure all numeric fields have valid values
+    const safeBalance = typeof trip.balance === 'number' ? trip.balance : 0;
+    const safeCollectionAmount = typeof trip.collectionAmount === 'number' ? trip.collectionAmount : 0;
+    const safePurchaseAmount = typeof trip.purchaseAmount === 'number' ? trip.purchaseAmount : 0;
+    const safeExpiry = typeof trip.expiry === 'number' ? trip.expiry : 0;
+    const safeDiscount = typeof trip.discount === 'number' ? trip.discount : 0;
+    const safePetrol = typeof trip.petrol === 'number' ? trip.petrol : 0;
+    
     reset({
       driverId: trip.driverId,
-      date: dayjs(trip.date).tz('Asia/Dubai').toDate(),
+      date: tripDate,
       isProductTransferred: trip.transfer.isProductTransferred,
       transferredProducts: trip.transfer.transferredProducts,
       selectedCategory: 'bakery',
       products: trip.products,
-      collectionAmount: trip.collectionAmount,
-      purchaseAmount: trip.purchaseAmount,
-      expiry: trip.expiry,
-      discount: trip.discount,
-      petrol: trip.petrol,
-      balance: trip.balance,
+      collectionAmount: safeCollectionAmount,
+      purchaseAmount: safePurchaseAmount,
+      expiry: safeExpiry,
+      discount: safeDiscount,
+      petrol: safePetrol,
+      balance: safeBalance,
     });
     setOpen(true);
   };
