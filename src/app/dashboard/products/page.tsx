@@ -20,6 +20,9 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
+import Skeleton from '@mui/material/Skeleton';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { TableIcon } from '@phosphor-icons/react/dist/ssr/Table';
@@ -100,7 +103,7 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Old Price (AED)</TableCell>
+              <TableCell>Price (AED)</TableCell>
               <TableCell>Updated At</TableCell>
               <TableCell>Updated By</TableCell>
             </TableRow>
@@ -122,16 +125,41 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
   );
 };
 
+// Skeleton Component for Loading State
+const ProductTableSkeleton: React.FC = () => {
+  return (
+    <>
+      {[...Array(5)].map((_, index) => (
+        <TableRow key={index}>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="rectangular" width={80} height={24} sx={{ borderRadius: 1 }} /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="circular" width={32} height={32} /></TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+};
+
 export default function Page(): React.JSX.Element {
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, addProduct, updateProduct, deleteProduct, isLoading: isLoadingProducts } = useProducts();
   const { showSuccess, showError } = useNotifications();
   const [open, setOpen] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [productToDelete, setProductToDelete] = React.useState<ProductWithHistory | null>(null);
   const [editingProduct, setEditingProduct] = React.useState<ProductWithHistory | null>(null);
   const [filteredProducts, setFilteredProducts] = React.useState<ProductWithHistory[]>([]);
   const [categoryFilter, setCategoryFilter] = React.useState<string>('allCategories');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [historyOpen, setHistoryOpen] = React.useState(false);
   const [historyProduct, setHistoryProduct] = React.useState<ProductWithHistory | null>(null);
+  
+  // Loading states for actions
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // Helper function to generate product ID based on category
   const generateProductId = (category: 'bakery' | 'fresh'): string => {
@@ -203,25 +231,38 @@ export default function Page(): React.JSX.Element {
     setOpen(false);
     setEditingProduct(null);
     reset();
+    setIsSaving(false);
   };
 
-  const handleDelete = async (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    const productName = product?.name || 'this product';
+  const handleDeleteClick = (product: ProductWithHistory) => {
+    setProductToDelete(product);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
     
-    if (!confirm(`Are you sure you want to delete "${productName}"? This action cannot be undone.`)) {
-      return;
-    }
-    
+    setIsDeleting(true);
     try {
-      await deleteProduct(productId);
+      await deleteProduct(productToDelete.id);
       showSuccess('Product deleted successfully!');
+      setDeleteDialogOpen(false);
+      setProductToDelete(null);
     } catch {
       showError('Failed to delete product. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setProductToDelete(null);
+    setIsDeleting(false);
   };
 
   const onSubmit = async (data: ProductFormData) => {
+    setIsSaving(true);
     try {
       if (editingProduct) {
         await updateProduct(editingProduct.id, {
@@ -252,6 +293,8 @@ export default function Page(): React.JSX.Element {
       handleClose();
     } catch {
       showError('Failed to save product. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -319,43 +362,73 @@ export default function Page(): React.JSX.Element {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filteredProducts.map((product) => (
-            <TableRow hover key={product.id}>
-              <TableCell align="center">{product.name}</TableCell>
-              <TableCell align="center">{`${product.price.toFixed(2)} AED`}</TableCell>
-              <TableCell align="center">
-                <Chip label={product.category === 'bakery' ? 'Bakery' : 'Fresh'} size="small" color={product.category === 'bakery' ? 'primary' : 'success'} />
-              </TableCell>
-              <TableCell align="center">{product.id}</TableCell>
-              <TableCell align="center">{dayjs(product.updatedAt).format('MMM D, YYYY h:mm A')}</TableCell>
-              <TableCell align="center">{dayjs(product.createdAt).format('MMM D, YYYY')}</TableCell>
-              <TableCell>
-                <Stack direction="row" spacing={1.5} justifyContent="center">
-                  <Tooltip title="Edit Product">
-                    <IconButton onClick={() => handleEdit(product)} size="small"><PencilIcon /></IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete Product">
-                    <IconButton onClick={() => handleDelete(product.id)} size="small" color="error"><TrashIcon /></IconButton>
-                  </Tooltip>
-                  <Tooltip title="View Price History">
-                    <IconButton
-                      size="small"
-                      onClick={() => { setHistoryProduct(product); setHistoryOpen(true); }}
-                    >
-                      <ClockClockwiseIcon weight="bold" />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
+          {isLoadingProducts ? (
+            <ProductTableSkeleton />
+          ) : filteredProducts.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No products found
+                </Typography>
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            filteredProducts.map((product) => (
+              <TableRow hover key={product.id}>
+                <TableCell align="center">{product.name}</TableCell>
+                <TableCell align="center">{`${product.price.toFixed(2)} AED`}</TableCell>
+                <TableCell align="center">
+                  <Chip label={product.category === 'bakery' ? 'Bakery' : 'Fresh'} size="small" color={product.category === 'bakery' ? 'primary' : 'success'} />
+                </TableCell>
+                <TableCell align="center">{product.id}</TableCell>
+                <TableCell align="center">{dayjs(product.updatedAt).format('MMM D, YYYY h:mm A')}</TableCell>
+                <TableCell align="center">{dayjs(product.createdAt).format('MMM D, YYYY')}</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={1.5} justifyContent="center">
+                    <Tooltip title="Edit Product">
+                      <IconButton onClick={() => handleEdit(product)} size="small"><PencilIcon /></IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete Product">
+                      <IconButton onClick={() => handleDeleteClick(product)} size="small" color="error"><TrashIcon /></IconButton>
+                    </Tooltip>
+                    <Tooltip title="View Price History">
+                      <IconButton
+                        size="small"
+                        onClick={() => { setHistoryProduct(product); setHistoryOpen(true); }}
+                      >
+                        <ClockClockwiseIcon weight="bold" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={isSaving ? undefined : handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingProduct ? 'Edit Product' : 'Add Product'}</DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogContent>
+          <DialogContent sx={{ position: 'relative' }}>
+            {isSaving && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'rgba(255, 255, 255, 0.8)',
+                  zIndex: 1,
+                }}
+              >
+                <CircularProgress />
+              </Box>
+            )}
             <Stack spacing={2} sx={{ pt: 1 }}>
               {/* Product ID - Auto-generated and read-only */}
               <TextField
@@ -416,13 +489,64 @@ export default function Page(): React.JSX.Element {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">Save</Button>
+            <Button onClick={handleClose} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={isSaving}
+              startIcon={isSaving ? <CircularProgress size={16} /> : (editingProduct ? <PencilIcon /> : <PlusIcon />)}
+            >
+              {isSaving ? (editingProduct ? 'Updating...' : 'Adding...') : 'Save'}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
 
       <PriceHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} product={historyProduct} />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={isDeleting ? undefined : handleDeleteCancel}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent sx={{ position: 'relative' }}>
+          {isDeleting && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                zIndex: 1,
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          )}
+          <Typography>
+            {`Are you sure you want to delete "${productToDelete?.name}"? This action cannot be undone.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            variant="contained" 
+            color="error"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <TrashIcon />}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }
