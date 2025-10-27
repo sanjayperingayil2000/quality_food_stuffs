@@ -16,6 +16,8 @@ import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
+import CircularProgress from '@mui/material/CircularProgress';
+import Backdrop from '@mui/material/Backdrop';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -39,6 +41,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { useProducts } from '@/contexts/product-context';
 import { useEmployees } from '@/contexts/employee-context';
 import { useDailyTrips, ProductTransfer } from '@/contexts/daily-trip-context';
+import { useNotifications } from '@/contexts/notification-context';
 import type { DailyTrip, TripProduct } from '@/contexts/daily-trip-context';
 
 // Configure dayjs plugins
@@ -153,10 +156,14 @@ export default function Page(): React.JSX.Element {
   const { products } = useProducts();
   const { drivers } = useEmployees();
   const { trips, addTrip, updateTrip, deleteTrip, canAddTripForDriver } = useDailyTrips();
+  const { showSuccess, showError } = useNotifications();
   const [open, setOpen] = React.useState(false);
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [tripToDelete, setTripToDelete] = React.useState<DailyTrip | null>(null);
   const [filteredTrips, setFilteredTrips] = React.useState<DailyTrip[]>([]);
   const [driverFilter, setDriverFilter] = React.useState<string>('');
+  const [isSaving, setIsSaving] = React.useState(false);
   const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(9, 'day').format('YYYY-MM-DD'));
   const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
   const [mounted, setMounted] = React.useState(false);
@@ -213,15 +220,15 @@ export default function Page(): React.JSX.Element {
   // Debug logging for drivers
   const currentDriverId = watch('driverId');
   React.useEffect(() => {
-    console.log('=== DRIVER DEBUG INFO ===');
-    console.log('Available drivers:', drivers);
-    console.log('Drivers length:', drivers.length);
-    console.log('Current driver ID:', currentDriverId);
-    console.log('Current driver ID type:', typeof currentDriverId);
-    console.log('Filtered drivers for transfer:', drivers.filter(d => d.id !== currentDriverId));
-    console.log('Filtered drivers count:', drivers.filter(d => d.id !== currentDriverId).length);
-    console.log('Transfer form receiving driver ID:', transferForm.receivingDriverId);
-    console.log('========================');
+    // console.log('=== DRIVER DEBUG INFO ===');
+    // console.log('Available drivers:', drivers);
+    // console.log('Drivers length:', drivers.length);
+    // console.log('Current driver ID:', currentDriverId);
+    // console.log('Current driver ID type:', typeof currentDriverId);
+    // console.log('Filtered drivers for transfer:', drivers.filter(d => d.id !== currentDriverId));
+    // console.log('Filtered drivers count:', drivers.filter(d => d.id !== currentDriverId).length);
+    // console.log('Transfer form receiving driver ID:', transferForm.receivingDriverId);
+    // console.log('========================');
   }, [drivers, currentDriverId, transferForm.receivingDriverId]);
 
   // Filter products based on search
@@ -232,7 +239,7 @@ export default function Page(): React.JSX.Element {
       const filtered = products.filter(product => 
         product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
         product.id.toLowerCase().includes(productSearch.toLowerCase())
-      );
+      ).sort((a, b) => a.id.localeCompare(b.id));
       setFilteredProducts(filtered);
     }
   }, [productSearch, products]);
@@ -241,7 +248,7 @@ export default function Page(): React.JSX.Element {
   const getAvailableDrivers = React.useCallback(() => {
     if (!watchedDate) return drivers;
     
-    return drivers.filter(driver => canAddTripForDriver(driver.id, watchedDate));
+    return drivers.filter(driver => canAddTripForDriver(driver.id, watchedDate.toISOString().split('T')[0]));
   }, [drivers, watchedDate, canAddTripForDriver]);
 
   // Calculation functions
@@ -268,22 +275,36 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleEdit = (trip: DailyTrip) => {
+    // console.log('handleEdit called with trip:', trip);
     setEditingTrip(trip);
     setSelectedDriverId(trip.driverId);
     setProductSearch('');
+    
+    const tripDate = dayjs(trip.date).toDate();
+    // console.log('Original date:', trip.date);
+    // console.log('Converted date:', tripDate);
+    
+    // Ensure all numeric fields have valid values
+    const safeBalance = typeof trip.balance === 'number' ? trip.balance : 0;
+    const safeCollectionAmount = typeof trip.collectionAmount === 'number' ? trip.collectionAmount : 0;
+    const safePurchaseAmount = typeof trip.purchaseAmount === 'number' ? trip.purchaseAmount : 0;
+    const safeExpiry = typeof trip.expiry === 'number' ? trip.expiry : 0;
+    const safeDiscount = typeof trip.discount === 'number' ? trip.discount : 0;
+    const safePetrol = typeof trip.petrol === 'number' ? trip.petrol : 0;
+    
     reset({
       driverId: trip.driverId,
-      date: trip.date,
+      date: tripDate,
       isProductTransferred: trip.transfer.isProductTransferred,
       transferredProducts: trip.transfer.transferredProducts,
       selectedCategory: 'bakery',
       products: trip.products,
-      collectionAmount: trip.collectionAmount,
-      purchaseAmount: trip.purchaseAmount,
-      expiry: trip.expiry,
-      discount: trip.discount,
-      petrol: trip.petrol,
-      balance: trip.balance,
+      collectionAmount: safeCollectionAmount,
+      purchaseAmount: safePurchaseAmount,
+      expiry: safeExpiry,
+      discount: safeDiscount,
+      petrol: safePetrol,
+      balance: safeBalance,
     });
     setOpen(true);
   };
@@ -296,7 +317,27 @@ export default function Page(): React.JSX.Element {
   };
 
   const handleDelete = (tripId: string) => {
-    deleteTrip(tripId);
+    // console.log('Frontend handleDelete called with trip ID:', tripId);
+    // console.log('Trip ID type:', typeof tripId);
+    
+    const trip = trips.find(t => t.id === tripId);
+    if (trip) {
+      setTripToDelete(trip);
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  const handleDeleteConfirm = () => {
+    if (tripToDelete) {
+      deleteTrip(tripToDelete.id);
+      setDeleteDialogOpen(false);
+      setTripToDelete(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setTripToDelete(null);
   };
 
   const handleApplyFilter = React.useCallback(() => {
@@ -307,16 +348,27 @@ export default function Page(): React.JSX.Element {
       filtered = filtered.filter(trip => trip.driverId === driverFilter);
     }
 
-    // Filter by date range
+    // Filter by date range (inclusive of both from and to dates)
     if (dateFrom && dateTo) {
       const fromDate = dayjs(dateFrom).startOf('day').utc();
       const toDate = dayjs(dateTo).endOf('day').utc();
 
       filtered = filtered.filter(trip => {
         const tripDate = dayjs(trip.date).utc();
-        return tripDate.isAfter(fromDate) && tripDate.isBefore(toDate);
+        // Check if trip date is on or after fromDate and on or before toDate (inclusive)
+        return (tripDate.isAfter(fromDate) || tripDate.isSame(fromDate)) && 
+               (tripDate.isBefore(toDate) || tripDate.isSame(toDate));
       });
     }
+
+    // Sort by date descending (newest first), then by createdAt descending
+    filtered = filtered.sort((a, b) => {
+      const dateComparison = dayjs(b.date).valueOf() - dayjs(a.date).valueOf();
+      if (dateComparison !== 0) return dateComparison;
+      
+      // If dates are the same, sort by createdAt (newest first)
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
 
     setFilteredTrips(filtered);
   }, [trips, driverFilter, dateFrom, dateTo]);
@@ -399,10 +451,13 @@ export default function Page(): React.JSX.Element {
     }
   };
 
-  const onSubmit = (data: TripFormData) => {
+  const onSubmit = async (data: TripFormData) => {
+    // console.log('onSubmit called with data:', data);
+    // console.log('editingTrip:', editingTrip);
+    
     // Check if this is a new trip and if driver already has a trip for this date
-    if (!editingTrip && !canAddTripForDriver(data.driverId, data.date)) {
-      alert(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
+    if (!editingTrip && !canAddTripForDriver(data.driverId, dayjs(data.date).format('YYYY-MM-DD'))) {
+      showError(`This driver already has a daily trip for ${dayjs(data.date).format('MMM D, YYYY')}. Please select a different driver or date.`);
       return;
     }
 
@@ -415,10 +470,17 @@ export default function Page(): React.JSX.Element {
       transferredProducts: filteredTransferredProducts,
     };
 
+    // Calculate totals for financial metrics
+    const totals = calculateTotals(
+      filteredProducts,
+      [],
+      filteredTransferredProducts
+    );
+
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
       driverName: driver?.name || '',
-      date: data.date,
+      date: dayjs(data.date).format('YYYY-MM-DD'),
       products: filteredProducts,
       transfer,
       acceptedProducts: [], // Will be populated by context when products are transferred to this driver
@@ -428,21 +490,36 @@ export default function Page(): React.JSX.Element {
       discount: data.discount,
       petrol: data.petrol,
       balance: roundBalance(data.balance),
-      totalAmount: 0, // Will be calculated in context
-      netTotal: 0, // Will be calculated in context
-      grandTotal: 0, // Will be calculated in context
+      totalAmount: totals.overall.total,
+      netTotal: totals.overall.netTotal,
+      grandTotal: totals.overall.grandTotal,
       expiryAfterTax: 0, // Will be calculated in context
       amountToBe: 0, // Will be calculated in context
       salesDifference: 0, // Will be calculated in context
       profit: 0, // Will be calculated in context
     };
 
-    if (editingTrip) {
-      updateTrip(editingTrip.id, tripData);
-    } else {
-      addTrip(tripData);
+    setIsSaving(true);
+    try {
+      // console.log('About to call updateTrip/addTrip with tripData:', tripData);
+      if (editingTrip) {
+        // console.log('Calling updateTrip for trip ID:', editingTrip.id);
+        await updateTrip(editingTrip.id, tripData);
+        // console.log('updateTrip succeeded');
+        showSuccess('Daily trip updated successfully!');
+      } else {
+        // console.log('Calling addTrip');
+        await addTrip(tripData);
+        // console.log('addTrip succeeded');
+        showSuccess('Daily trip created successfully!');
+      }
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save trip:', error);
+      showError('Failed to save daily trip. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-    handleClose();
   };
 
   const bakeryProducts = products.filter(p => p.category === 'bakery');
@@ -475,7 +552,8 @@ export default function Page(): React.JSX.Element {
             <InputLabel>All Drivers</InputLabel>
             <Select
               value={driverFilter}
-              label={driverFilter ? drivers.find(d => d.id === driverFilter)?.name || 'All Drivers' : 'All Drivers'}
+              label="All Drivers"
+              displayEmpty
               onChange={(e) => setDriverFilter(e.target.value)}
             >
               <MenuItem value="">All Drivers</MenuItem>
@@ -505,7 +583,17 @@ export default function Page(): React.JSX.Element {
         </Stack>
 
       <Stack spacing={2}>
-        {filteredTrips.map((trip, index) => (
+        {filteredTrips.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 2 }}>
+            <Typography variant="h6" color="text.secondary">
+              No records available at this time
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Try adjusting your date range or driver filter
+            </Typography>
+          </Paper>
+        ) : (
+          filteredTrips.map((trip, index) => (
           <Card key={trip.id} sx={{ 
             p: 2, 
             bgcolor: index % 2 === 0 ? 'blue.50' : 'white',
@@ -514,7 +602,7 @@ export default function Page(): React.JSX.Element {
           }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
               <Typography variant="h6">
-                {trip.driverName} - {dayjs(trip.date).tz('Asia/Dubai').format('MMM D, YYYY')} GST
+                {trip.driverName} - {dayjs(trip.date).format('MMM D, YYYY')}
               </Typography>
               <Stack direction="row" spacing={1}>
                 <IconButton onClick={() => handleEdit(trip)} size="small">
@@ -627,7 +715,7 @@ export default function Page(): React.JSX.Element {
                       const maxRows = Math.max(freshProducts.length, bakeryProducts.length);
                       
                       return Array.from({ length: maxRows }, (_, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={`product-row-${index}`}>
                           <TableCell sx={{ borderRight: '1px solid #e0e0e0', width: '50%' }}>
                             {freshProducts[index] ? (
                               <Box>
@@ -691,7 +779,7 @@ export default function Page(): React.JSX.Element {
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Typography variant="body2" color="text.secondary">Balance</Typography>
-                    <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance)}</Typography>
+                    <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance ?? 0)}</Typography>
                   </Grid>
                 </Grid>
               </Paper>
@@ -702,28 +790,28 @@ export default function Page(): React.JSX.Element {
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
-                    <Typography variant="h6" color="warning.dark">AED {trip.expiryAfterTax.toFixed(2)}</Typography>
+                    <Typography variant="h6" color="warning.dark">AED {(trip.expiryAfterTax ?? 0).toFixed(2)}</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Amount To Be</Typography>
-                    <Typography variant="h6" color="info.dark">AED {trip.amountToBe.toFixed(2)}</Typography>
+                    <Typography variant="h6" color="info.dark">AED {(trip.amountToBe ?? 0).toFixed(2)}</Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
-                    <Typography variant="h6" color={trip.salesDifference >= 0 ? 'success.dark' : 'error.dark'}>
-                      AED {trip.salesDifference.toFixed(2)}
+                    <Typography variant="h6" color={(trip.salesDifference ?? 0) >= 0 ? 'success.dark' : 'error.dark'}>
+                      AED {(trip.salesDifference ?? 0).toFixed(2)}
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Profit</Typography>
-                    <Typography variant="h6" color={trip.profit >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
-                      AED {trip.profit.toFixed(2)}
+                    <Typography variant="h6" color={(trip.profit ?? 0) >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
+                      AED {(trip.profit ?? 0).toFixed(2)}
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="body2" color="text.secondary">Calculated Balance</Typography>
                     <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
-                      AED {roundBalance(trip.balance)}
+                      AED {roundBalance(trip.balance ?? 0)}
                     </Typography>
                   </Grid>
                 </Grid>
@@ -779,7 +867,7 @@ export default function Page(): React.JSX.Element {
               )}
             </Stack>
           </Card>
-        ))}
+        )))}
       </Stack>
 
       <Dialog 
@@ -956,7 +1044,7 @@ export default function Page(): React.JSX.Element {
                         format="MMM D, YYYY"
                         value={field.value ? dayjs(field.value) : null}
                         onChange={(newValue) => {
-                          console.log('Date picker changed to:', newValue?.format('YYYY-MM-DD'));
+                          // console.log('Date picker changed to:', newValue?.format('YYYY-MM-DD'));
                           field.onChange(newValue?.toDate());
                         }}
                         maxDate={dayjs()} // Prevent future dates
@@ -1006,8 +1094,24 @@ export default function Page(): React.JSX.Element {
                   </Typography>
 
                   {/* Transfer Product Form */}
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 2, flexWrap: 'wrap' }}>
-                    <FormControl sx={{ flex: 1, minWidth: '200px' }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 2, 
+                    alignItems: 'flex-end', 
+                    mb: 2, 
+                    flexWrap: 'wrap',
+                    '@media (min-width: 1024px)': {
+                      flexWrap: 'nowrap',
+                      alignItems: 'flex-end'
+                    }
+                  }}>
+                    <FormControl sx={{ 
+                      flex: 1, 
+                      minWidth: '200px',
+                      '@media (min-width: 1024px)': {
+                        flex: '2 1 0'
+                      }
+                    }}>
                       <TextField
                         label="Search Product (Name or ID)"
                         value={productSearch}
@@ -1078,6 +1182,10 @@ export default function Page(): React.JSX.Element {
                       size="small"
                       sx={{ 
                         width: 140,
+                        '@media (min-width: 1024px)': {
+                          width: 160,
+                          flex: '0 0 auto'
+                        },
                         '& .MuiInputBase-input': {
                           cursor: 'text',
                           pointerEvents: 'auto',
@@ -1097,7 +1205,12 @@ export default function Page(): React.JSX.Element {
                       }}
                     />
                     
-                    <Box sx={{ flex: 1 }}>
+                    <Box sx={{ 
+                      flex: 1,
+                      '@media (min-width: 1024px)': {
+                        flex: '1.5 1 0'
+                      }
+                    }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -1126,7 +1239,7 @@ export default function Page(): React.JSX.Element {
                         <Select
                           value={transferForm.receivingDriverId}
                           onChange={(e) => {
-                            console.log('Transfer driver dropdown changed to:', e.target.value);
+                            // console.log('Transfer driver dropdown changed to:', e.target.value);
                             setTransferForm(prev => ({ ...prev, receivingDriverId: e.target.value }));
                           }}
                           label="Select Receiving Driver"
@@ -1145,28 +1258,18 @@ export default function Page(): React.JSX.Element {
                             }
                           }}
                           onClick={() => {
-                            console.log('Transfer driver dropdown clicked');
-                            console.log('Current drivers state:', drivers);
-                            console.log('Current driver ID:', currentDriverId);
-                            console.log('Available drivers:', currentDriverId ? drivers.filter(d => d.id !== currentDriverId) : drivers);
+                            // console.log('Transfer driver dropdown clicked');
+                            // console.log('Current drivers state:', drivers);
+                            // console.log('Current driver ID:', currentDriverId);
+                            // console.log('Available drivers:', currentDriverId ? drivers.filter(d => d.id !== currentDriverId) : drivers);
                           }}
                           onOpen={() => {
-                            console.log('Transfer driver dropdown opened');
+                            // console.log('Transfer driver dropdown opened');
                           }}
                           onClose={() => {
-                            console.log('Transfer driver dropdown closed');
+                            // console.log('Transfer driver dropdown closed');
                           }}
                         >
-                          <MenuItem value="TEST-DRIVER">
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                TEST DRIVER
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Test Route
-                              </Typography>
-                            </Box>
-                          </MenuItem>
                           {(() => {
                             if (!drivers || drivers.length === 0) {
                               return <MenuItem disabled>No drivers available</MenuItem>;
@@ -1176,10 +1279,9 @@ export default function Page(): React.JSX.Element {
                               ? drivers.filter(d => d.id !== currentDriverId)
                               : drivers;
                             
-                            console.log('Rendering', availableDrivers.length, 'MenuItems for drivers');
+                            // console.log('Rendering', availableDrivers.length, 'MenuItems for drivers');
                             
-                            return availableDrivers.map((driver, index) => {
-                              console.log(`Rendering MenuItem ${index + 1}:`, driver.name);
+                            return availableDrivers.map((driver) => {
                               return (
                                 <MenuItem key={driver.id} value={driver.id}>
                                   <Box>
@@ -1546,12 +1648,43 @@ export default function Page(): React.JSX.Element {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              Save
+            <Button onClick={handleClose} disabled={isSaving}>Cancel</Button>
+            <Button 
+              type="submit" 
+              variant="contained"
+              disabled={isSaving}
+              startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : null}
+              onClick={() => {
+                // console.log('Save button clicked');
+                // console.log('Form errors:', errors);
+              }}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
           </DialogActions>
+          <Backdrop
+            sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+            open={isSaving}
+          >
+            <CircularProgress color="inherit" />
+          </Backdrop>
         </form>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
       </Dialog>
     </Stack>
   );

@@ -12,17 +12,18 @@ export const metadata = { title: `Account | Dashboard | ${config.site.name}` } s
 
 export default function Page(): React.JSX.Element {
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} sx={{ width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
       <div>
         <Typography variant="h4">Account</Typography>
       </div>
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ width: '100%', maxWidth: '100%' }}>
         <Grid
           size={{
             lg: 4,
             md: 6,
             xs: 12,
           }}
+          sx={{ width: '100%', maxWidth: '100%' }}
         >
           <AccountInfo />
         </Grid>
@@ -32,6 +33,7 @@ export default function Page(): React.JSX.Element {
             md: 6,
             xs: 12,
           }}
+          sx={{ width: '100%', maxWidth: '100%' }}
         >
           <AccountDetailsForm />
         </Grid>

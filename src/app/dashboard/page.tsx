@@ -4,130 +4,269 @@ import * as React from 'react';
 import Grid from '@mui/material/Grid';
 import dayjs from 'dayjs';
 import { Budget } from '@/components/dashboard/overview/budget';
-// import { LatestOrders } from '@/components/dashboard/overview/latest-orders';
-// import { LatestProducts } from '@/components/dashboard/overview/latest-products';
 import { Sales } from '@/components/dashboard/overview/sales';
-// import { TasksProgress } from '@/components/dashboard/overview/tasks-progress';
-// import { TotalCustomers } from '@/components/dashboard/overview/total-customers';
 import { TotalProfit } from '@/components/dashboard/overview/total-profit';
-// import { Traffic } from '@/components/dashboard/overview/traffic';
 import { MainNavWrapper } from '@/components/dashboard/layout/main-nav';
 import { useDailyTrips } from '@/contexts/daily-trip-context';
 import { useEmployees } from '@/contexts/employee-context';
+import { useFilters } from '@/contexts/filter-context';
 
 export default function Page(): React.JSX.Element {
   const { trips } = useDailyTrips();
   const { drivers } = useEmployees();
+  const { filters } = useFilters();
 
   // Calculate overview metrics from trips and employee data
   const overviewMetrics = React.useMemo(() => {
-    const today = dayjs().startOf('day');
-    const thisWeek = today.subtract(7, 'days');
-    const lastWeek = thisWeek.subtract(7, 'days');
+    // Filter trips based on selected date range
+    let filteredTrips = trips.filter(trip => {
+      const tripDate = dayjs(trip.date);
+      const fromDate = filters.dateRange[0];
+      const toDate = filters.dateRange[1];
+      
+      if (!fromDate || !toDate) return true;
+      
+      // Inclusive date range filtering
+      return (tripDate.isSame(fromDate, 'day') || tripDate.isAfter(fromDate)) && 
+             (tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate));
+    });
 
-    // Filter trips for this week and last week
-    const thisWeekTrips = trips.filter(trip => 
-      dayjs(trip.date).isAfter(thisWeek) && dayjs(trip.date).isBefore(today.add(1, 'day'))
-    );
+    // Filter trips based on driver selection
+    if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+      const selectedDriver = drivers.find(driver => driver.name === filters.driver);
+      if (selectedDriver) {
+        filteredTrips = filteredTrips.filter(trip => trip.driverId === selectedDriver.id);
+      }
+    }
+
+    // Calculate totals for the filtered trips
+    const baseTotals = filteredTrips.reduce((acc, trip) => ({
+      collectionAmount: acc.collectionAmount + trip.collectionAmount,
+      purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
+      discount: acc.discount + trip.discount,
+      petrol: acc.petrol + trip.petrol,
+      expiry: acc.expiry + trip.expiry,
+    }), {
+      collectionAmount: 0,
+      purchaseAmount: 0,
+      discount: 0,
+      petrol: 0,
+      expiry: 0,
+    });
+
+    // Calculate Amount to be and Profit dynamically
+    // Expiry after tax = ((expiry + 5%) - 13%)
+    const expiryAfterTax = Math.floor(baseTotals.expiry * 1.05 * 0.87);
     
-    const lastWeekTrips = trips.filter(trip => 
-      dayjs(trip.date).isAfter(lastWeek) && dayjs(trip.date).isBefore(thisWeek.add(1, 'day'))
-    );
+    // Amount to be = Purchase amount - Expiry after tax
+    const amountToBe = baseTotals.purchaseAmount - expiryAfterTax;
+    
+    // For profit calculation, we need to calculate for each trip and sum
+    const calculatedProfit = filteredTrips.reduce((sum, trip) => {
+      // Calculate expiry after tax for this trip
+      const tripExpiryAfterTax = Math.floor(trip.expiry * 1.05 * 0.87);
+      
+      // Calculate fresh and bakery totals for this trip
+      const freshProductsTotal = trip.products.filter(p => p.category === 'fresh')
+        .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+      const bakeryProductsTotal = trip.products.filter(p => p.category === 'bakery')
+        .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+      const totalProductsValue = freshProductsTotal + bakeryProductsTotal;
+      
+      // Skip if no products
+      if (totalProductsValue === 0) return sum;
+      
+      // Calculate fresh net total
+      const freshNetTotal = freshProductsTotal * 0.885; // 11.5% reduction
+      
+      // Calculate bakery net total
+      const bakeryNetTotal = bakeryProductsTotal * 0.84; // 16% reduction
+      
+      // Profit = (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
+      const freshProfit = (freshNetTotal - tripExpiryAfterTax) * 0.135;
+      const bakeryProfit = bakeryNetTotal * 0.195;
+      const tripProfit = freshProfit + bakeryProfit - trip.discount;
+      
+      return sum + tripProfit;
+    }, 0);
 
-    // Calculate totals for this week
-    const thisWeekTotals = thisWeekTrips.reduce((acc, trip) => ({
-      collectionAmount: acc.collectionAmount + trip.collectionAmount,
-      purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
-      discount: acc.discount + trip.discount,
-      amountToBe: acc.amountToBe + trip.amountToBe,
-      petrol: acc.petrol + trip.petrol,
-      balance: acc.balance + trip.balance,
-      expiry: acc.expiry + trip.expiry,
-      profit: acc.profit + trip.profit,
-    }), {
-      collectionAmount: 0,
-      purchaseAmount: 0,
-      discount: 0,
-      amountToBe: 0,
-      petrol: 0,
-      balance: 0,
-      expiry: 0,
-      profit: 0,
-    });
-
-    // Calculate totals for last week
-    const lastWeekTotals = lastWeekTrips.reduce((acc, trip) => ({
-      collectionAmount: acc.collectionAmount + trip.collectionAmount,
-      purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
-      discount: acc.discount + trip.discount,
-      amountToBe: acc.amountToBe + trip.amountToBe,
-      petrol: acc.petrol + trip.petrol,
-      balance: acc.balance + trip.balance,
-      expiry: acc.expiry + trip.expiry,
-      profit: acc.profit + trip.profit,
-    }), {
-      collectionAmount: 0,
-      purchaseAmount: 0,
-      discount: 0,
-      amountToBe: 0,
-      petrol: 0,
-      balance: 0,
-      expiry: 0,
-      profit: 0,
-    });
-
-    // Calculate total driver balance from employee data
-    const totalDriverBalance = drivers.reduce((sum, driver) => sum + (driver.balance || 0), 0);
-
-    // Calculate percentage changes
-    const calculatePercentageChange = (current: number, previous: number) => {
-      if (previous === 0) return current > 0 ? 100 : 0;
-      return Math.round(((current - previous) / previous) * 100);
+    const totals = {
+      ...baseTotals,
+      amountToBe,
+      profit: calculatedProfit,
     };
+
+    // Calculate balance dynamically from trip data
+    // Balance = previous balance + profit - salesDifference
+    const calculateDriverBalance = () => {
+      if (filteredTrips.length === 0) return 0;
+      
+      // If a driver is selected, calculate their balance from the filtered trips
+      if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+        const selectedDriver = drivers.find(driver => driver.name === filters.driver);
+        if (!selectedDriver) return 0;
+        
+        // Get ALL trips for this driver (not just filtered) to calculate cumulative balance
+        const allDriverTrips = trips.filter(trip => trip.driverId === selectedDriver.id);
+        if (allDriverTrips.length === 0) return 0;
+        
+        // Sort chronologically
+        const sortedTrips = [...allDriverTrips].sort((a, b) => 
+          dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
+        );
+        
+        // Get the most recent trip within the filter date range to find the starting balance
+        const filterFromDate = filters.dateRange[0];
+        const filterToDate = filters.dateRange[1];
+        
+        let startingBalance = selectedDriver.balance || 0;
+        
+        // Find the most recent trip before the filter date range to get starting balance
+        const tripsBeforeRange = sortedTrips.filter(trip => {
+          const tripDate = dayjs(trip.date);
+          if (filterFromDate) {
+            return tripDate.isBefore(filterFromDate, 'day');
+          }
+          return false;
+        });
+        
+        if (tripsBeforeRange.length > 0) {
+          // Get the balance from the most recent trip before the range
+          startingBalance = tripsBeforeRange.at(-1)?.balance || startingBalance;
+        }
+        
+        // Now calculate balance for trips in the filtered date range
+        const filteredDriverTrips = sortedTrips.filter(trip => {
+          const tripDate = dayjs(trip.date);
+          if (!filterFromDate || !filterToDate) return true;
+          return (tripDate.isSame(filterFromDate, 'day') || tripDate.isAfter(filterFromDate)) &&
+                 (tripDate.isSame(filterToDate, 'day') || tripDate.isBefore(filterToDate));
+        });
+        
+        let currentBalance = startingBalance;
+        
+        for (const trip of filteredDriverTrips) {
+          // Calculate profit for this trip
+          const tripExpiryAfterTax = Math.floor(trip.expiry * 1.05 * 0.87);
+          
+          const freshProductsTotal = trip.products.filter(p => p.category === 'fresh')
+            .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+          const bakeryProductsTotal = trip.products.filter(p => p.category === 'bakery')
+            .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+          const totalProductsValue = freshProductsTotal + bakeryProductsTotal;
+          
+          if (totalProductsValue > 0) {
+            const freshNetTotal = freshProductsTotal * 0.885;
+            const bakeryNetTotal = bakeryProductsTotal * 0.84;
+            const freshProfit = (freshNetTotal - tripExpiryAfterTax) * 0.135;
+            const bakeryProfit = bakeryNetTotal * 0.195;
+            const tripProfit = freshProfit + bakeryProfit - trip.discount;
+            
+            // Sales difference calculation
+            const amountToBe = trip.purchaseAmount - tripExpiryAfterTax;
+            const salesDifference = trip.collectionAmount - amountToBe;
+            
+            // Balance = previous balance + current profit - current sales difference
+            currentBalance = Math.round(currentBalance + tripProfit - salesDifference);
+          }
+        }
+        
+        return currentBalance;
+      }
+      
+      // For all drivers, sum their individual balances
+      return drivers.reduce((total, driver) => {
+        const driverTrips = trips.filter(trip => trip.driverId === driver.id);
+        if (driverTrips.length === 0) return total;
+        
+        const sortedTrips = [...driverTrips].sort((a, b) => 
+          dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
+        );
+        
+        let driverBalance = driver.balance || 0;
+        
+        // Calculate balance for the filtered date range
+        const filteredDriverTrips = sortedTrips.filter(trip => {
+          const tripDate = dayjs(trip.date);
+          const fromDate = filters.dateRange[0];
+          const toDate = filters.dateRange[1];
+          if (!fromDate || !toDate) return true;
+          return (tripDate.isSame(fromDate, 'day') || tripDate.isAfter(fromDate)) &&
+                 (tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate));
+        });
+        
+        for (const trip of filteredDriverTrips) {
+          const tripExpiryAfterTax = Math.floor(trip.expiry * 1.05 * 0.87);
+          
+          const freshProductsTotal = trip.products.filter(p => p.category === 'fresh')
+            .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+          const bakeryProductsTotal = trip.products.filter(p => p.category === 'bakery')
+            .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+          const totalProductsValue = freshProductsTotal + bakeryProductsTotal;
+          
+          if (totalProductsValue > 0) {
+            const freshNetTotal = freshProductsTotal * 0.885;
+            const bakeryNetTotal = bakeryProductsTotal * 0.84;
+            const freshProfit = (freshNetTotal - tripExpiryAfterTax) * 0.135;
+            const bakeryProfit = bakeryNetTotal * 0.195;
+            const tripProfit = freshProfit + bakeryProfit - trip.discount;
+            
+            const amountToBe = trip.purchaseAmount - tripExpiryAfterTax;
+            const salesDifference = trip.collectionAmount - amountToBe;
+            
+            driverBalance = Math.round(driverBalance + tripProfit - salesDifference);
+          }
+        }
+        
+        return total + driverBalance;
+      }, 0);
+    };
+    
+    const totalDriverBalance = calculateDriverBalance();
 
     return {
       collectionAmount: {
-        value: thisWeekTotals.collectionAmount,
-        diff: calculatePercentageChange(thisWeekTotals.collectionAmount, lastWeekTotals.collectionAmount),
-        trend: thisWeekTotals.collectionAmount >= lastWeekTotals.collectionAmount ? 'up' : 'down' as 'up' | 'down'
+        value: totals.collectionAmount,
+        diff: 0, // We'll calculate this based on previous period if needed
+        trend: 'up' as 'up' | 'down'
       },
       purchaseAmount: {
-        value: thisWeekTotals.purchaseAmount,
-        diff: calculatePercentageChange(thisWeekTotals.purchaseAmount, lastWeekTotals.purchaseAmount),
-        trend: thisWeekTotals.purchaseAmount >= lastWeekTotals.purchaseAmount ? 'up' : 'down' as 'up' | 'down'
+        value: totals.purchaseAmount,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       discount: {
-        value: thisWeekTotals.discount,
-        diff: calculatePercentageChange(thisWeekTotals.discount, lastWeekTotals.discount),
-        trend: thisWeekTotals.discount >= lastWeekTotals.discount ? 'up' : 'down' as 'up' | 'down'
+        value: totals.discount,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       amountToBe: {
-        value: thisWeekTotals.amountToBe,
-        diff: calculatePercentageChange(thisWeekTotals.amountToBe, lastWeekTotals.amountToBe),
-        trend: thisWeekTotals.amountToBe >= lastWeekTotals.amountToBe ? 'up' : 'down' as 'up' | 'down'
+        value: totals.amountToBe,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       petrol: {
-        value: thisWeekTotals.petrol,
-        diff: calculatePercentageChange(thisWeekTotals.petrol, lastWeekTotals.petrol),
-        trend: thisWeekTotals.petrol >= lastWeekTotals.petrol ? 'up' : 'down' as 'up' | 'down'
+        value: totals.petrol,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       balance: {
         value: totalDriverBalance,
-        diff: 0, // Balance is cumulative, so we don't show week-over-week change
+        diff: 0,
         trend: 'up' as 'up' | 'down'
       },
       expiry: {
-        value: thisWeekTotals.expiry,
-        diff: calculatePercentageChange(thisWeekTotals.expiry, lastWeekTotals.expiry),
-        trend: thisWeekTotals.expiry >= lastWeekTotals.expiry ? 'up' : 'down' as 'up' | 'down'
+        value: totals.expiry,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       },
       profit: {
-        value: thisWeekTotals.profit,
-        diff: calculatePercentageChange(thisWeekTotals.profit, lastWeekTotals.profit),
-        trend: thisWeekTotals.profit >= lastWeekTotals.profit ? 'up' : 'down' as 'up' | 'down'
+        value: totals.profit,
+        diff: 0,
+        trend: 'up' as 'up' | 'down'
       }
     };
-  }, [trips, drivers]);
+  }, [trips, drivers, filters]);
 
   return (
     <> 
@@ -144,7 +283,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.collectionAmount.diff} 
             trend={overviewMetrics.collectionAmount.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.collectionAmount.value.toFixed(0)}`} 
+            value={`${overviewMetrics.collectionAmount.value.toFixed(0)}`} 
             name="Cash Collection" 
           />
         </Grid>
@@ -159,7 +298,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.purchaseAmount.diff} 
             trend={overviewMetrics.purchaseAmount.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.purchaseAmount.value.toFixed(0)}`} 
+            value={`${overviewMetrics.purchaseAmount.value.toFixed(0)}`} 
             name="Purchase Amount" 
           />
         </Grid>
@@ -183,7 +322,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.discount.diff} 
             trend={overviewMetrics.discount.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.discount.value.toFixed(0)}`} 
+            value={`${overviewMetrics.discount.value.toFixed(0)}`} 
             name="Discount" 
           />
         </Grid>
@@ -244,7 +383,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.amountToBe.diff} 
             trend={overviewMetrics.amountToBe.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.amountToBe.value.toFixed(0)}`} 
+            value={`${overviewMetrics.amountToBe.value.toFixed(0)}`} 
             name='Amount to be' 
           />
         </Grid>
@@ -268,7 +407,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.petrol.diff} 
             trend={overviewMetrics.petrol.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.petrol.value.toFixed(0)}`} 
+            value={`${overviewMetrics.petrol.value.toFixed(0)}`} 
             name='Petrol' 
           />
         </Grid>
@@ -292,7 +431,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.balance.diff} 
             trend={overviewMetrics.balance.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.balance.value.toFixed(0)}`} 
+            value={`${overviewMetrics.balance.value.toFixed(0)}`} 
             name='Balance' 
           />
         </Grid>
@@ -316,7 +455,7 @@ export default function Page(): React.JSX.Element {
             diff={overviewMetrics.expiry.diff} 
             trend={overviewMetrics.expiry.trend} 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.expiry.value.toFixed(0)}`} 
+            value={`${overviewMetrics.expiry.value.toFixed(0)}`} 
             name='Expiry' 
           />
         </Grid>
@@ -329,7 +468,7 @@ export default function Page(): React.JSX.Element {
         >
           <TotalProfit 
             sx={{ height: '100%' }} 
-            value={`AED ${overviewMetrics.profit.value.toFixed(0)}`} 
+            value={`${overviewMetrics.profit.value.toFixed(0)}`} 
           />
         </Grid>
         <Grid
@@ -341,10 +480,8 @@ export default function Page(): React.JSX.Element {
           }}
         >
           <Sales
-            chartSeries={[
-              { name: 'This year', data: [18, 16, 5, 8, 3, 14, 14, 16, 17, 19, 18, 20] },
-              // { name: 'Last year', data: [12, 11, 4, 6, 2, 9, 9, 10, 11, 12, 13, 13] },
-            ]}
+            trips={trips}
+            drivers={drivers}
             sx={{ height: '100%' }}
           />
         </Grid>

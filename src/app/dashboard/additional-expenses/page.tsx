@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-// import type { Metadata } from 'next';
 import type { ChipProps } from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -22,6 +21,8 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
 import { FilePdfIcon } from '@phosphor-icons/react/dist/ssr/FilePdf';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
@@ -66,11 +67,11 @@ const expenseSchema = zod.object({
     return data.employeeId && data.employeeId.length > 0;
   }
   if (data.type === 'others') {
-    return data.employeeId && data.employeeId.length > 0 && data.reason && data.reason.length > 0;
+    return data.employeeId && data.employeeId.length > 0;
   }
   return true;
 }, {
-  message: 'Required fields are missing for the selected expense type',
+  message: 'Please select a driver/employee for this expense type',
   path: ['employeeId']
 });
 
@@ -109,11 +110,17 @@ export default function Page(): React.JSX.Element {
   const { employees } = useEmployees();
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [expenseToDelete, setExpenseToDelete] = React.useState<Expense | null>(null);
   const [filteredExpenses, setFilteredExpenses] = React.useState<Expense[]>([]);
-  const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(1, 'day').format('YYYY-MM-DD'));
-  const [dateTo, setDateTo] = React.useState<string>(dayjs().subtract(1, 'day').format('YYYY-MM-DD'));
+  const [dateFrom, setDateFrom] = React.useState<string>(dayjs().subtract(30, 'day').format('YYYY-MM-DD'));
+  const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
   const [expenseTypeFilter, setExpenseTypeFilter] = React.useState<string>('allTypes');
   const [employeeFilter, setEmployeeFilter] = React.useState<string>('allEmployees');
+  
+  // Loading states for actions
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // Map context expenses to display format
   const mappedExpenses = React.useMemo(() => {
@@ -170,8 +177,8 @@ export default function Page(): React.JSX.Element {
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense);
     reset({
-      date: expense.date,
-      type: expense.category,
+      date: new Date(expense.date),
+      type: expense.category as ExpenseType,
       employeeId: expense.driverId || '',
       maintenanceName: expense.vendor || '',
       reason: expense.description || '',
@@ -185,15 +192,41 @@ export default function Page(): React.JSX.Element {
     setOpen(false);
     setEditingExpense(null);
     reset();
+    setIsSaving(false);
   };
 
-  const handleDelete = (expenseId: string) => {
-    deleteExpense(expenseId);
-    // Update filtered expenses to reflect the deletion
-    setFilteredExpenses(prev => prev.filter(e => e.id !== expenseId));
+  const handleDelete = async (expenseId: string) => {
+    const expense = expenses.find(e => e.id === expenseId);
+    if (expense) {
+      setExpenseToDelete(expense);
+      setDeleteDialogOpen(true);
+    }
   };
 
-  const handleApplyFilter = () => {
+  const handleDeleteConfirm = async () => {
+    if (expenseToDelete) {
+      setIsDeleting(true);
+      try {
+        await deleteExpense(expenseToDelete.id);
+        // Update filtered expenses to reflect the deletion
+        setFilteredExpenses(prev => prev.filter(e => e.id !== expenseToDelete.id));
+        setDeleteDialogOpen(false);
+        setExpenseToDelete(null);
+      } catch (error) {
+        console.error('Failed to delete expense:', error);
+      } finally {
+        setIsDeleting(false);
+      }
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setExpenseToDelete(null);
+    setIsDeleting(false);
+  };
+
+  const applyFilters = React.useCallback(() => {
     let filtered = mappedExpenses;
 
     // Date range filter
@@ -222,7 +255,12 @@ export default function Page(): React.JSX.Element {
     }
 
     setFilteredExpenses(filtered);
-  };
+  }, [mappedExpenses, dateFrom, dateTo, expenseTypeFilter, employeeFilter]);
+
+  // Auto-apply filters when any filter changes
+  React.useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
 
   const handleExportPdf = () => {
@@ -351,47 +389,55 @@ export default function Page(): React.JSX.Element {
     link.remove();
   };
 
-  const onSubmit = (data: ExpenseFormData) => {
-    const employee = employees.find(emp => emp.id === data.employeeId);
+  const onSubmit = async (data: ExpenseFormData) => {
+    setIsSaving(true);
+    try {
+      const employee = employees.find(emp => emp.id === data.employeeId);
 
-    if (editingExpense) {
-      // Edit existing expense using context
-      updateExpense(editingExpense.id, {
-        title: data.description || 'Expense',
-        description: data.description,
-        category: data.type,
-        amount: data.amount,
-        currency: 'AED',
-        date: data.date,
-        driverId: data.employeeId,
-        driverName: employee?.name,
-        receiptNumber: undefined,
-        vendor: data.maintenanceName,
-        isReimbursable: true,
-        status: 'pending',
-        updatedAt: new Date(),
-        updatedBy: 'current-user', // You might want to get this from auth context
-      });
-    } else {
-      // Add new expense using context
-      addExpense({
-        title: data.description || 'Expense',
-        description: data.description,
-        category: data.type,
-        amount: data.amount,
-        currency: 'AED',
-        date: data.date,
-        driverId: data.employeeId,
-        driverName: employee?.name,
-        designation: employee?.designation || 'driver',
-        receiptNumber: undefined,
-        vendor: data.maintenanceName,
-        isReimbursable: true,
-        status: 'pending',
-        createdBy: 'current-user', // You might want to get this from auth context
-      });
+      // eslint-disable-next-line unicorn/prefer-ternary
+      if (editingExpense) {
+        // Edit existing expense using context
+        await updateExpense(editingExpense.id, {
+          title: data.description || 'Expense',
+          description: data.description,
+          category: data.type,
+          amount: data.amount,
+          currency: 'AED',
+          date: data.date.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
+          driverId: data.employeeId,
+          driverName: employee?.name,
+          receiptNumber: undefined,
+          vendor: data.maintenanceName,
+          isReimbursable: true,
+          status: 'pending',
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'current-user', // You might want to get this from auth context
+        });
+      } else {
+        // Add new expense using context
+        await addExpense({
+          title: data.description || 'Expense',
+          description: data.description,
+          category: data.type,
+          amount: data.amount,
+          currency: 'AED',
+          date: data.date.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
+          driverId: data.employeeId,
+          driverName: employee?.name,
+          designation: employee?.designation || 'driver',
+          receiptNumber: undefined,
+          vendor: data.maintenanceName,
+          isReimbursable: true,
+          status: 'pending',
+          createdBy: 'current-user', // You might want to get this from auth context
+        });
+      }
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save expense:', error);
+    } finally {
+      setIsSaving(false);
     }
-    handleClose();
   };
 
 
@@ -469,9 +515,6 @@ export default function Page(): React.JSX.Element {
             ))}
           </Select>
         </FormControl>
-        <Button variant="contained" onClick={handleApplyFilter}>
-          Apply
-        </Button>
       </Stack>
 
       {filteredExpenses.length > 0 ? (
@@ -537,12 +580,30 @@ export default function Page(): React.JSX.Element {
         </Typography>
       )}
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={isSaving ? undefined : handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingExpense ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogContent>
+          <DialogContent sx={{ position: 'relative' }}>
+            {isSaving && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'rgba(255, 255, 255, 0.8)',
+                  zIndex: 1,
+                }}
+              >
+                <CircularProgress />
+              </Box>
+            )}
             <Stack spacing={2} sx={{ pt: 1 }}>
-              {/* <Controller
+              <Controller
                 control={control}
                 name="date"
                 render={({ field }) => (
@@ -558,7 +619,7 @@ export default function Page(): React.JSX.Element {
                     value={field.value ? dayjs(field.value).format('YYYY-MM-DD') : ''}
                   />
                 )}
-              /> */}
+              />
 
               <Controller
                 control={control}
@@ -655,12 +716,61 @@ export default function Page(): React.JSX.Element {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              Save
+            <Button onClick={handleClose} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={isSaving}
+              startIcon={isSaving ? <CircularProgress size={16} /> : (editingExpense ? <PencilIcon /> : <PlusIcon />)}
+            >
+              {isSaving ? (editingExpense ? 'Updating...' : 'Adding...') : 'Save'}
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={isDeleting ? undefined : handleDeleteCancel}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent sx={{ position: 'relative' }}>
+          {isDeleting && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.8)',
+                zIndex: 1,
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          )}
+          <Typography>
+            {`Are you sure you want to delete this expense? This action cannot be undone.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={16} color="inherit" /> : <TrashIcon />}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Stack>
   );
