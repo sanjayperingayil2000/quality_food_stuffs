@@ -406,7 +406,7 @@ async function seedDefaultData(): Promise<void> {
      {
        id: 'EMP-002',
        name: 'Dinesh',
-       designation: 'ceo',
+       designation: 'staff',
        phoneNumber: '+971 50 123 4568',
        email: 'dinesh@company.com',
        address: 'Jumeirah, Dubai, UAE',
