@@ -721,6 +721,9 @@ export default function Page(): React.JSX.Element {
                                 {(() => {
                                   const reason = entry.reason || 'N/A';
                                   // Format trip reasons to show date
+                                  if (reason.includes('Daily trip on') || reason.includes('Daily trip updated on')) {
+                                    return reason; // Already formatted
+                                  }
                                   if (reason.includes('trip_added_')) {
                                     const dateStr = reason.replace('trip_added_', '');
                                     if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {

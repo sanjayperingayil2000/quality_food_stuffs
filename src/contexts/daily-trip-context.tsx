@@ -907,15 +907,21 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
 
   // Process balance updates after state changes to avoid setState during render
   React.useEffect(() => {
-    if (balanceUpdatesRef.current.length > 0) {
-      const updates = [...balanceUpdatesRef.current];
-      balanceUpdatesRef.current = []; // Clear the ref
-      
-      // Process each balance update
-      for (const update of updates) {
-        updateDriverBalance(update.driverId, update.balance, update.reason, update.updatedBy);
+    const processUpdates = async () => {
+      if (balanceUpdatesRef.current.length > 0) {
+        const updates = [...balanceUpdatesRef.current];
+        balanceUpdatesRef.current = []; // Clear the ref
+        
+        // Process each balance update
+        for (const update of updates) {
+          await updateDriverBalance(update.driverId, update.balance, update.reason, update.updatedBy);
+        }
       }
-    }
+    };
+    
+    processUpdates().catch(error => {
+      console.error('Error processing balance updates:', error);
+    });
   }, [trips, updateDriverBalance]);
 
   // Helper to check if a trip has the latest date for its driver
@@ -956,8 +962,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       return previousTrips[0].balance;
     }
     
-    // For first trip, return a random balance between 100 and 200
-    return Math.round(Math.floor(Math.random() * 101) + 100); // 100 to 200
+    // For first trip, return 0 or the initial balance from employee
+    return employee?.balance || 0;
   }, [getEmployeeById]);
 
   const getTripById = React.useCallback((id: string): DailyTrip | undefined => {
@@ -1162,7 +1168,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       balanceUpdatesRef.current.push({
         driverId: tripData.driverId,
         balance: Math.round(financialMetrics.balance),
-        reason: `trip_added_${tripDate}`,
+        reason: `Daily trip on ${dayjs(tripData.date).format('DD-MM-YYYY')}`,
         date: tripDate,
         updatedBy: 'EMP-001'
       });
@@ -1254,7 +1260,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 balanceUpdatesRef.current.push({
                   driverId: updatedTrip.driverId,
                   balance: updatedTrip.balance,
-                  reason: `trip_updated_${dayjs(updatedTrip.date).format('YYYY-MM-DD')}`,
+                  reason: `Daily trip updated on ${dayjs(updatedTrip.date).format('DD-MM-YYYY')}`,
                   date: dayjs(updatedTrip.date).format('YYYY-MM-DD'),
                   updatedBy: 'EMP-001'
                 });
