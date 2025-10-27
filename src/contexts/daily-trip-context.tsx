@@ -912,8 +912,11 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
         const updates = [...balanceUpdatesRef.current];
         balanceUpdatesRef.current = []; // Clear the ref
         
+        console.log('Processing balance updates:', updates);
+        
         // Process each balance update
         for (const update of updates) {
+          console.log('Updating driver balance:', update);
           await updateDriverBalance(update.driverId, update.balance, update.reason, update.updatedBy);
         }
       }
@@ -1159,16 +1162,20 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     }
 
     // Track balance update to be processed after state change
-    // Check if this is the latest trip for this driver (including the new trip we just added)
-    const allDriverTrips = [...trips, newTrip].filter(t => t.driverId === tripData.driverId);
-    const isLatestTrip = allDriverTrips.length === 0 || 
-      !allDriverTrips.some(t => t.id !== newTrip.id && dayjs(t.date).isAfter(dayjs(tripData.date), 'day'));
+    // Check if this is the latest trip for this driver
+    // We check if any existing trip for this driver has a later date
+    const existingTripsForDriver = trips.filter(t => t.driverId === tripData.driverId);
+    const hasLaterTrip = existingTripsForDriver.some(t => dayjs(t.date).isAfter(dayjs(tripData.date), 'day'));
     
-    if (isLatestTrip) {
+    if (!hasLaterTrip) {
+      // This is the latest trip, update the balance
+      const balanceReason = `Daily trip on ${dayjs(tripData.date).format('DD-MM-YYYY')}`;
+      console.log('Updating balance for driver:', tripData.driverId, 'New balance:', Math.round(financialMetrics.balance), 'Reason:', balanceReason);
+      
       balanceUpdatesRef.current.push({
         driverId: tripData.driverId,
         balance: Math.round(financialMetrics.balance),
-        reason: `Daily trip on ${dayjs(tripData.date).format('DD-MM-YYYY')}`,
+        reason: balanceReason,
         date: tripDate,
         updatedBy: 'EMP-001'
       });

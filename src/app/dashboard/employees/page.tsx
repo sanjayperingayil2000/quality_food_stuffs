@@ -28,10 +28,12 @@ import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { useEmployees, Employee } from '@/contexts/employee-context';
 import { useNotifications } from '@/contexts/notification-context';
+import { useUser } from '@/hooks/use-user';
 import { Tooltip } from '@mui/material';
 
 export default function Page(): React.JSX.Element {
   const { employees, addEmployee, updateEmployee, deleteEmployee, updateDriverBalance, refreshEmployees } = useEmployees();
+  const { user } = useUser();
   const { showSuccess, showError } = useNotifications();
 
   // Dialog states
@@ -218,7 +220,12 @@ export default function Page(): React.JSX.Element {
           
           if (newBalance !== previousBalance) {
             // Use the updateDriverBalance method to maintain history
-            await updateDriverBalance(selectedEmployee.id, newBalance, 'manual_adjustment', 'EMP-001');
+            await updateDriverBalance(
+              selectedEmployee.id, 
+              newBalance, 
+              'Balance edited by user', 
+              user?.email || 'System'
+            );
             // Refresh employees to get updated data
             await refreshEmployees();
           }
@@ -742,6 +749,13 @@ export default function Page(): React.JSX.Element {
                                   }
                                   if (reason.includes('trip_update')) {
                                     return reason.replaceAll('trip_update', 'Manual balance update').replaceAll('_', ' ');
+                                  }
+                                  if (reason.includes('Balance edited by user')) {
+                                    const entryUpdatedBy = entry.updatedBy;
+                                    if (entryUpdatedBy) {
+                                      return `Balance edited by ${entryUpdatedBy}`;
+                                    }
+                                    return 'Balance edited manually';
                                   }
                                   return reason.replaceAll('_', ' ');
                                 })()}

@@ -170,6 +170,7 @@ export default function Page(): React.JSX.Element {
   const [dateTo, setDateTo] = React.useState<string>(dayjs().format('YYYY-MM-DD'));
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
+  const [acceptedProductsForForm, setAcceptedProductsForForm] = React.useState<TripProduct[]>([]);
   
   // Transfer product form state
   const [transferForm, setTransferForm] = React.useState({
@@ -483,9 +484,14 @@ export default function Page(): React.JSX.Element {
     };
 
     // Calculate totals for financial metrics
+    // Include accepted products in the calculation
+    const acceptedProductsToInclude = editingTrip 
+      ? (editingTrip.acceptedProducts || [])
+      : acceptedProductsForForm;
+    
     const totals = calculateTotals(
       filteredProducts,
-      [],
+      acceptedProductsToInclude,
       filteredTransferredProducts
     );
 
@@ -498,7 +504,7 @@ export default function Page(): React.JSX.Element {
       date: dayjs(data.date).format('YYYY-MM-DD'),
       products: filteredProducts,
       transfer,
-      acceptedProducts: [], // Will be populated by context when products are transferred to this driver
+      acceptedProducts: editingTrip ? editingTrip.acceptedProducts : acceptedProductsForForm,
       collectionAmount: data.collectionAmount,
       purchaseAmount: calculatedPurchaseAmount, // Use calculated value
       expiry: data.expiry,
@@ -1000,6 +1006,37 @@ export default function Page(): React.JSX.Element {
                           onClick={() => {
                             setSelectedDriverId(driver.id);
                             setValue('driverId', driver.id);
+                            
+                            // Check for accepted products (transfers TO this driver) for the selected date
+                            const selectedDate = watchedDate ? dayjs(watchedDate).format('YYYY-MM-DD') : '';
+                            const acceptedProductsForThisDriver = trips
+                              .filter(trip => {
+                                // Find trips where products were transferred TO this driver
+                                return trip.transfer?.transferredProducts?.some(
+                                  tp => tp.receivingDriverId === driver.id &&
+                                  dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
+                                );
+                              })
+                              .flatMap(trip => 
+                                trip.transfer?.transferredProducts
+                                  ?.filter(tp => tp.receivingDriverId === driver.id)
+                                  .map(tp => ({
+                                    productId: tp.productId,
+                                    productName: tp.productName,
+                                    category: tp.category as 'fresh' | 'bakery',
+                                    quantity: tp.quantity,
+                                    unitPrice: tp.unitPrice,
+                                    transferredFromDriverId: trip.driverId,
+                                    transferredFromDriverName: trip.driverName,
+                                  })) || []
+                              );
+                            
+                            if (acceptedProductsForThisDriver.length > 0) {
+                              console.log('Found accepted products for driver:', driver.id, acceptedProductsForThisDriver);
+                              setAcceptedProductsForForm(acceptedProductsForThisDriver);
+                            } else {
+                              setAcceptedProductsForForm([]);
+                            }
                           }}
                         >
                           <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
@@ -1454,6 +1491,42 @@ export default function Page(): React.JSX.Element {
                   </Box>
                 </Grid>
               </Grid>
+
+              {/* Accepted Products View (Shown when adding trip for receiving driver) */}
+              {acceptedProductsForForm.length > 0 && !editingTrip && (
+                <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'success.main', borderRadius: 1, bgcolor: 'success.light' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: 'success.dark' }}>
+                    Products Accepted from Other Drivers ({acceptedProductsForForm.length})
+                  </Typography>
+                  <Stack spacing={1}>
+                    {acceptedProductsForForm.map((acceptedProduct, index) => (
+                        <Box
+                          key={index}
+                          sx={{
+                            p: 1.5,
+                            border: '1px solid',
+                            borderColor: 'success.main',
+                            borderRadius: 1,
+                            bgcolor: 'white'
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {acceptedProduct.productName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Quantity: {acceptedProduct.quantity} × AED {acceptedProduct.unitPrice.toFixed(2)} = AED {(acceptedProduct.unitPrice * acceptedProduct.quantity).toFixed(2)}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'success.dark', fontWeight: 'bold', display: 'block', mt: 0.5 }}>
+                            From: {acceptedProduct.transferredFromDriverName}
+                          </Typography>
+                        </Box>
+                    ))}
+                  </Stack>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2 }}>
+                    💡 These products were transferred to this driver by other drivers and will be automatically included in the trip totals.
+                  </Typography>
+                </Box>
+              )}
 
               {/* Accepted Products View (Read-only in edit mode) */}
               {editingTrip && editingTrip.acceptedProducts && editingTrip.acceptedProducts.length > 0 && (

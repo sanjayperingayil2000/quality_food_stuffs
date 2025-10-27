@@ -215,13 +215,20 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
 
   const updateDriverBalance = React.useCallback(async (driverId: string, newBalance: number, reason: string, updatedBy?: string) => {
     try {
+      console.log('updateDriverBalance called:', { driverId, newBalance, reason, updatedBy });
+      
       // Get the current employee to build proper history
       const currentEmployee = employees.find(emp => emp.id === driverId && emp.designation === 'driver');
       if (!currentEmployee) {
+        console.error('Driver not found:', driverId);
         throw new Error('Driver not found');
       }
 
       const roundedNewBalance = Math.round(newBalance);
+      
+      console.log('Current employee balance:', currentEmployee.balance);
+      console.log('New balance:', roundedNewBalance);
+      console.log('Balance history length:', currentEmployee.balanceHistory?.length || 0);
       
       const newHistoryEntry: BalanceHistoryEntry = {
         version: (currentEmployee.balanceHistory?.length || 0) + 1,
