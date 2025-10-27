@@ -250,10 +250,18 @@ export default function Page(): React.JSX.Element {
 
   // Get available drivers (excluding those who already have trips for the selected date)
   const getAvailableDrivers = React.useCallback(() => {
-    if (!watchedDate) return drivers;
+    if (!watchedDate) return [];
     
-    return drivers.filter(driver => canAddTripForDriver(driver.id, watchedDate.toISOString().split('T')[0]));
-  }, [drivers, watchedDate, canAddTripForDriver]);
+    const selectedDate = dayjs(watchedDate).format('YYYY-MM-DD');
+    return drivers.filter(driver => {
+      // Filter out drivers who already have a trip for this date
+      const hasTripForDate = trips.some(trip => 
+        trip.driverId === driver.id && 
+        dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
+      );
+      return !hasTripForDate;
+    });
+  }, [drivers, watchedDate, trips]);
 
   // Calculation functions
 
