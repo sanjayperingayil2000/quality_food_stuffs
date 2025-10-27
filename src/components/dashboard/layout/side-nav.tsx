@@ -2,21 +2,21 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
-// import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-// import { ArrowSquareUpRightIcon } from '@phosphor-icons/react/dist/ssr/ArrowSquareUpRight';
-import { ListIcon } from '@phosphor-icons/react/dist/ssr/List';
-import { XIcon } from '@phosphor-icons/react/dist/ssr/X';
+import { List as ListIcon, X as XIcon } from '@phosphor-icons/react';
+import { SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
-import { Logo } from '@/components/core/logo';
+import { useUser } from '@/hooks/use-user';
+import { authClient } from '@/lib/auth/client';
+import { logger } from '@/lib/default-logger';
 
 import { navItems } from './config';
 import { navIcons } from './nav-icons';
@@ -26,9 +26,39 @@ interface SideNavProps {
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {  const pathname = usePathname();
+export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, checkSession } = useUser();
 
   const toggleSidebar = () => setOpen((prev) => !prev);
+
+  const handleSignOut = React.useCallback(async (): Promise<void> => {
+    try {
+      const { error } = await authClient.signOut();
+
+      if (error) {
+        logger.error('Sign out error', error);
+        return;
+      }
+
+      // Refresh the auth state
+      await checkSession?.();
+
+      // UserProvider, for this case, will not refresh the router and we need to do it manually
+      router.refresh();
+      // After refresh, AuthGuard will handle the redirect
+    } catch (error) {
+      logger.error('Sign out error', error);
+    }
+  }, [checkSession, router]);
+
+  // Filter nav items based on user roles
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.roles) return true;
+    if (!user?.roles) return false;
+    return item.roles.some((role) => user.roles?.includes(role));
+  });
 
   return (
     <Box
@@ -45,16 +75,23 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {  c
         '--NavItem-icon-disabled-color': 'var(--mui-palette-neutral-600)',
         bgcolor: 'var(--SideNav-background)',
         color: 'var(--SideNav-color)',
-        display: { xs: 'none', lg: 'flex' },
+        display: { xs: 'flex', lg: 'flex' },
         flexDirection: 'column',
-        height: '100vh', // full height
+        height: '100vh',
         left: 0,
         position: 'fixed',
         top: 0,
         transition: 'width 0.3s ease',
-        width: open ? '240px' : '72px',
-        zIndex: 'var(--SideNav-zIndex)',
-        overflow: 'hidden', // no page scroll
+        width: open ? 240 : 72,
+        '@media (max-width: 1023px)': {
+          width: open ? 280 : 0,
+          transform: open ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s ease, width 0.3s ease',
+          backgroundColor: 'var(--SideNav-background)',
+          boxShadow: open ? '2px 0 8px rgba(0,0,0,0.3)' : 'none',
+        },
+        zIndex: 1200,
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
@@ -65,21 +102,51 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {  c
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: open ? 'space-between' : 'center',
+          minHeight: 56,
         }}
       >
-        {open && (
-          <Box component={RouterLink} href={paths.home} sx={{ display: 'inline-flex' }}>
-            <Logo color="light" height={32} width={122} />
-          </Box>
-        )}
-        <IconButton onClick={toggleSidebar} sx={{ color: 'white' }}>
+        <Box
+          component={RouterLink}
+          href={paths.home}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            textDecoration: 'none',
+            color: 'inherit',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {/* Logo / Square */}
+          {/* <Box
+            sx={{
+              width: 32,
+              height: 32,
+              bgcolor: 'primary.main',
+              borderRadius: 1,
+              mr: open ? 1 : 0,
+              transition: 'margin 0.3s ease',
+            }}
+          /> */}
+          {open && (
+            <Typography
+              variant="h6"
+              noWrap
+              sx={{ fontWeight: 'bold', color: 'white', transition: 'opacity 0.3s ease' }}
+            >
+              Quality Food Stuffs
+            </Typography>
+          )}
+        </Box>
+
+        <IconButton onClick={toggleSidebar} sx={{ color: 'white', p: 0.5 }}>
           {open ? <XIcon size={20} /> : <ListIcon size={20} />}
         </IconButton>
       </Stack>
 
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
 
-      {/* Nav Items (scrollable area) */}
+      {/* Nav Items */}
       <Box
         component="nav"
         sx={{
@@ -93,43 +160,47 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {  c
           },
         }}
       >
-        {renderNavItems({ pathname: pathname ?? '', items: navItems, open })}
+        {renderNavItems({ pathname: pathname ?? '', items: filteredNavItems, open })}
       </Box>
 
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
 
-      {/* Footer (pinned, only when expanded) */}
-      {/* {open && (
-        <Stack spacing={2} sx={{ p: 2 }}>
-          <div>
-            <Typography color="var(--mui-palette-neutral-100)" variant="subtitle2">
-              Need more features?
-            </Typography>
-            <Typography color="var(--mui-palette-neutral-400)" variant="body2">
-              Check out our Pro solution template.
-            </Typography>
-          </div>
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <Box
-              component="img"
-              alt="Pro version"
-              src="/assets/devias-kit-pro.png"
-              sx={{ height: 'auto', width: '160px' }}
+      {/* Logout Button */}
+      <Box sx={{ p: 1 }}>
+        <Box
+          onClick={handleSignOut}
+          sx={{
+            alignItems: 'center',
+            borderRadius: 1,
+            color: 'var(--NavItem-color)',
+            cursor: 'pointer',
+            display: 'flex',
+            flex: '0 0 auto',
+            gap: 1,
+            p: '6px 12px',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+            '&:hover': {
+              bgcolor: 'var(--NavItem-hover-background)',
+            },
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>
+            <SignOutIcon
+              fill="var(--NavItem-icon-color)"
+              fontSize="var(--icon-fontSize-md)"
             />
           </Box>
-          <Button
-            component="a"
-            endIcon={<ArrowSquareUpRightIcon fontSize="var(--icon-fontSize-md)" />}
-            fullWidth
-            href="https://material-kit-pro-react.devias.io/"
-            sx={{ mt: 2 }}
-            target="_blank"
-            variant="contained"
-          >
-            Pro version
-          </Button>
-        </Stack>
-      )} */}
+          {open && (
+            <Typography
+              component="span"
+              sx={{ color: 'inherit', fontSize: '0.875rem', fontWeight: 500, lineHeight: '28px' }}
+            >
+              Logout
+            </Typography>
+          )}
+        </Box>
+      </Box>
     </Box>
   );
 }
@@ -143,15 +214,11 @@ function renderNavItems({
   pathname: string;
   open: boolean;
 }): React.JSX.Element {
-  const children = items.reduce((acc: React.ReactNode[], curr: NavItemConfig): React.ReactNode[] => {
-    const { key, ...item } = curr;
-    acc.push(<NavItem key={key} pathname={pathname} open={open} {...item} />);
-    return acc;
-  }, []);
-
   return (
     <Stack component="ul" spacing={1} sx={{ listStyle: 'none', m: 0, p: 0 }}>
-      {children}
+      {items.map(({ key, ...rest }) => (
+        <NavItem key={key} pathname={pathname} open={open} {...rest} />
+      ))}
     </Stack>
   );
 }
@@ -170,11 +237,11 @@ function NavItem({ disabled, external, href, icon, matcher, pathname, title, ope
       <Box
         {...(href
           ? {
-              component: external ? 'a' : RouterLink,
-              href,
-              target: external ? '_blank' : undefined,
-              rel: external ? 'noreferrer' : undefined,
-            }
+            component: external ? 'a' : RouterLink,
+            href,
+            target: external ? '_blank' : undefined,
+            rel: external ? 'noreferrer' : undefined,
+          }
           : { role: 'button' })}
         sx={{
           alignItems: 'center',

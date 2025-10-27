@@ -4,8 +4,8 @@ import * as React from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
-import { freshProducts } from './data/fresh-products';
-import { bakeryProducts } from './data/bakery-products';
+import { apiClient } from '@/lib/api-client';
+import { useUser } from '@/hooks/use-user';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -44,26 +44,72 @@ interface ProductContextType {
   products: Product[];
   bakeryProducts: Product[];
   freshProducts: Product[];
+  isLoading: boolean;
+  error: string | null;
   getProductById: (id: string) => Product | undefined;
-  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateProduct: (id: string, updates: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  refreshProducts: () => Promise<void>;
 }
 
 const ProductContext = React.createContext<ProductContextType | undefined>(undefined);
 
-const initialProducts: Product[] = [...freshProducts,...bakeryProducts];
-
 export function ProductProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const [products, setProducts] = React.useState<Product[]>(initialProducts);
+  const { user, isLoading: userLoading } = useUser();
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const refreshProducts = React.useCallback(async () => {
+    // Don't load data if user is not authenticated yet
+    if (userLoading || !user) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await apiClient.getProducts();
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Get the product data directly
+      if (result.data?.products) {
+        const transformedProducts = result.data.products.map(product => ({
+          ...product,
+          createdAt: new Date(product.createdAt),
+          updatedAt: new Date(product.updatedAt),
+          priceHistory: product.priceHistory?.map(entry => ({
+            ...entry,
+            updatedAt: new Date(entry.updatedAt),
+            updatedBy: entry.updatedBy || 'Unknown'
+          }))
+        }));
+        setProducts(transformedProducts.sort((a, b) => a.id.localeCompare(b.id)));
+      }
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to fetch products');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, userLoading]);
+
+  React.useEffect(() => {
+    refreshProducts();
+  }, [refreshProducts]);
 
   const bakeryProducts = React.useMemo(() => 
-    products.filter(prod => prod.category === 'bakery' && prod.isActive), 
+    products.filter(prod => prod.category === 'bakery' && prod.isActive)
+            .sort((a, b) => a.id.localeCompare(b.id)), 
     [products]
   );
 
   const freshProducts = React.useMemo(() => 
-    products.filter(prod => prod.category === 'fresh' && prod.isActive), 
+    products.filter(prod => prod.category === 'fresh' && prod.isActive)
+            .sort((a, b) => a.id.localeCompare(b.id)), 
     [products]
   );
 
@@ -71,38 +117,123 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
     return products.find(prod => prod.id === id);
   }, [products]);
 
-  const addProduct = React.useCallback((productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: `PRD-${String(products.length + 1).padStart(3, '0')}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    setProducts(prev => [newProduct,...prev ]);
-  }, [products.length]);
+  const addProduct = React.useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      // Generate category-specific ID
+      const categoryProducts = products.filter(p => p.category === productData.category);
+      const lastId = categoryProducts.length > 0 ? categoryProducts.at(-1)?.id : null;
+      
+      let nextNumber = 1;
+      if (lastId) {
+        // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
+        const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+        if (match) {
+          nextNumber = Number.parseInt(match[2], 10) + 1;
+        }
+      }
+      
+      const prefix = productData.category === 'fresh' ? 'FRS' : 'BAK';
+      const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
+      
+      const newProduct: Product = {
+        ...productData,
+        id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      // Update local state immediately
+      setProducts(prev => [newProduct, ...prev]);
+      
+      // Save to backend - convert Date objects to strings for API
+      const apiProduct = {
+        ...newProduct,
+        createdAt: newProduct.createdAt.toISOString(),
+        updatedAt: newProduct.updatedAt.toISOString(),
+        priceHistory: newProduct.priceHistory?.map(entry => ({
+          ...entry,
+          updatedAt: entry.updatedAt.toISOString()
+        }))
+      };
+      const result = await apiClient.createProduct(apiProduct);
+      
+      if (result.error) {
+        // Revert local state on error
+        setProducts(prev => prev.filter(prod => prod.id !== newProduct.id));
+        setError(result.error);
+      }
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to add product');
+    }
+  }, [products]);
 
-  const updateProduct = React.useCallback((id: string, updates: Partial<Product>) => {
-    setProducts(prev => 
-      prev.map(prod => 
+  const updateProduct = React.useCallback(async (id: string, updates: Partial<Product>) => {
+    try {
+      const updatedProducts = products.map(prod => 
         prod.id === id 
           ? { ...prod, ...updates, updatedAt: new Date() }
           : prod
-      )
-    );
-  }, []);
+      );
+      
+      // Update local state immediately
+      setProducts(updatedProducts);
+      
+      // Save to backend - convert Date objects to strings for API
+      const apiUpdates = {
+        ...updates,
+        createdAt: updates.createdAt?.toISOString(),
+        updatedAt: updates.updatedAt?.toISOString(),
+        priceHistory: updates.priceHistory?.map(entry => ({
+          ...entry,
+          updatedAt: entry.updatedAt.toISOString()
+        }))
+      };
+      const result = await apiClient.updateProduct(id, apiUpdates);
+      
+      if (result.error) {
+        // Revert local state on error
+        await refreshProducts();
+        setError(result.error);
+      } else {
+        // Refresh products to get updated price history from backend
+        await refreshProducts();
+      }
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to update product');
+    }
+  }, [products, refreshProducts]);
 
-  const deleteProduct = React.useCallback((id: string) => {
-    setProducts(prev => prev.filter(prod => prod.id !== id));
-  }, []);
+  const deleteProduct = React.useCallback(async (id: string) => {
+    try {
+      const updatedProducts = products.filter(prod => prod.id !== id);
+      
+      // Update local state immediately
+      setProducts(updatedProducts);
+      
+      // Save to backend
+      const result = await apiClient.deleteProduct(id);
+      
+      if (result.error) {
+        // Revert local state on error
+        await refreshProducts();
+        setError(result.error);
+      }
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to delete product');
+    }
+  }, [products, refreshProducts]);
 
   const value: ProductContextType = {
     products,
     bakeryProducts,
     freshProducts,
+    isLoading,
+    error,
     getProductById,
     addProduct,
     updateProduct,
     deleteProduct,
+    refreshProducts,
   };
 
   return (

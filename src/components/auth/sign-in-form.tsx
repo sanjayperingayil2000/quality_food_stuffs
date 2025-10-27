@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import RouterLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Alert from '@mui/material/Alert';
@@ -13,10 +12,14 @@ import Link from '@mui/material/Link';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Backdrop from '@mui/material/Backdrop';
 import { EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
 import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 
 import { paths } from '@/paths';
 import { authClient } from '@/lib/auth/client';
@@ -29,7 +32,7 @@ const schema = zod.object({
 
 type Values = zod.infer<typeof schema>;
 
-const defaultValues = { email: 'sanjay@eg.io', password: 'Secret1' } satisfies Values;
+const defaultValues = { email: '', password: '' } satisfies Values;
 
 export function SignInForm(): React.JSX.Element {
   const router = useRouter();
@@ -62,92 +65,108 @@ export function SignInForm(): React.JSX.Element {
       // Refresh the auth state
       await checkSession?.();
 
-      // UserProvider, for this case, will not refresh the router
-      // After refresh, GuestGuard will handle the redirect
-      router.refresh();
+      // Navigate to dashboard after successful login
+      router.push('/dashboard');
     },
     [checkSession, router, setError]
   );
 
   return (
-    <Stack spacing={4}>
-      <Stack spacing={1}>
-        <Typography variant="h4">Sign in</Typography>
-        <Typography color="text.secondary" variant="body2">
-          Don&apos;t have an account?{' '}
-          <Link component={RouterLink} href={paths.auth.signUp} underline="hover" variant="subtitle2">
-            Sign up
-          </Link>
-        </Typography>
-      </Stack>
+    <>
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 1 }}
+        open={isPending}
+      >
+        <CircularProgress color="inherit" />
+      </Backdrop>
+      <Stack spacing={4} sx={{ maxWidth: 400, mx: 'auto', mt: 6 }}>
+        {/* Header */}
+        <Stack spacing={1}>
+          <Typography variant="h4" textAlign="center">
+            Sign In
+          </Typography>
+          <Typography color="text.secondary" variant="body2" textAlign="center">
+            Contact your administrator for account access.
+          </Typography>
+        </Stack>
+
+      {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack spacing={2}>
+          {/* Email */}
           <Controller
             control={control}
             name="email"
             render={({ field }) => (
-              <FormControl error={Boolean(errors.email)}>
+              <FormControl error={Boolean(errors.email)} fullWidth>
                 <InputLabel>Email address</InputLabel>
                 <OutlinedInput {...field} label="Email address" type="email" />
-                {errors.email ? <FormHelperText>{errors.email.message}</FormHelperText> : null}
+                {errors.email && (
+                  <FormHelperText>{errors.email.message}</FormHelperText>
+                )}
               </FormControl>
             )}
           />
+
+          {/* Password */}
           <Controller
             control={control}
             name="password"
             render={({ field }) => (
-              <FormControl error={Boolean(errors.password)}>
+              <FormControl error={Boolean(errors.password)} fullWidth>
                 <InputLabel>Password</InputLabel>
                 <OutlinedInput
                   {...field}
-                  endAdornment={
-                    showPassword ? (
-                      <EyeIcon
-                        cursor="pointer"
-                        fontSize="var(--icon-fontSize-md)"
-                        onClick={(): void => {
-                          setShowPassword(false);
-                        }}
-                      />
-                    ) : (
-                      <EyeSlashIcon
-                        cursor="pointer"
-                        fontSize="var(--icon-fontSize-md)"
-                        onClick={(): void => {
-                          setShowPassword(true);
-                        }}
-                      />
-                    )
-                  }
                   label="Password"
                   type={showPassword ? 'text' : 'password'}
+                  endAdornment={
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        edge="end"
+                        aria-label="toggle password visibility"
+                      >
+                        {showPassword ? (
+                          <EyeSlashIcon width={20} height={20} />
+                        ) : (
+                          <EyeIcon width={20} height={20} />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  }
                 />
-                {errors.password ? <FormHelperText>{errors.password.message}</FormHelperText> : null}
+                {errors.password && (
+                  <FormHelperText>{errors.password.message}</FormHelperText>
+                )}
               </FormControl>
             )}
           />
-          <div>
-            <Link component={RouterLink} href={paths.auth.resetPassword} variant="subtitle2">
+
+          {/* Forgot password link */}
+          <Stack direction="row" justifyContent="flex-end">
+            <Link
+              href={paths.auth.resetPassword}
+              style={{
+                textDecoration: 'none',
+                fontWeight: 500,
+                color: '#1976d2',
+                fontSize: '0.875rem',
+              }}
+            >
               Forgot password?
             </Link>
-          </div>
-          {errors.root ? <Alert color="error">{errors.root.message}</Alert> : null}
-          <Button disabled={isPending} type="submit" variant="contained">
-            Sign in
+          </Stack>
+
+          {/* Error */}
+          {errors.root && <Alert color="error">{errors.root.message}</Alert>}
+
+          {/* Submit button */}
+          <Button disabled={isPending} type="submit" variant="contained" fullWidth startIcon={isPending ? <CircularProgress size={16} color="inherit" /> : null}>
+            {isPending ? 'Signing in...' : 'Sign In'}
           </Button>
         </Stack>
       </form>
-      <Alert color="warning">
-        Use{' '}
-        <Typography component="span" sx={{ fontWeight: 700 }} variant="inherit">
-          sanjay@eg.io
-        </Typography>{' '}
-        with password{' '}
-        <Typography component="span" sx={{ fontWeight: 700 }} variant="inherit">
-          Secret1
-        </Typography>
-      </Alert>
-    </Stack>
+      </Stack>
+    </>
   );
 }

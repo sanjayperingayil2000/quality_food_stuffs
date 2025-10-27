@@ -1,0 +1,266 @@
+'use client';
+
+import * as React from 'react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import CardHeader from '@mui/material/CardHeader';
+import Chip from '@mui/material/Chip';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import { useUser } from '@/hooks/use-user';
+import { apiClient } from '@/lib/api-client';
+
+// ---------- Types ----------
+interface Snapshot {
+  name?: string;
+  id?: string;
+  balance?: number;
+  price?: number;
+  [key: string]: unknown;
+}
+
+export interface Activity {
+  _id: string;
+  action: string;
+  collectionName: string;
+  documentId?: string;
+  before?: Snapshot;
+  after?: Snapshot;
+  actor?: string; // populated actor name
+  timestamp: string;
+}
+
+export interface EnrichedActivity extends Activity {
+  entityName?: string; // populated entity name
+}
+
+// ---------- Helpers ----------
+const getActionColor = (
+  action: string
+): 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info' => {
+  const actionLower = action.toLowerCase();
+  
+  // Handle various possible action values
+  if (actionLower === 'create' || actionLower === 'created') {
+    return 'success'; // Green
+  }
+  if (actionLower === 'update' || actionLower === 'updated') {
+    return 'primary'; // Blue
+  }
+  if (actionLower === 'delete' || actionLower === 'deleted') {
+    return 'error'; // Red
+  }
+  
+  // Default fallback
+  return 'info';
+};
+
+// Map collection names to display names
+const getCollectionType = (collection: string): string => {
+  switch (collection) {
+    case 'employees': {
+      return 'employee';
+    }
+    case 'products': {
+      return 'product';
+    }
+    case 'additional_expenses':
+    case 'additionalExpenses': {
+      return 'additionalExpense';
+    }
+    case 'daily_trips':
+    case 'dailyTrips': {
+      return 'dailyTrip';
+    }
+    default: {
+      return collection;
+    }
+  }
+};
+
+const getActionDescription = (activity: EnrichedActivity): string => {
+  const { action, collectionName } = activity;
+  const actionLower = action.toLowerCase();
+  
+  // Use enriched entity name or fallback to snapshot data
+  const entityName = activity.entityName || 'Unknown Entity';
+
+  // Map action to description format: action entityName collectionType
+  const collectionType = getCollectionType(collectionName);
+  
+  switch (actionLower) {
+    case 'create':
+    case 'created': {
+      return `create ${entityName} ${collectionType}`;
+    }
+    case 'update':
+    case 'updated': {
+      return `update ${entityName} ${collectionType}`;
+    }
+    case 'delete':
+    case 'deleted': {
+      return `delete ${entityName} ${collectionType}`;
+    }
+    default: {
+      return `${action} ${entityName} ${collectionType}`;
+    }
+  }
+};
+
+// ---------- Helper Function to Extract Entity Name from History Snapshots ----------
+const extractEntityName = (
+  activity: Activity
+): string => {
+  const { collectionName, before, after } = activity;
+  
+  // Try to extract name from the snapshot data
+  // For 'create' actions, use 'after'
+  // For 'delete' actions, use 'before'
+  // For 'update' actions, prefer 'after' (current state)
+  const snapshot = after || before;
+  
+  if (!snapshot) {
+    return 'Unknown Entity';
+  }
+
+  try {
+    switch (collectionName) {
+      case 'employees': {
+        return (snapshot as { name?: string }).name || 'Unknown Employee';
+      }
+      case 'products': {
+        return (snapshot as { name?: string }).name || 'Unknown Product';
+      }
+      case 'additional_expenses': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      case 'daily_trips': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      case 'dailyTrips': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      case 'additionalExpenses': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      default: {
+        return 'Unknown Entity';
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to extract entity name for ${collectionName}:`, error);
+    return 'Unknown Entity';
+  }
+};
+
+// ---------- Component ----------
+export default function Page(): React.JSX.Element {
+  const { user } = useUser();
+  const [activities, setActivities] = React.useState<EnrichedActivity[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const res = await apiClient.getHistory<Activity>();
+        if (res.error) throw new Error(res.error);
+
+        // Ensure proper type mapping
+        const mapped: Activity[] = (res.data?.items || []).map(item => ({
+          ...item,
+          actor: item.actor || 'Unknown',
+        }));
+
+        // Enrich activities with entity names from stored snapshots
+        const enriched: EnrichedActivity[] = mapped.map((activity) => {
+          const entityName = extractEntityName(activity);
+          return { ...activity, entityName };
+        });
+
+        setActivities(enriched);
+      } catch (error) {
+        console.error('Failed to load histories', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, []);
+
+  // Access control
+  if (!user?.roles?.includes('super_admin')) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h6" color="error">
+          Access Denied
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          You don&apos;t have permission to view this page.
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Card>
+        <CardHeader
+          title="System Activity Log"
+          subheader="Track all system activities and changes"
+        />
+        <CardContent>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Action</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell>User</TableCell>
+                  <TableCell>Date & Time</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {activities.map(activity => {
+                  const actionDescription = getActionDescription(activity);
+
+                  return (
+                    <TableRow key={activity._id} hover>
+                      <TableCell>
+                        <Chip
+                          label={activity.action}
+                          color={getActionColor(activity.action)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {actionDescription}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{activity.actor || 'System'}</TableCell>
+                      <TableCell>
+                        {new Date(activity.timestamp).toLocaleDateString()}{' '}
+                        {new Date(activity.timestamp).toLocaleTimeString()}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
+  );
+}
