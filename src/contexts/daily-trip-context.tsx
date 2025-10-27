@@ -868,6 +868,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     driverId: string;
     balance: number;
     reason: string;
+    date?: string;
     updatedBy: string;
   }>>([]);
 
@@ -916,6 +917,23 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       }
     }
   }, [trips, updateDriverBalance]);
+
+  // Helper to check if a trip has the latest date for its driver
+  const _checkAndUpdateBalanceForLatestTrip = React.useCallback((driverId: string, tripDate: string, calculatedBalance: number) => {
+    const allDriverTrips = trips.filter(t => t.driverId === driverId);
+    const isLatestTrip = allDriverTrips.length === 0 || 
+      !allDriverTrips.some(t => dayjs(t.date).isAfter(dayjs(tripDate), 'day'));
+    
+    if (isLatestTrip) {
+      balanceUpdatesRef.current.push({
+        driverId,
+        balance: calculatedBalance,
+        reason: `trip_added_${tripDate}`,
+        date: tripDate,
+        updatedBy: 'EMP-001'
+      });
+    }
+  }, [trips]);
 
   // Helper to get previous balance for a driver
   const getPreviousBalance = React.useCallback((driverId: string, currentDate: Date, allTrips: DailyTrip[]): number => {
@@ -1135,12 +1153,20 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     }
 
     // Track balance update to be processed after state change
-    balanceUpdatesRef.current.push({
-      driverId: tripData.driverId,
-      balance: Math.round(financialMetrics.balance),
-      reason: 'trip_update',
-      updatedBy: 'EMP-001'
-    });
+    // Check if this is the latest trip for this driver (including the new trip we just added)
+    const allDriverTrips = [...trips, newTrip].filter(t => t.driverId === tripData.driverId);
+    const isLatestTrip = allDriverTrips.length === 0 || 
+      !allDriverTrips.some(t => t.id !== newTrip.id && dayjs(t.date).isAfter(dayjs(tripData.date), 'day'));
+    
+    if (isLatestTrip) {
+      balanceUpdatesRef.current.push({
+        driverId: tripData.driverId,
+        balance: Math.round(financialMetrics.balance),
+        reason: `trip_added_${tripDate}`,
+        date: tripDate,
+        updatedBy: 'EMP-001'
+      });
+    }
   }, [trips, pendingTransfers, getPreviousBalance]);
 
   const updateTrip = React.useCallback(async (id: string, updates: Partial<DailyTrip>) => {
@@ -1219,13 +1245,20 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             
             // Track balance changes to update after state change
             if (updatedTrip.balance !== trip.balance) {
-              // Store the balance update to be processed after state update
-              balanceUpdatesRef.current.push({
-                driverId: updatedTrip.driverId,
-                balance: updatedTrip.balance,
-                reason: 'trip_update',
-                updatedBy: 'EMP-001'
-              });
+              // Check if this is the latest trip for this driver
+              const allDriverTrips = prev.filter(t => t.driverId === updatedTrip.driverId);
+              const isLatestTrip = !allDriverTrips.some(t => t.id !== id && dayjs(t.date).isAfter(dayjs(updatedTrip.date), 'day'));
+              
+              if (isLatestTrip) {
+                // Store the balance update to be processed after state update
+                balanceUpdatesRef.current.push({
+                  driverId: updatedTrip.driverId,
+                  balance: updatedTrip.balance,
+                  reason: `trip_updated_${dayjs(updatedTrip.date).format('YYYY-MM-DD')}`,
+                  date: dayjs(updatedTrip.date).format('YYYY-MM-DD'),
+                  updatedBy: 'EMP-001'
+                });
+              }
             }
             
             return updatedTrip;

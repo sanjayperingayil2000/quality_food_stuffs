@@ -718,7 +718,30 @@ export default function Page(): React.JSX.Element {
                             <TableCell>AED {entry.balance?.toFixed(2) || '0.00'}</TableCell>
                             <TableCell>
                               <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                                {entry.reason?.replace('_', ' ') || 'N/A'}
+                                {(() => {
+                                  const reason = entry.reason || 'N/A';
+                                  // Format trip reasons to show date
+                                  if (reason.includes('trip_added_')) {
+                                    const dateStr = reason.replace('trip_added_', '');
+                                    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                                      const date = new Date(dateStr);
+                                      return `Daily trip added on ${date.toLocaleDateString()}`;
+                                    }
+                                    return reason.replaceAll('_', ' ');
+                                  }
+                                  if (reason.includes('trip_updated_')) {
+                                    const dateStr = reason.replace('trip_updated_', '');
+                                    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                                      const date = new Date(dateStr);
+                                      return `Daily trip updated on ${date.toLocaleDateString()}`;
+                                    }
+                                    return reason.replaceAll('_', ' ');
+                                  }
+                                  if (reason.includes('trip_update')) {
+                                    return reason.replaceAll('trip_update', 'Manual balance update').replaceAll('_', ' ');
+                                  }
+                                  return reason.replaceAll('_', ' ');
+                                })()}
                               </Typography>
                             </TableCell>
                           </TableRow>
