@@ -39,6 +39,10 @@ export interface Activity {
   timestamp: string;
 }
 
+export interface EnrichedActivity extends Activity {
+  entityName?: string; // populated entity name
+}
+
 // ---------- Helpers ----------
 const getActionColor = (
   action: string
@@ -46,13 +50,13 @@ const getActionColor = (
   const actionLower = action.toLowerCase();
   
   // Handle various possible action values
-  if (actionLower.includes('create') || actionLower === 'create') {
+  if (actionLower === 'create' || actionLower === 'created') {
     return 'success'; // Green
   }
-  if (actionLower.includes('update') || actionLower === 'update') {
+  if (actionLower === 'update' || actionLower === 'updated') {
     return 'primary'; // Blue
   }
-  if (actionLower.includes('delete') || actionLower === 'delete') {
+  if (actionLower === 'delete' || actionLower === 'deleted') {
     return 'error'; // Red
   }
   
@@ -111,13 +115,13 @@ const formatFieldName = (fieldName: string): string => {
   return fieldMap[fieldName] || fieldName;
 };
 
-const getActionDescription = (activity: Activity): string => {
-  const { action, collectionName, before, after, documentId } = activity;
+const getActionDescription = (activity: EnrichedActivity): string => {
+  const { action, collectionName, before, after } = activity;
   const actionLower = action.toLowerCase();
   
-  // Get entity name from after, before, or documentId
-  const entityName = after?.name || before?.name || documentId || 'Unknown';
-  
+  // Use enriched entity name or fallback to snapshot data
+  const entityName = activity.entityName || 'Unknown Entity';
+
   switch (collectionName) {
     case 'employees': {
       switch (actionLower) {
@@ -261,10 +265,56 @@ const getActionDescription = (activity: Activity): string => {
   }
 };
 
+// ---------- Helper Function to Extract Entity Name from History Snapshots ----------
+const extractEntityName = (
+  activity: Activity
+): string => {
+  const { collectionName, before, after } = activity;
+  
+  // Try to extract name from the snapshot data
+  // For 'create' actions, use 'after'
+  // For 'delete' actions, use 'before'
+  // For 'update' actions, prefer 'after' (current state)
+  const snapshot = after || before;
+  
+  if (!snapshot) {
+    return 'Unknown Entity';
+  }
+
+  try {
+    switch (collectionName) {
+      case 'employees': {
+        return (snapshot as { name?: string }).name || 'Unknown Employee';
+      }
+      case 'products': {
+        return (snapshot as { name?: string }).name || 'Unknown Product';
+      }
+      case 'additional_expenses': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      case 'daily_trips': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      case 'dailyTrips': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      case 'additionalExpenses': {
+        return (snapshot as { driverName?: string }).driverName || 'Unknown Employee';
+      }
+      default: {
+        return 'Unknown Entity';
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to extract entity name for ${collectionName}:`, error);
+    return 'Unknown Entity';
+  }
+};
+
 // ---------- Component ----------
 export default function Page(): React.JSX.Element {
   const { user } = useUser();
-  const [activities, setActivities] = React.useState<Activity[]>([]);
+  const [activities, setActivities] = React.useState<EnrichedActivity[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -279,7 +329,13 @@ export default function Page(): React.JSX.Element {
           actor: item.actor || 'Unknown',
         }));
 
-        setActivities(mapped);
+        // Enrich activities with entity names from stored snapshots
+        const enriched: EnrichedActivity[] = mapped.map((activity) => {
+          const entityName = extractEntityName(activity);
+          return { ...activity, entityName };
+        });
+
+        setActivities(enriched);
       } catch (error) {
         console.error('Failed to load histories', error);
       } finally {
@@ -344,7 +400,7 @@ export default function Page(): React.JSX.Element {
                           {actionDescription}
                         </Typography>
                       </TableCell>
-                      <TableCell>{activity.actor || 'Satheesh Thalekkara'}</TableCell>
+                      <TableCell>{activity.actor || 'System'}</TableCell>
                       <TableCell>
                         {new Date(activity.timestamp).toLocaleDateString()}{' '}
                         {new Date(activity.timestamp).toLocaleTimeString()}

@@ -177,6 +177,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
                 label="From"
                 value={filters.dateRange[0]}
                 onChange={(newValue) => updateDateRange([newValue, filters.dateRange[1]])}
+                format="DD-MM-YYYY"
                 slotProps={{
                   textField: {
                     sx: {
@@ -202,6 +203,7 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
                 label="To"
                 value={filters.dateRange[1]}
                 onChange={(newValue) => updateDateRange([filters.dateRange[0], newValue])}
+                format="DD-MM-YYYY"
                 slotProps={{
                   textField: {
                     sx: {

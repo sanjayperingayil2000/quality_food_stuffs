@@ -2,18 +2,21 @@
 
 import * as React from 'react';
 import RouterLink from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import { List as ListIcon, X as XIcon } from '@phosphor-icons/react';
+import { SignOutIcon } from '@phosphor-icons/react/dist/ssr/SignOut';
 
 import type { NavItemConfig } from '@/types/nav';
 import { paths } from '@/paths';
 import { isNavItemActive } from '@/lib/is-nav-item-active';
 import { useUser } from '@/hooks/use-user';
+import { authClient } from '@/lib/auth/client';
+import { logger } from '@/lib/default-logger';
 
 import { navItems } from './config';
 import { navIcons } from './nav-icons';
@@ -25,9 +28,30 @@ interface SideNavProps {
 
 export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {
   const pathname = usePathname();
-  const { user } = useUser();
+  const router = useRouter();
+  const { user, checkSession } = useUser();
 
   const toggleSidebar = () => setOpen((prev) => !prev);
+
+  const handleSignOut = React.useCallback(async (): Promise<void> => {
+    try {
+      const { error } = await authClient.signOut();
+
+      if (error) {
+        logger.error('Sign out error', error);
+        return;
+      }
+
+      // Refresh the auth state
+      await checkSession?.();
+
+      // UserProvider, for this case, will not refresh the router and we need to do it manually
+      router.refresh();
+      // After refresh, AuthGuard will handle the redirect
+    } catch (error) {
+      logger.error('Sign out error', error);
+    }
+  }, [checkSession, router]);
 
   // Filter nav items based on user roles
   const filteredNavItems = navItems.filter((item) => {
@@ -140,6 +164,43 @@ export function SideNav({ open, setOpen }: SideNavProps): React.JSX.Element {
       </Box>
 
       <Divider sx={{ borderColor: 'var(--mui-palette-neutral-700)' }} />
+
+      {/* Logout Button */}
+      <Box sx={{ p: 1 }}>
+        <Box
+          onClick={handleSignOut}
+          sx={{
+            alignItems: 'center',
+            borderRadius: 1,
+            color: 'var(--NavItem-color)',
+            cursor: 'pointer',
+            display: 'flex',
+            flex: '0 0 auto',
+            gap: 1,
+            p: '6px 12px',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+            '&:hover': {
+              bgcolor: 'var(--NavItem-hover-background)',
+            },
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'center', flex: '0 0 auto' }}>
+            <SignOutIcon
+              fill="var(--NavItem-icon-color)"
+              fontSize="var(--icon-fontSize-md)"
+            />
+          </Box>
+          {open && (
+            <Typography
+              component="span"
+              sx={{ color: 'inherit', fontSize: '0.875rem', fontWeight: 500, lineHeight: '28px' }}
+            >
+              Logout
+            </Typography>
+          )}
+        </Box>
+      </Box>
     </Box>
   );
 }

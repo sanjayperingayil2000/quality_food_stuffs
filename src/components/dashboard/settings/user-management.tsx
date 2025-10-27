@@ -98,6 +98,8 @@ export function UserManagement(): React.JSX.Element {
   const [error, setError] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
   const [editingUser, setEditingUser] = React.useState<ApiUser | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [userToDelete, setUserToDelete] = React.useState<ApiUser | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
@@ -246,25 +248,38 @@ export function UserManagement(): React.JSX.Element {
   };
 
   const handleDelete = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) {
-      return;
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setUserToDelete(user);
+      setDeleteDialogOpen(true);
     }
+  };
 
-    try {
-      setError(null);
-      console.log('Attempting to delete user with ID:', userId);
-      console.log('User ID type:', typeof userId);
-      const result = await apiClient.deleteUser(userId);
-      console.log('Delete API result:', result);
-      if (result.error) {
-        setError(result.error);
-        return;
+  const handleDeleteConfirm = async () => {
+    if (userToDelete) {
+      try {
+        setError(null);
+        console.log('Attempting to delete user with ID:', userToDelete.id);
+        console.log('User ID type:', typeof userToDelete.id);
+        const result = await apiClient.deleteUser(userToDelete.id);
+        console.log('Delete API result:', result);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        await fetchUsers();
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+      } catch (error) {
+        console.error('Delete error:', error);
+        setError('Failed to delete user');
       }
-      await fetchUsers();
-    } catch (error) {
-      console.error('Delete error:', error);
-      setError('Failed to delete user');
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setUserToDelete(null);
   };
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
@@ -486,6 +501,22 @@ export function UserManagement(): React.JSX.Element {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel}>Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
       </Dialog>
     </Card>
   );

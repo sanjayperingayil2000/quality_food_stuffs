@@ -7,6 +7,7 @@ import { connectToDatabase } from '@/lib/db';
 import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
+import { updateEmployee as updateEmployeeService } from '@/services/employee-service';
 
 const balanceHistoryEntrySchema = z.object({
   version: z.number(),
@@ -70,53 +71,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    const employee = await Employee.findOne({ id });
-    if (!employee) {
-      return withCors(NextResponse.json({ error: 'Employee not found' }, { status: 404 }));
-    }
-    
-    const beforeData = employee.toObject();
-    
-    // If balance is being updated, add to balance history
-    let updateData = {
+    const updatedEmployee = await updateEmployeeService(id, {
       ...parsed.data,
       updatedBy: user?.sub,
-    };
-    
-    if (updateData.balance !== undefined && updateData.balance !== employee.balance) {
-      const currentVersion = employee.balanceHistory?.length || 0;
-      const newHistoryEntry = {
-        version: currentVersion + 1,
-        balance: updateData.balance,
-        updatedAt: new Date(),
-        reason: 'balance_update',
-        updatedBy: user?.sub,
-      };
-      
-      updateData = {
-        ...updateData,
-        balanceHistory: [
-          ...(employee.balanceHistory || []),
-          newHistoryEntry
-        ]
-      };
-    }
-    
-    const updatedEmployee = await Employee.findOneAndUpdate(
-      { id },
-      updateData,
-      { new: true, runValidators: true }
-    );
-    
-    // Log to history
-    await History.create({
-      collectionName: 'employees',
-      documentId: employee._id,
-      action: 'update',
-      actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
-      before: beforeData,
-      after: updatedEmployee?.toObject(),
-      timestamp: new Date(),
     });
     
     return withCors(NextResponse.json({ employee: updatedEmployee }, { status: 200 }));

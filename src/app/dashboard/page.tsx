@@ -26,7 +26,9 @@ export default function Page(): React.JSX.Element {
       
       if (!fromDate || !toDate) return true;
       
-      return tripDate.isAfter(fromDate.subtract(1, 'day')) && tripDate.isBefore(toDate.add(1, 'day'));
+      // Inclusive date range filtering
+      return (tripDate.isSame(fromDate, 'day') || tripDate.isAfter(fromDate)) && 
+             (tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate));
     });
 
     // Filter trips based on driver selection
@@ -38,54 +40,189 @@ export default function Page(): React.JSX.Element {
     }
 
     // Calculate totals for the filtered trips
-    const totals = filteredTrips.reduce((acc, trip) => ({
+    const baseTotals = filteredTrips.reduce((acc, trip) => ({
       collectionAmount: acc.collectionAmount + trip.collectionAmount,
       purchaseAmount: acc.purchaseAmount + trip.purchaseAmount,
       discount: acc.discount + trip.discount,
-      amountToBe: acc.amountToBe + trip.amountToBe,
       petrol: acc.petrol + trip.petrol,
-      balance: acc.balance + trip.balance,
       expiry: acc.expiry + trip.expiry,
-      profit: acc.profit + trip.profit,
     }), {
       collectionAmount: 0,
       purchaseAmount: 0,
       discount: 0,
-      amountToBe: 0,
       petrol: 0,
-      balance: 0,
       expiry: 0,
-      profit: 0,
     });
 
-    // Calculate balance based on the last trip in the date range
-    let calculatedBalance = 0;
-    if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
-      // For specific driver, get the last trip's calculated balance
-      const selectedDriver = drivers.find(driver => driver.name === filters.driver);
-      if (selectedDriver && filteredTrips.length > 0) {
-        // Get the last trip's calculated balance
-        const lastTrip = filteredTrips.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-        calculatedBalance = lastTrip.balance || 0;
-      } else if (selectedDriver) {
-        // If no trips in date range, use driver's current balance from employee data
-        calculatedBalance = selectedDriver.balance || 0;
-      }
-    } else {
-      // For company view, sum the latest calculated balance for each driver from their last trip in the range
-      const driverLastTrips = new Map<string, number>();
+    // Calculate Amount to be and Profit dynamically
+    // Expiry after tax = ((expiry + 5%) - 13%)
+    const expiryAfterTax = Math.floor(baseTotals.expiry * 1.05 * 0.87);
+    
+    // Amount to be = Purchase amount - Expiry after tax
+    const amountToBe = baseTotals.purchaseAmount - expiryAfterTax;
+    
+    // For profit calculation, we need to calculate for each trip and sum
+    const calculatedProfit = filteredTrips.reduce((sum, trip) => {
+      // Calculate expiry after tax for this trip
+      const tripExpiryAfterTax = Math.floor(trip.expiry * 1.05 * 0.87);
       
-      // Collect the last trip's calculated balance for each driver
-      for (const trip of filteredTrips) {
-        const currentBalance = driverLastTrips.get(trip.driverId);
-        if (!currentBalance || trip.balance !== undefined) {
-          driverLastTrips.set(trip.driverId, trip.balance);
+      // Calculate fresh and bakery totals for this trip
+      const freshProductsTotal = trip.products.filter(p => p.category === 'fresh')
+        .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+      const bakeryProductsTotal = trip.products.filter(p => p.category === 'bakery')
+        .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+      const totalProductsValue = freshProductsTotal + bakeryProductsTotal;
+      
+      // Skip if no products
+      if (totalProductsValue === 0) return sum;
+      
+      // Calculate fresh net total
+      const freshNetTotal = freshProductsTotal * 0.885; // 11.5% reduction
+      
+      // Calculate bakery net total
+      const bakeryNetTotal = bakeryProductsTotal * 0.84; // 16% reduction
+      
+      // Profit = (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
+      const freshProfit = (freshNetTotal - tripExpiryAfterTax) * 0.135;
+      const bakeryProfit = bakeryNetTotal * 0.195;
+      const tripProfit = freshProfit + bakeryProfit - trip.discount;
+      
+      return sum + tripProfit;
+    }, 0);
+
+    const totals = {
+      ...baseTotals,
+      amountToBe,
+      profit: calculatedProfit,
+    };
+
+    // Calculate balance dynamically from trip data
+    // Balance = previous balance + profit - salesDifference
+    const calculateDriverBalance = () => {
+      if (filteredTrips.length === 0) return 0;
+      
+      // If a driver is selected, calculate their balance from the filtered trips
+      if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+        const selectedDriver = drivers.find(driver => driver.name === filters.driver);
+        if (!selectedDriver) return 0;
+        
+        // Get ALL trips for this driver (not just filtered) to calculate cumulative balance
+        const allDriverTrips = trips.filter(trip => trip.driverId === selectedDriver.id);
+        if (allDriverTrips.length === 0) return 0;
+        
+        // Sort chronologically
+        const sortedTrips = [...allDriverTrips].sort((a, b) => 
+          dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
+        );
+        
+        // Get the most recent trip within the filter date range to find the starting balance
+        const filterFromDate = filters.dateRange[0];
+        const filterToDate = filters.dateRange[1];
+        
+        let startingBalance = selectedDriver.balance || 0;
+        
+        // Find the most recent trip before the filter date range to get starting balance
+        const tripsBeforeRange = sortedTrips.filter(trip => {
+          const tripDate = dayjs(trip.date);
+          if (filterFromDate) {
+            return tripDate.isBefore(filterFromDate, 'day');
+          }
+          return false;
+        });
+        
+        if (tripsBeforeRange.length > 0) {
+          // Get the balance from the most recent trip before the range
+          startingBalance = tripsBeforeRange.at(-1)?.balance || startingBalance;
         }
+        
+        // Now calculate balance for trips in the filtered date range
+        const filteredDriverTrips = sortedTrips.filter(trip => {
+          const tripDate = dayjs(trip.date);
+          if (!filterFromDate || !filterToDate) return true;
+          return (tripDate.isSame(filterFromDate, 'day') || tripDate.isAfter(filterFromDate)) &&
+                 (tripDate.isSame(filterToDate, 'day') || tripDate.isBefore(filterToDate));
+        });
+        
+        let currentBalance = startingBalance;
+        
+        for (const trip of filteredDriverTrips) {
+          // Calculate profit for this trip
+          const tripExpiryAfterTax = Math.floor(trip.expiry * 1.05 * 0.87);
+          
+          const freshProductsTotal = trip.products.filter(p => p.category === 'fresh')
+            .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+          const bakeryProductsTotal = trip.products.filter(p => p.category === 'bakery')
+            .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+          const totalProductsValue = freshProductsTotal + bakeryProductsTotal;
+          
+          if (totalProductsValue > 0) {
+            const freshNetTotal = freshProductsTotal * 0.885;
+            const bakeryNetTotal = bakeryProductsTotal * 0.84;
+            const freshProfit = (freshNetTotal - tripExpiryAfterTax) * 0.135;
+            const bakeryProfit = bakeryNetTotal * 0.195;
+            const tripProfit = freshProfit + bakeryProfit - trip.discount;
+            
+            // Sales difference calculation
+            const amountToBe = trip.purchaseAmount - tripExpiryAfterTax;
+            const salesDifference = trip.collectionAmount - amountToBe;
+            
+            // Balance = previous balance + current profit - current sales difference
+            currentBalance = Math.round(currentBalance + tripProfit - salesDifference);
+          }
+        }
+        
+        return currentBalance;
       }
       
-      // Sum all driver balances
-      calculatedBalance = [...driverLastTrips.values()].reduce((sum, balance) => sum + balance, 0);
-    }
+      // For all drivers, sum their individual balances
+      return drivers.reduce((total, driver) => {
+        const driverTrips = trips.filter(trip => trip.driverId === driver.id);
+        if (driverTrips.length === 0) return total;
+        
+        const sortedTrips = [...driverTrips].sort((a, b) => 
+          dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
+        );
+        
+        let driverBalance = driver.balance || 0;
+        
+        // Calculate balance for the filtered date range
+        const filteredDriverTrips = sortedTrips.filter(trip => {
+          const tripDate = dayjs(trip.date);
+          const fromDate = filters.dateRange[0];
+          const toDate = filters.dateRange[1];
+          if (!fromDate || !toDate) return true;
+          return (tripDate.isSame(fromDate, 'day') || tripDate.isAfter(fromDate)) &&
+                 (tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate));
+        });
+        
+        for (const trip of filteredDriverTrips) {
+          const tripExpiryAfterTax = Math.floor(trip.expiry * 1.05 * 0.87);
+          
+          const freshProductsTotal = trip.products.filter(p => p.category === 'fresh')
+            .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+          const bakeryProductsTotal = trip.products.filter(p => p.category === 'bakery')
+            .reduce((s, p) => s + (p.quantity * p.unitPrice), 0);
+          const totalProductsValue = freshProductsTotal + bakeryProductsTotal;
+          
+          if (totalProductsValue > 0) {
+            const freshNetTotal = freshProductsTotal * 0.885;
+            const bakeryNetTotal = bakeryProductsTotal * 0.84;
+            const freshProfit = (freshNetTotal - tripExpiryAfterTax) * 0.135;
+            const bakeryProfit = bakeryNetTotal * 0.195;
+            const tripProfit = freshProfit + bakeryProfit - trip.discount;
+            
+            const amountToBe = trip.purchaseAmount - tripExpiryAfterTax;
+            const salesDifference = trip.collectionAmount - amountToBe;
+            
+            driverBalance = Math.round(driverBalance + tripProfit - salesDifference);
+          }
+        }
+        
+        return total + driverBalance;
+      }, 0);
+    };
+    
+    const totalDriverBalance = calculateDriverBalance();
 
     return {
       collectionAmount: {
@@ -114,7 +251,7 @@ export default function Page(): React.JSX.Element {
         trend: 'up' as 'up' | 'down'
       },
       balance: {
-        value: calculatedBalance,
+        value: totalDriverBalance,
         diff: 0,
         trend: 'up' as 'up' | 'down'
       },

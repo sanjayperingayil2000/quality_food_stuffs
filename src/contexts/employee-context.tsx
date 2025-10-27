@@ -215,24 +215,38 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
 
   const updateDriverBalance = React.useCallback(async (driverId: string, newBalance: number, reason: string, updatedBy?: string) => {
     try {
-      // Find the employee and calculate the updated values
-      const employee = employees.find(emp => emp.id === driverId && emp.designation === 'driver');
-      if (!employee) {
+      // Get the current employee to build proper history
+      const currentEmployee = employees.find(emp => emp.id === driverId && emp.designation === 'driver');
+      if (!currentEmployee) {
         throw new Error('Driver not found');
       }
 
       const roundedNewBalance = Math.round(newBalance);
       
       const newHistoryEntry: BalanceHistoryEntry = {
-        version: (employee.balanceHistory?.length || 0) + 1,
+        version: (currentEmployee.balanceHistory?.length || 0) + 1,
         balance: roundedNewBalance,
         updatedAt: new Date(),
         reason,
         updatedBy,
       };
 
-      const updatedBalanceHistory = [...(employee.balanceHistory || []), newHistoryEntry];
+      const updatedBalanceHistory = [...(currentEmployee.balanceHistory || []), newHistoryEntry];
 
+      // Build the update payload with balance history
+      const updatePayload = {
+        balance: roundedNewBalance,
+        balanceHistory: updatedBalanceHistory.map(entry => ({
+          version: entry.version,
+          balance: entry.balance,
+          updatedAt: entry.updatedAt.toISOString(),
+          reason: entry.reason,
+          updatedBy: entry.updatedBy,
+        })),
+        updatedBy
+      };
+
+      // Update local state immediately for better UX
       const updatedEmployees = employees.map(emp => {
         if (emp.id === driverId && emp.designation === 'driver') {
           return {
@@ -245,21 +259,10 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
         }
         return emp;
       });
-      
-      // Update local state immediately
       setEmployees(updatedEmployees);
       
-      // Serialize balance history for API
-      const serializedBalanceHistory = updatedBalanceHistory.map(entry => ({
-        ...entry,
-        updatedAt: entry.updatedAt instanceof Date ? entry.updatedAt.toISOString() : entry.updatedAt
-      }));
-      
-      const result = await apiClient.updateEmployee(driverId, { 
-        balance: roundedNewBalance,
-        balanceHistory: serializedBalanceHistory,
-        updatedBy,
-      });
+      // Save to backend with full balance history
+      const result = await apiClient.updateEmployee(driverId, updatePayload);
       
       if (result.error) {
         // Revert local state on error

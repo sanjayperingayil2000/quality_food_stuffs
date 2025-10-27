@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { apiClient } from '@/lib/api-client';
+import { useUser } from '@/hooks/use-user';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -55,11 +56,17 @@ interface ProductContextType {
 const ProductContext = React.createContext<ProductContextType | undefined>(undefined);
 
 export function ProductProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const { user, isLoading: userLoading } = useUser();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const refreshProducts = React.useCallback(async () => {
+    // Don't load data if user is not authenticated yet
+    if (userLoading || !user) {
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -88,7 +95,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user, userLoading]);
 
   React.useEffect(() => {
     refreshProducts();
@@ -112,9 +119,25 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
 
   const addProduct = React.useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
+      // Generate category-specific ID
+      const categoryProducts = products.filter(p => p.category === productData.category);
+      const lastId = categoryProducts.length > 0 ? categoryProducts.at(-1)?.id : null;
+      
+      let nextNumber = 1;
+      if (lastId) {
+        // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
+        const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+        if (match) {
+          nextNumber = Number.parseInt(match[2], 10) + 1;
+        }
+      }
+      
+      const prefix = productData.category === 'fresh' ? 'FRS' : 'BAK';
+      const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
+      
       const newProduct: Product = {
         ...productData,
-        id: `PRD-${String(products.length + 1).padStart(3, '0')}`,
+        id,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
