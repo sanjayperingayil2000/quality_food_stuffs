@@ -58,8 +58,34 @@ export default function Page(): React.JSX.Element {
       profit: 0,
     });
 
-    // Calculate total driver balance from employee data
-    const totalDriverBalance = drivers.reduce((sum, driver) => sum + (driver.balance || 0), 0);
+    // Calculate balance based on the last trip in the date range
+    let calculatedBalance = 0;
+    if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+      // For specific driver, get the last trip's calculated balance
+      const selectedDriver = drivers.find(driver => driver.name === filters.driver);
+      if (selectedDriver && filteredTrips.length > 0) {
+        // Get the last trip's calculated balance
+        const lastTrip = filteredTrips.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+        calculatedBalance = lastTrip.balance || 0;
+      } else if (selectedDriver) {
+        // If no trips in date range, use driver's current balance from employee data
+        calculatedBalance = selectedDriver.balance || 0;
+      }
+    } else {
+      // For company view, sum the latest calculated balance for each driver from their last trip in the range
+      const driverLastTrips = new Map<string, number>();
+      
+      // Collect the last trip's calculated balance for each driver
+      for (const trip of filteredTrips) {
+        const currentBalance = driverLastTrips.get(trip.driverId);
+        if (!currentBalance || trip.balance !== undefined) {
+          driverLastTrips.set(trip.driverId, trip.balance);
+        }
+      }
+      
+      // Sum all driver balances
+      calculatedBalance = [...driverLastTrips.values()].reduce((sum, balance) => sum + balance, 0);
+    }
 
     return {
       collectionAmount: {
@@ -88,7 +114,7 @@ export default function Page(): React.JSX.Element {
         trend: 'up' as 'up' | 'down'
       },
       balance: {
-        value: totalDriverBalance,
+        value: calculatedBalance,
         diff: 0,
         trend: 'up' as 'up' | 'down'
       },

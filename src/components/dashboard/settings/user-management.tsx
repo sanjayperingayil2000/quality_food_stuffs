@@ -316,7 +316,7 @@ export function UserManagement(): React.JSX.Element {
             <TableBody>
               {users?.map((user, index) => (
                 <TableRow key={user.id || `user-${index}`}>
-                  <TableCell>{user.name} (ID: {user.id})</TableCell>
+                  <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     {user.roles?.map((role) => (
@@ -329,7 +329,7 @@ export function UserManagement(): React.JSX.Element {
                         <Switch
                           checked={user.isActive}
                           onChange={(e) => handleToggleActive(user.id, e.target.checked)}
-                          disabled={user.id === currentUser?.id} // Can't deactivate self
+                          disabled={user.roles.includes('super_admin') || user.id === currentUser?.id} // Can't deactivate super admin or self
                         />
                       }
                       label={user.isActive ? 'Active' : 'Inactive'}

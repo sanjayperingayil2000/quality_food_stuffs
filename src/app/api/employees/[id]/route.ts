@@ -8,6 +8,14 @@ import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
 
+const balanceHistoryEntrySchema = z.object({
+  version: z.number(),
+  balance: z.number(),
+  updatedAt: z.string().transform(str => new Date(str)).or(z.date()),
+  reason: z.string().optional(),
+  updatedBy: z.string().optional(),
+});
+
 const employeeUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   designation: z.enum(['driver', 'staff', 'ceo']).optional(),
@@ -18,6 +26,7 @@ const employeeUpdateSchema = z.object({
   location: z.string().optional(),
   salary: z.number().min(0).optional(),
   balance: z.number().min(0).optional(),
+  balanceHistory: z.array(balanceHistoryEntrySchema).optional(),
   hireDate: z.string().transform(str => new Date(str)).optional(),
   isActive: z.boolean().optional(),
 }).partial();
@@ -67,10 +76,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     
     const beforeData = employee.toObject();
-    const updateData = {
+    
+    // If balance is being updated, add to balance history
+    let updateData = {
       ...parsed.data,
       updatedBy: user?.sub,
     };
+    
+    if (updateData.balance !== undefined && updateData.balance !== employee.balance) {
+      const currentVersion = employee.balanceHistory?.length || 0;
+      const newHistoryEntry = {
+        version: currentVersion + 1,
+        balance: updateData.balance,
+        updatedAt: new Date(),
+        reason: 'balance_update',
+        updatedBy: user?.sub,
+      };
+      
+      updateData = {
+        ...updateData,
+        balanceHistory: [
+          ...(employee.balanceHistory || []),
+          newHistoryEntry
+        ]
+      };
+    }
     
     const updatedEmployee = await Employee.findOneAndUpdate(
       { id },

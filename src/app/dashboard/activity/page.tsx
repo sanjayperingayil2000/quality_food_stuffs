@@ -22,6 +22,9 @@ interface Snapshot {
   id?: string;
   balance?: number;
   price?: number;
+  date?: string | Date;
+  driverName?: string;
+  category?: string;
   [key: string]: unknown;
 }
 
@@ -57,6 +60,57 @@ const getActionColor = (
   return 'info';
 };
 
+// Function to compare objects and get changed fields
+const getChangedFields = (before: Snapshot, after: Snapshot): string[] => {
+  const changedFields: string[] = [];
+  
+  if (!before || !after) return changedFields;
+  
+  // Get all unique keys from both objects
+  const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  
+  for (const key of allKeys) {
+    // Compare values, handling nested objects
+    if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+      changedFields.push(key);
+    }
+  }
+  
+  return changedFields;
+};
+
+// Function to format field names for display
+const formatFieldName = (fieldName: string): string => {
+  const fieldMap: Record<string, string> = {
+    'phoneNumber': 'phone number',
+    'routeName': 'route',
+    'salary': 'salary',
+    'balance': 'balance',
+    'location': 'location',
+    'address': 'address',
+    'designation': 'role',
+    'isActive': 'status',
+    'price': 'price',
+    'name': 'name',
+    'email': 'email',
+    'quantity': 'quantity',
+    'products': 'products',
+    'collectionAmount': 'collection amount',
+    'purchaseAmount': 'purchase amount',
+    'discount': 'discount',
+    'petrol': 'petrol',
+    'expiry': 'expiry',
+    'transfer': 'product transfer',
+    'title': 'title',
+    'category': 'category',
+    'amount': 'amount',
+    'status': 'status',
+    'date': 'date',
+  };
+  
+  return fieldMap[fieldName] || fieldName;
+};
+
 const getActionDescription = (activity: Activity): string => {
   const { action, collectionName, before, after, documentId } = activity;
   const actionLower = action.toLowerCase();
@@ -64,25 +118,24 @@ const getActionDescription = (activity: Activity): string => {
   // Get entity name from after, before, or documentId
   const entityName = after?.name || before?.name || documentId || 'Unknown';
   
-  
   switch (collectionName) {
     case 'employees': {
       switch (actionLower) {
         case 'created': {
-          return `${entityName} named employee added`;
+          return `Employee "${entityName}" added on employee page`;
         }
         case 'updated': {
           if (before && after) {
-            // Check for specific field changes
-            if (before.balance !== after.balance) {
-              return `${entityName} employee balance updated from ${before.balance || 0} to ${after.balance || 0}`;
+            const changedFields = getChangedFields(before, after);
+            if (changedFields.length > 0) {
+              const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
+              return `Update on ${fieldNames} of ${entityName} on employee page`;
             }
-            return `${entityName} employee details updated`;
           }
-          return `${entityName} employee updated`;
+          return `Employee "${entityName}" details updated on employee page`;
         }
         case 'deleted': {
-          return `${entityName} named employee has been deleted`;
+          return `Employee "${entityName}" deleted from employee page`;
         }
         default: {
           return `${action} ${entityName} employee`;
@@ -91,67 +144,100 @@ const getActionDescription = (activity: Activity): string => {
     }
       
     case 'products': {
+      const productName = entityName;
       switch (actionLower) {
         case 'created': {
-          return `${entityName} named product added`;
+          return `Product "${productName}" added on product page`;
         }
         case 'updated': {
           if (before && after) {
-            // Check for price changes
-            if (before.price !== after.price) {
-              return `${entityName} product unit price updated from ${before.price || 0} to ${after.price || 0}`;
+            const changedFields = getChangedFields(before, after);
+            if (changedFields.length > 0) {
+              const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
+              return `Update on ${fieldNames} field for product "${productName}" on product page`;
             }
-            return `${entityName} product details updated`;
           }
-          return `${entityName} product updated`;
+          return `Product "${productName}" details updated on product page`;
         }
         case 'deleted': {
-          return `${entityName} product has been deleted`;
+          return `Product "${productName}" deleted from product page`;
         }
         default: {
-          return `${action} ${entityName} product`;
+          return `${action} ${productName} product`;
         }
       }
     }
       
+    case 'dailyTrips':
     case 'daily_trips': {
+      const driverName = entityName;
+      let tripDate = 'selected date';
+      try {
+        if (after?.date) {
+          tripDate = new Date(after.date).toLocaleDateString();
+        } else if (before?.date) {
+          tripDate = new Date(before.date).toLocaleDateString();
+        }
+      } catch {
+        // Invalid date, use default
+      }
+      
       switch (actionLower) {
         case 'created': {
-          return `${entityName} daily trip added`;
+          return `Daily trip for ${driverName} created on daily trip page`;
         }
         case 'updated': {
           if (before && after) {
-            return `${entityName} daily trip (quantity and financial details) updated`;
+            const changedFields = getChangedFields(before, after);
+            const relevantFields = changedFields.filter(f => 
+              ['quantity', 'products', 'collectionAmount', 'purchaseAmount', 
+               'discount', 'petrol', 'expiry', 'transfer', 'acceptedProducts'].includes(f)
+            );
+            
+            if (relevantFields.length > 0) {
+              let fieldDescription = 'quantity and financial information';
+              if (relevantFields.includes('transfer') || relevantFields.includes('acceptedProducts')) {
+                fieldDescription = 'quantity, financial information or product transfer';
+              }
+              return `Update on ${fieldDescription} field of ${driverName} for day ${tripDate} on daily trip page`;
+            }
           }
-          return `${entityName} daily trip updated`;
+          return `Daily trip for ${driverName} on ${tripDate} updated on daily trip page`;
         }
         case 'deleted': {
-          return `${entityName} daily trip has been deleted`;
+          return `Daily trip for ${driverName} on ${tripDate} deleted from daily trip page`;
         }
         default: {
-          return `${action} ${entityName} daily trip`;
+          return `${action} daily trip for ${driverName}`;
         }
       }
     }
       
+    case 'additionalExpenses':
     case 'additional_expenses': {
-      // Try to get expense details from before/after snapshots
       const expenseData = after || before;
-      const driverName = expenseData?.driverName || expenseData?.name || 'Unknown Employee';
-      const expenseType = expenseData?.category || expenseData?.type || 'expense';
+      const driverName = expenseData?.driverName || expenseData?.name || entityName;
       
       switch (actionLower) {
         case 'created': {
-          return `${driverName} ${expenseType} expense added`;
+          const category = expenseData?.category || 'additional';
+          return `${driverName} ${category} expense added on additional expense page`;
         }
         case 'updated': {
-          return `${driverName} ${expenseType} expense updated`;
+          if (before && after) {
+            const changedFields = getChangedFields(before, after);
+            if (changedFields.length > 0) {
+              const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
+              return `Update on ${fieldNames} for ${driverName} on additional expense page`;
+            }
+          }
+          return `${driverName} additional expense updated on additional expense page`;
         }
         case 'deleted': {
-          return `${driverName} ${expenseType} expense has been deleted`;
+          return `${driverName} additional expense deleted from additional expense page`;
         }
         default: {
-          return `${action} ${driverName} ${expenseType} expense`;
+          return `${action} ${driverName} additional expense`;
         }
       }
     }
@@ -159,16 +245,16 @@ const getActionDescription = (activity: Activity): string => {
     default: {
       switch (actionLower) {
         case 'created': {
-          return `${entityName} named ${collectionName} added`;
+          return `${entityName} added on ${collectionName} page`;
         }
         case 'updated': {
-          return `${entityName} ${collectionName} updated`;
+          return `${entityName} updated on ${collectionName} page`;
         }
         case 'deleted': {
-          return `${entityName} ${collectionName} has been deleted`;
+          return `${entityName} deleted from ${collectionName} page`;
         }
         default: {
-          return `${action} ${entityName} ${collectionName}`;
+          return `${action} ${entityName} on ${collectionName}`;
         }
       }
     }

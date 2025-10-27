@@ -32,7 +32,7 @@ export async function login({ email, password }: { email: string; password: stri
   if (!user) throw new Error('Please enter a valid email address.');
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) throw new Error('Incorrect password. Please try again.');
-  if (!user.isActive) throw new Error('User is inactive');
+  if (!user.isActive) throw new Error('Account is inactive. Please contact administrator.');
 
   const accessToken = signAccessToken({ sub: (user as { _id: Types.ObjectId })._id.toString(), roles: (user as { roles: string[] }).roles });
   const refreshTokenPlain = crypto.randomBytes(48).toString('hex');
