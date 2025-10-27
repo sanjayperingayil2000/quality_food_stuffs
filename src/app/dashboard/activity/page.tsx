@@ -133,7 +133,7 @@ const getActionDescription = (activity: EnrichedActivity): string => {
             const changedFields = getChangedFields(before, after);
             if (changedFields.length > 0) {
               const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
-              return `Update on ${fieldNames} of ${entityName} on employee page`;
+              return `Update on (${fieldNames}) of ${entityName} on employee page`;
             }
           }
           return `Employee "${entityName}" details updated on employee page`;
@@ -158,7 +158,7 @@ const getActionDescription = (activity: EnrichedActivity): string => {
             const changedFields = getChangedFields(before, after);
             if (changedFields.length > 0) {
               const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
-              return `Update on ${fieldNames} field for product "${productName}" on product page`;
+              return `Update on (${fieldNames}) field for product "${productName}" on product page`;
             }
           }
           return `Product "${productName}" details updated on product page`;
@@ -199,11 +199,8 @@ const getActionDescription = (activity: EnrichedActivity): string => {
             );
             
             if (relevantFields.length > 0) {
-              let fieldDescription = 'quantity and financial information';
-              if (relevantFields.includes('transfer') || relevantFields.includes('acceptedProducts')) {
-                fieldDescription = 'quantity, financial information or product transfer';
-              }
-              return `Update on ${fieldDescription} field of ${driverName} for day ${tripDate} on daily trip page`;
+              const fieldNames = relevantFields.map(f => formatFieldName(f)).join(', ');
+              return `Update on (${fieldNames}) field of ${driverName} for day ${tripDate} on daily trip page`;
             }
           }
           return `Daily trip for ${driverName} on ${tripDate} updated on daily trip page`;
@@ -232,7 +229,7 @@ const getActionDescription = (activity: EnrichedActivity): string => {
             const changedFields = getChangedFields(before, after);
             if (changedFields.length > 0) {
               const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
-              return `Update on ${fieldNames} for ${driverName} on additional expense page`;
+              return `Update on (${fieldNames}) for ${driverName} on additional expense page`;
             }
           }
           return `${driverName} additional expense updated on additional expense page`;
