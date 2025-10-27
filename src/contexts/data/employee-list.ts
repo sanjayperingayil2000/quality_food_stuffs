@@ -62,12 +62,10 @@ export const initialEmployees: Employee[] = [
     balance: 5845,
     balanceHistory: [
       {
-        id: 'BAL-001',
-        previousBalance: 0,
-        newBalance: 5845,
-        changeAmount: 5845,
+        version: 1,
+        balance: 5845,
+        updatedAt: dayjs().subtract(12, 'month').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(12, 'month').toDate(),
         updatedBy: 'EMP-002',
       }
     ],
@@ -90,12 +88,10 @@ export const initialEmployees: Employee[] = [
     balance: 4233,
     balanceHistory: [
       {
-        id: 'BAL-002',
-        previousBalance: 0,
-        newBalance: 4233,
-        changeAmount: 4233,
+        version: 1,
+        balance: 4233,
+        updatedAt: dayjs().subtract(10, 'month').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(10, 'month').toDate(),
         updatedBy: 'EMP-002',
       }
     ],
@@ -118,12 +114,10 @@ export const initialEmployees: Employee[] = [
     balance: 3590,
     balanceHistory: [
       {
-        id: 'BAL-003',
-        previousBalance: 0,
-        newBalance: 3590,
-        changeAmount: 3590,
+        version: 1,
+        balance: 3590,
+        updatedAt: dayjs().subtract(8, 'month').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(8, 'month').toDate(),
         updatedBy: 'EMP-003',
       }
     ],
@@ -146,12 +140,10 @@ export const initialEmployees: Employee[] = [
     balance: 6004,
     balanceHistory: [
       {
-        id: 'BAL-004',
-        previousBalance: 0,
-        newBalance: 6004,
-        changeAmount: 6004,
+        version: 1,
+        balance: 6004,
+        updatedAt: dayjs().subtract(6, 'month').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(6, 'month').toDate(),
         updatedBy: 'EMP-003',
       }
     ],
@@ -174,12 +166,10 @@ export const initialEmployees: Employee[] = [
     balance: 2996,
     balanceHistory: [
       {
-        id: 'BAL-005',
-        previousBalance: 0,
-        newBalance: 2996,
-        changeAmount: 2996,
+        version: 1,
+        balance: 2996,
+        updatedAt: dayjs().subtract(4, 'month').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(4, 'month').toDate(),
         updatedBy: 'EMP-002',
       }
     ],
@@ -202,12 +192,10 @@ export const initialEmployees: Employee[] = [
     balance: 2208,
     balanceHistory: [
       {
-        id: 'BAL-006',
-        previousBalance: 0,
-        newBalance: 2208,
-        changeAmount: 2208,
+        version: 1,
+        balance: 2208,
+        updatedAt: dayjs().subtract(3, 'month').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(3, 'month').toDate(),
         updatedBy: 'EMP-002',
       }
     ],
@@ -230,12 +218,10 @@ export const initialEmployees: Employee[] = [
     balance: 12_049,
     balanceHistory: [
       {
-        id: 'BAL-007',
-        previousBalance: 0,
-        newBalance: 12_049,
-        changeAmount: 12_049,
+        version: 1,
+        balance: 12_049,
+        updatedAt: dayjs().subtract(2, 'month').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(2, 'month').toDate(),
         updatedBy: 'EMP-003',
       }
     ],
@@ -258,12 +244,10 @@ export const initialEmployees: Employee[] = [
     balance: 6687,
     balanceHistory: [
       {
-        id: 'BAL-008',
-        previousBalance: 0,
-        newBalance: 6687,
-        changeAmount: 6687,
+        version: 1,
+        balance: 6687,
+        updatedAt: dayjs().subtract(1, 'month').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(1, 'month').toDate(),
         updatedBy: 'EMP-002',
       }
     ],
@@ -286,12 +270,10 @@ export const initialEmployees: Employee[] = [
     balance: 18_468,
     balanceHistory: [
       {
-        id: 'BAL-009',
-        previousBalance: 0,
-        newBalance: 18_468,
-        changeAmount: 18_468,
+        version: 1,
+        balance: 18_468,
+        updatedAt: dayjs().subtract(3, 'week').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(3, 'week').toDate(),
         updatedBy: 'EMP-003',
       }
     ],
@@ -314,12 +296,10 @@ export const initialEmployees: Employee[] = [
     balance: 4175,
     balanceHistory: [
       {
-        id: 'BAL-010',
-        previousBalance: 0,
-        newBalance: 4175,
-        changeAmount: 4175,
+        version: 1,
+        balance: 4175,
+        updatedAt: dayjs().subtract(2, 'week').toDate(),
         reason: 'initial',
-        date: dayjs().subtract(2, 'week').toDate(),
         updatedBy: 'EMP-002',
       }
     ],

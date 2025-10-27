@@ -5,8 +5,10 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { useEmployees } from './employee-context';
+import { apiClient } from '@/lib/api-client';
 import { freshProducts } from './data/fresh-products';
 import { bakeryProducts } from './data/bakery-products';
+import { useUser } from '@/hooks/use-user';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -40,7 +42,7 @@ export interface DailyTrip {
   id: string;
   driverId: string;
   driverName: string;
-  date: Date;
+  date: string;
   products: TripProduct[]; // Regular products in the trip
   transfer: ProductTransfer; // Product transfer information
   acceptedProducts: TripProduct[]; // Products accepted from other drivers
@@ -61,22 +63,25 @@ export interface DailyTrip {
   salesDifference: number; // Collection amount - Amount to be
   profit: number; // (13.5% of (Net Total of fresh - Expiry after tax)) + (19.5% of net total of bakery) - Discount
   // Metadata
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   createdBy?: string; // Employee ID who created this trip
   updatedBy?: string; // Employee ID who last updated this trip
 }
 
 interface DailyTripContextType {
   trips: DailyTrip[];
+  isLoading: boolean;
+  error: string | null;
   getTripById: (id: string) => DailyTrip | undefined;
-  addTrip: (trip: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateTrip: (id: string, updates: Partial<DailyTrip>) => void;
-  deleteTrip: (id: string) => void;
+  addTrip: (trip: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateTrip: (id: string, updates: Partial<DailyTrip>) => Promise<void>;
+  deleteTrip: (id: string) => Promise<void>;
   getTripsByDriver: (driverId: string) => DailyTrip[];
   getTripsByDateRange: (startDate: Date, endDate: Date) => DailyTrip[];
-  getTripByDriverAndDate: (driverId: string, date: Date) => DailyTrip | undefined;
-  canAddTripForDriver: (driverId: string, date: Date) => boolean;
+  getTripByDriverAndDate: (driverId: string, date: string) => DailyTrip | undefined;
+  canAddTripForDriver: (driverId: string, date: string) => boolean;
+  refreshTrips: () => Promise<void>;
 }
 
 const DailyTripContext = React.createContext<DailyTripContextType | undefined>(undefined);
@@ -229,7 +234,7 @@ const _generateDailyTrips = (): DailyTrip[] => {
 
   // Generate trips for last 10 days
   for (let dayOffset = 9; dayOffset >= 0; dayOffset--) {
-    const currentDate = dayjs().subtract(dayOffset, 'day').utc().toDate();
+    const currentDate = dayjs().subtract(dayOffset, 'day').utc().format('YYYY-MM-DD');
     
     // Day-specific scenarios
     // eslint-disable-next-line unicorn/prefer-switch
@@ -841,10 +846,14 @@ const _generateDailyTrips = (): DailyTrip[] => {
   return trips;
 };
 
-const initialTrips: DailyTrip[] = _generateDailyTrips();
+// Initialize empty; data will be fetched from API
+const _initialTrips: DailyTrip[] = [];
 
 export function DailyTripProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const [trips, setTrips] = React.useState<DailyTrip[]>(initialTrips);
+  const { user, isLoading: userLoading } = useUser();
+  const [trips, setTrips] = React.useState<DailyTrip[]>([]);
+  const [_isLoading, setIsLoading] = React.useState(true);
+  const [_error, setError] = React.useState<string | null>(null);
   const [pendingTransfers, setPendingTransfers] = React.useState<Array<{
     id: string;
     date: string;
@@ -853,9 +862,60 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     transferredFromDriverId: string;
     transferredFromDriverName: string;
   }>>([]);
+  
+  // Ref to track balance updates that need to be processed after state changes
+  const balanceUpdatesRef = React.useRef<Array<{
+    driverId: string;
+    balance: number;
+    reason: string;
+    updatedBy: string;
+  }>>([]);
+
+  const refreshTrips = React.useCallback(async () => {
+    // Don't load data if user is not authenticated yet
+    if (userLoading || !user) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await apiClient.getDailyTrips();
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Get the daily trip data directly
+      if (result.data?.trips) {
+        setTrips(result.data.trips);
+      }
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to fetch trips');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, userLoading]);
+
+  React.useEffect(() => {
+    refreshTrips();
+  }, [refreshTrips]);
 
   // Get employee context to access driver balance
   const { getEmployeeById, updateDriverBalance } = useEmployees();
+
+  // Process balance updates after state changes to avoid setState during render
+  React.useEffect(() => {
+    if (balanceUpdatesRef.current.length > 0) {
+      const updates = [...balanceUpdatesRef.current];
+      balanceUpdatesRef.current = []; // Clear the ref
+      
+      // Process each balance update
+      for (const update of updates) {
+        updateDriverBalance(update.driverId, update.balance, update.reason, update.updatedBy);
+      }
+    }
+  }, [trips, updateDriverBalance]);
 
   // Helper to get previous balance for a driver
   const getPreviousBalance = React.useCallback((driverId: string, currentDate: Date, allTrips: DailyTrip[]): number => {
@@ -886,7 +946,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     return trips.find(trip => trip.id === id);
   }, [trips]);
 
-  const addTrip = React.useCallback((tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addTrip = React.useCallback(async (tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'>) => {
     // Check for pending transfers for this driver and date
     const tripDate = dayjs(tripData.date).format('YYYY-MM-DD');
     const pendingForThisDriver = pendingTransfers.filter(
@@ -913,7 +973,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     );
     
     // Get previous balance for this driver
-    const previousBalance = getPreviousBalance(tripData.driverId, tripData.date, trips);
+    const previousBalance = getPreviousBalance(tripData.driverId, new Date(tripData.date), trips);
     
     // Calculate all financial metrics
     const financialMetrics = calculateFinancialMetrics(
@@ -938,8 +998,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       salesDifference: financialMetrics.salesDifference,
       profit: financialMetrics.profit,
       balance: financialMetrics.balance,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     setTrips(prev => {
@@ -999,7 +1059,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             );
             
             // Get previous balance for the receiving driver
-            const driverPreviousBalance = getPreviousBalance(driverId, updatedDriverTrip.date, updatedTrips);
+            const driverPreviousBalance = getPreviousBalance(driverId, new Date(updatedDriverTrip.date), updatedTrips);
             
             // Recalculate financial metrics for the receiving driver
             const driverFinancialMetrics = calculateFinancialMetrics(
@@ -1020,7 +1080,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             updatedDriverTrip.salesDifference = driverFinancialMetrics.salesDifference;
             updatedDriverTrip.profit = driverFinancialMetrics.profit;
             updatedDriverTrip.balance = driverFinancialMetrics.balance;
-            updatedDriverTrip.updatedAt = new Date();
+            updatedDriverTrip.updatedAt = new Date().toISOString();
             
             const driverTripIndex = updatedTrips.findIndex(trip => trip.id === driverTrip.id);
             updatedTrips[driverTripIndex] = updatedDriverTrip;
@@ -1050,90 +1110,152 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       return updatedTrips;
     });
 
-    // Update the employee's balance after creating the trip
-    updateDriverBalance(tripData.driverId, Math.round(financialMetrics.balance), 'trip_update', 'EMP-001');
+    // Save to backend
+    try {
+      const result = await apiClient.createDailyTrip({
+        ...newTrip,
+        date: newTrip.date,
+        createdAt: newTrip.createdAt,
+        updatedAt: newTrip.updatedAt,
+      });
+      
+      if (result.error) {
+        console.error('Failed to save trip to backend:', result.error);
+        // Revert local state on error
+        setTrips(prev => prev.filter(trip => trip.id !== newTrip.id));
+        setError(result.error);
+        return;
+      }
+    } catch (error_) {
+      console.error('Error saving trip to backend:', error_);
+      // Revert local state on error
+      setTrips(prev => prev.filter(trip => trip.id !== newTrip.id));
+      setError(error_ instanceof Error ? error_.message : 'Failed to save trip');
+      return;
+    }
 
-    return newTrip;
-  }, [trips, pendingTransfers, getPreviousBalance, updateDriverBalance]);
+    // Track balance update to be processed after state change
+    balanceUpdatesRef.current.push({
+      driverId: tripData.driverId,
+      balance: Math.round(financialMetrics.balance),
+      reason: 'trip_update',
+      updatedBy: 'EMP-001'
+    });
+  }, [trips, pendingTransfers, getPreviousBalance]);
 
-  const updateTrip = React.useCallback((id: string, updates: Partial<DailyTrip>) => {
-    setTrips(prev => 
-      prev.map(trip => {
-        if (trip.id === id) {
-          const updatedTrip = { ...trip, ...updates, updatedAt: new Date() };
-          
-          // Recalculate totals if products, accepted products, or transferred products changed
-          if (updates.products || updates.acceptedProducts || updates.transfer) {
-            const totals = calculateTotals(
-              updatedTrip.products,
-              updatedTrip.acceptedProducts,
-              updatedTrip.transfer.transferredProducts
-            );
-            updatedTrip.totalAmount = totals.overall.total;
-            updatedTrip.netTotal = totals.overall.netTotal;
-            updatedTrip.grandTotal = totals.overall.grandTotal;
+  const updateTrip = React.useCallback(async (id: string, updates: Partial<DailyTrip>) => {
+    try {
+      // Save to backend first
+      const result = await apiClient.updateDailyTrip(id, updates);
+      
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      
+      // Update local state only if API call succeeded
+      setTrips(prev => 
+        prev.map(trip => {
+          if (trip.id === id) {
+            const updatedTrip = { ...trip, ...updates, updatedAt: new Date().toISOString() };
             
-            // Get previous balance for this driver
-            const previousBalance = getPreviousBalance(updatedTrip.driverId, updatedTrip.date, prev);
+            // Recalculate totals if products, accepted products, or transferred products changed
+            if (updates.products || updates.acceptedProducts || updates.transfer) {
+              const totals = calculateTotals(
+                updatedTrip.products,
+                updatedTrip.acceptedProducts,
+                updatedTrip.transfer.transferredProducts
+              );
+              updatedTrip.totalAmount = totals.overall.total;
+              updatedTrip.netTotal = totals.overall.netTotal;
+              updatedTrip.grandTotal = totals.overall.grandTotal;
+              
+              // Get previous balance for this driver
+              const previousBalance = getPreviousBalance(updatedTrip.driverId, new Date(updatedTrip.date), prev);
+              
+              // Recalculate financial metrics
+              const financialMetrics = calculateFinancialMetrics(
+                updatedTrip.expiry,
+                updatedTrip.purchaseAmount,
+                updatedTrip.collectionAmount,
+                updatedTrip.discount,
+                totals.fresh.netTotal,
+                totals.bakery.netTotal,
+                previousBalance
+              );
+              
+              updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
+              updatedTrip.amountToBe = financialMetrics.amountToBe;
+              updatedTrip.salesDifference = financialMetrics.salesDifference;
+              updatedTrip.profit = financialMetrics.profit;
+              updatedTrip.balance = financialMetrics.balance;
+            } else if (updates.collectionAmount !== undefined || updates.purchaseAmount !== undefined || 
+                       updates.expiry !== undefined || updates.discount !== undefined) {
+              // Recalculate financial metrics if any financial field changed
+              const totals = calculateTotals(
+                updatedTrip.products,
+                updatedTrip.acceptedProducts,
+                updatedTrip.transfer.transferredProducts
+              );
+              
+              const previousBalance = getPreviousBalance(updatedTrip.driverId,  new Date(updatedTrip.date), prev);
+              
+              const financialMetrics = calculateFinancialMetrics(
+                updatedTrip.expiry,
+                updatedTrip.purchaseAmount,
+                updatedTrip.collectionAmount,
+                updatedTrip.discount,
+                totals.fresh.netTotal,
+                totals.bakery.netTotal,
+                previousBalance
+              );
+              
+              updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
+              updatedTrip.amountToBe = financialMetrics.amountToBe;
+              updatedTrip.salesDifference = financialMetrics.salesDifference;
+              updatedTrip.profit = financialMetrics.profit;
+              updatedTrip.balance = financialMetrics.balance;
+            }
             
-            // Recalculate financial metrics
-            const financialMetrics = calculateFinancialMetrics(
-              updatedTrip.expiry,
-              updatedTrip.purchaseAmount,
-              updatedTrip.collectionAmount,
-              updatedTrip.discount,
-              totals.fresh.netTotal,
-              totals.bakery.netTotal,
-              previousBalance
-            );
+            // Track balance changes to update after state change
+            if (updatedTrip.balance !== trip.balance) {
+              // Store the balance update to be processed after state update
+              balanceUpdatesRef.current.push({
+                driverId: updatedTrip.driverId,
+                balance: updatedTrip.balance,
+                reason: 'trip_update',
+                updatedBy: 'EMP-001'
+              });
+            }
             
-            updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
-            updatedTrip.amountToBe = financialMetrics.amountToBe;
-            updatedTrip.salesDifference = financialMetrics.salesDifference;
-            updatedTrip.profit = financialMetrics.profit;
-            updatedTrip.balance = financialMetrics.balance;
-          } else if (updates.collectionAmount !== undefined || updates.purchaseAmount !== undefined || 
-                     updates.expiry !== undefined || updates.discount !== undefined) {
-            // Recalculate financial metrics if any financial field changed
-            const totals = calculateTotals(
-              updatedTrip.products,
-              updatedTrip.acceptedProducts,
-              updatedTrip.transfer.transferredProducts
-            );
-            
-            const previousBalance = getPreviousBalance(updatedTrip.driverId, updatedTrip.date, prev);
-            
-            const financialMetrics = calculateFinancialMetrics(
-              updatedTrip.expiry,
-              updatedTrip.purchaseAmount,
-              updatedTrip.collectionAmount,
-              updatedTrip.discount,
-              totals.fresh.netTotal,
-              totals.bakery.netTotal,
-              previousBalance
-            );
-            
-            updatedTrip.expiryAfterTax = financialMetrics.expiryAfterTax;
-            updatedTrip.amountToBe = financialMetrics.amountToBe;
-            updatedTrip.salesDifference = financialMetrics.salesDifference;
-            updatedTrip.profit = financialMetrics.profit;
-            updatedTrip.balance = financialMetrics.balance;
+            return updatedTrip;
           }
-          
-          // Update employee balance if it changed
-          if (updatedTrip.balance !== trip.balance) {
-            updateDriverBalance(updatedTrip.driverId, updatedTrip.balance, 'trip_update', 'EMP-001');
-          }
-          
-          return updatedTrip;
-        }
-        return trip;
-      })
-    );
-  }, [getPreviousBalance, updateDriverBalance]);
+          return trip;
+        })
+      );
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Failed to update trip');
+    }
+  }, [getPreviousBalance]);
 
-  const deleteTrip = React.useCallback((id: string) => {
-    setTrips(prev => prev.filter(trip => trip.id !== id));
+  const deleteTrip = React.useCallback(async (id: string) => {
+    try {
+      console.log('Attempting to delete daily trip with ID:', id);
+      const result = await apiClient.deleteDailyTrip(id);
+      console.log('Delete daily trip API result:', result);
+      
+      if (result.error) {
+        console.error('Failed to delete trip from backend:', result.error);
+        setError(result.error);
+        return;
+      }
+      
+      // Only remove from local state if API call succeeded
+      setTrips(prev => prev.filter(trip => trip.id !== id));
+    } catch (error_) {
+      console.error('Error deleting trip from backend:', error_);
+      setError(error_ instanceof Error ? error_.message : 'Failed to delete trip');
+    }
   }, []);
 
   const getTripsByDriver = React.useCallback((driverId: string): DailyTrip[] => {
@@ -1147,20 +1269,22 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     });
   }, [trips]);
 
-  const getTripByDriverAndDate = React.useCallback((driverId: string, date: Date): DailyTrip | undefined => {
+  const getTripByDriverAndDate = React.useCallback((driverId: string, date: string): DailyTrip | undefined => {
     return trips.find(trip => 
       trip.driverId === driverId && 
       dayjs(trip.date).format('YYYY-MM-DD') === dayjs(date).format('YYYY-MM-DD')
     );
   }, [trips]);
 
-  const canAddTripForDriver = React.useCallback((driverId: string, date: Date): boolean => {
+  const canAddTripForDriver = React.useCallback((driverId: string, date: string): boolean => {
     const existingTrip = getTripByDriverAndDate(driverId, date);
     return !existingTrip;
   }, [getTripByDriverAndDate]);
 
   const value: DailyTripContextType = {
     trips,
+    isLoading: false,
+    error: null,
     getTripById,
     addTrip,
     updateTrip,
@@ -1169,6 +1293,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     getTripsByDateRange,
     getTripByDriverAndDate,
     canAddTripForDriver,
+    refreshTrips,
   };
 
   return (

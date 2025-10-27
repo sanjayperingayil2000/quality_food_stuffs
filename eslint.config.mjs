@@ -48,7 +48,7 @@ export default [
 				node: true,
 				alias: {
 					map: [["@", "./src"]],
-					extensions: [".js", ".jsx"],
+					extensions: [".js", ".jsx", ".ts", ".tsx"],
 				},
 			},
 		},

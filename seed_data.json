@@ -1,0 +1,79 @@
+{
+  "settings": [
+    {
+      "key": "company_name",
+      "value": "Quality Food Stuffs"
+    },
+    {
+      "key": "currency",
+      "value": "AED"
+    },
+    {
+      "key": "fresh_reduction_percentage",
+      "value": 11.5
+    },
+    {
+      "key": "bakery_reduction_percentage",
+      "value": 16
+    },
+    {
+      "key": "fresh_profit_percentage",
+      "value": 13.5
+    },
+    {
+      "key": "bakery_profit_percentage",
+      "value": 19.5
+    }
+  ],
+  "calculations": [
+    {
+      "_id": "calc_daily_trips_template",
+      "contextName": "dailyTrip",
+      "inputs": {
+        "trips": [],
+        "pendingTransfers": []
+      },
+      "results": {},
+      "metadata": {
+        "type": "template",
+        "description": "Daily trip calculation template"
+      }
+    },
+    {
+      "_id": "calc_additional_expenses_template",
+      "contextName": "additionalExpense",
+      "inputs": {
+        "expenses": []
+      },
+      "results": {},
+      "metadata": {
+        "type": "template",
+        "description": "Additional expenses calculation template"
+      }
+    },
+    {
+      "_id": "calc_employees_template",
+      "contextName": "employee",
+      "inputs": {
+        "employees": []
+      },
+      "results": {},
+      "metadata": {
+        "type": "template",
+        "description": "Employee management template"
+      }
+    },
+    {
+      "_id": "calc_products_template",
+      "contextName": "product",
+      "inputs": {
+        "products": []
+      },
+      "results": {},
+      "metadata": {
+        "type": "template",
+        "description": "Product management template"
+      }
+    }
+  ]
+}

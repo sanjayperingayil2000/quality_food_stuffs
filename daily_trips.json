@@ -1,0 +1,2510 @@
+[{
+  "_id": {
+    "$oid": "68fe1f586759c882fe0d5c1b"
+  },
+  "id": "TRP-001",
+  "driverId": "EMP-005",
+  "driverName": "SEBEH",
+  "date": {
+    "$date": "2025-08-30T00:00:00.000Z"
+  },
+  "products": [
+    {
+      "productId": "PRD-FRS-001",
+      "productName": "1089 LBN 180",
+      "category": "fresh",
+      "quantity": 108,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f02f"
+      }
+    },
+    {
+      "productId": "PRD-FRS-002",
+      "productName": "1073 LBN 360",
+      "category": "fresh",
+      "quantity": 20,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f030"
+      }
+    },
+    {
+      "productId": "PRD-FRS-003",
+      "productName": "1117 STRW LBN 340",
+      "category": "fresh",
+      "quantity": 18,
+      "unitPrice": 2.48,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f031"
+      }
+    },
+    {
+      "productId": "PRD-FRS-004",
+      "productName": "1115 MANG LBN 340",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f032"
+      }
+    },
+    {
+      "productId": "PRD-FRS-005",
+      "productName": "1107 LBN 2 LTR",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f033"
+      }
+    },
+    {
+      "productId": "PRD-FRS-006",
+      "productName": "2040 MILK 2 LTR",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f034"
+      }
+    },
+    {
+      "productId": "PRD-FRS-007",
+      "productName": "2121 MILK 1 LTR",
+      "category": "fresh",
+      "quantity": 14,
+      "unitPrice": 6.33,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f035"
+      }
+    },
+    {
+      "productId": "PRD-FRS-008",
+      "productName": "2123 500 MILK",
+      "category": "fresh",
+      "quantity": 96,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f036"
+      }
+    },
+    {
+      "productId": "PRD-FRS-009",
+      "productName": "2124 500 LOW FAT MILK",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f037"
+      }
+    },
+    {
+      "productId": "PRD-FRS-010",
+      "productName": "2081 MILK 180",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f038"
+      }
+    },
+    {
+      "productId": "PRD-FRS-011",
+      "productName": "2206 FLV MILK 225 ML",
+      "category": "fresh",
+      "quantity": 48,
+      "unitPrice": 1.87,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f039"
+      }
+    },
+    {
+      "productId": "PRD-FRS-012",
+      "productName": "3193 YGT 1 KG",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 6.61,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f03a"
+      }
+    },
+    {
+      "productId": "PRD-FRS-013",
+      "productName": "3115 YGT 500 GM",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 3.73,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f03b"
+      }
+    },
+    {
+      "productId": "PRD-FRS-014",
+      "productName": "3863 YGT 170 ML OUTER",
+      "category": "fresh",
+      "quantity": 43,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f03c"
+      }
+    },
+    {
+      "productId": "PRD-FRS-015",
+      "productName": "3469 GHISTA 100 GM",
+      "category": "fresh",
+      "quantity": 5,
+      "unitPrice": 3.22,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f03d"
+      }
+    },
+    {
+      "productId": "PRD-FRS-017",
+      "productName": "3902 PROTIN MILK 400 ML",
+      "category": "fresh",
+      "quantity": 3,
+      "unitPrice": 6.5,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f03e"
+      }
+    },
+    {
+      "productId": "PRD-FRS-019",
+      "productName": "3521 CUSTRD 85GM",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.03,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f03f"
+      }
+    },
+    {
+      "productId": "PRD-FRS-021",
+      "productName": "3413 VETLAY",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.57,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f040"
+      }
+    },
+    {
+      "productId": "PRD-FRS-022",
+      "productName": "7037 200 ML JUICE",
+      "category": "fresh",
+      "quantity": 216,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f041"
+      }
+    },
+    {
+      "productId": "PRD-FRS-023",
+      "productName": "7101 300 ML JUICE",
+      "category": "fresh",
+      "quantity": 28,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f042"
+      }
+    },
+    {
+      "productId": "PRD-FRS-024",
+      "productName": "7902 1.4 LTR JUICE",
+      "category": "fresh",
+      "quantity": 10,
+      "unitPrice": 11.25,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f043"
+      }
+    },
+    {
+      "productId": "PRD-FRS-026",
+      "productName": "1068 FLVD LBN 180 ML",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f044"
+      }
+    },
+    {
+      "productId": "PRD-FRS-033",
+      "productName": "5492 FETTA 200 GM",
+      "category": "fresh",
+      "quantity": 14,
+      "unitPrice": 7.6,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f045"
+      }
+    },
+    {
+      "productId": "PRD-FRS-040",
+      "productName": "5015 TEA MILK 180 GM",
+      "category": "fresh",
+      "quantity": 4,
+      "unitPrice": 10.25,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f046"
+      }
+    },
+    {
+      "productId": "PRD-BAK-001",
+      "productName": "8078 WHITE BREAD",
+      "category": "bakery",
+      "quantity": 48,
+      "unitPrice": 4.35,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f047"
+      }
+    },
+    {
+      "productId": "PRD-BAK-002",
+      "productName": "8013 BROWN BREAD",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 4.5,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f048"
+      }
+    },
+    {
+      "productId": "PRD-BAK-003",
+      "productName": "8037 MILK BREAD",
+      "category": "bakery",
+      "quantity": 3,
+      "unitPrice": 6.3,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f049"
+      }
+    },
+    {
+      "productId": "PRD-BAK-004",
+      "productName": "8071 BURGEN BUN",
+      "category": "bakery",
+      "quantity": 18,
+      "unitPrice": 3.43,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f04a"
+      }
+    },
+    {
+      "productId": "PRD-BAK-007",
+      "productName": "8627 CHEESE PUFF 70 GM",
+      "category": "bakery",
+      "quantity": 90,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f04b"
+      }
+    },
+    {
+      "productId": "PRD-BAK-008",
+      "productName": "8867 7 DAYS 5+1",
+      "category": "bakery",
+      "quantity": 16,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f04c"
+      }
+    },
+    {
+      "productId": "PRD-BAK-009",
+      "productName": "8707 SWISS ROLL 330 GM",
+      "category": "bakery",
+      "quantity": 6,
+      "unitPrice": 7.8,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f04d"
+      }
+    },
+    {
+      "productId": "PRD-BAK-010",
+      "productName": "8709 HAZZLENUT",
+      "category": "bakery",
+      "quantity": 28,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f04e"
+      }
+    },
+    {
+      "productId": "PRD-BAK-012",
+      "productName": "JUMBO BISCUT CREAM BUTTEI",
+      "category": "bakery",
+      "quantity": 34,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f04f"
+      }
+    },
+    {
+      "productId": "PRD-BAK-015",
+      "productName": "8793 PUFF MIX",
+      "category": "bakery",
+      "quantity": 65,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f050"
+      }
+    },
+    {
+      "productId": "PRD-BAK-016",
+      "productName": "SANDWICH ROLL",
+      "category": "bakery",
+      "quantity": 6,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f051"
+      }
+    },
+    {
+      "productId": "PRD-BAK-018",
+      "productName": "8655 PIZZA PUFF",
+      "category": "bakery",
+      "quantity": 20,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe20d038c444946ba7f052"
+      }
+    }
+  ],
+  "transfer": {
+    "isProductTransferred": false,
+    "transferredProducts": []
+  },
+  "acceptedProducts": [],
+  "collectionAmount": 3640,
+  "purchaseAmount": 3408,
+  "expiry": 187,
+  "discount": 58,
+  "petrol": 91,
+  "totalAmount": 3721.4400000000005,
+  "netTotal": 3247.16985,
+  "grandTotal": 3409.5283425000002,
+  "profit": 0,
+  "createdAt": {
+    "$date": "2025-08-29T18:30:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-26T13:23:28.189Z"
+  },
+  "createdBy": "EMP-005",
+  "updatedBy": "68fe1f526759c882fe0d5b98",
+  "__v": 0,
+  "amountToBe": 0,
+  "balance": 0,
+  "expiryAfterTax": 0,
+  "salesDifference": 0
+},
+{
+  "_id": {
+    "$oid": "68fe1f586759c882fe0d5c1d"
+  },
+  "id": "TRP-002",
+  "driverId": "EMP-010",
+  "driverName": "RIJAS",
+  "date": {
+    "$date": "2025-08-30T00:00:00.000Z"
+  },
+  "products": [
+    {
+      "productId": "PRD-FRS-001",
+      "productName": "1089 LBN 180",
+      "category": "fresh",
+      "quantity": 108,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a0"
+      }
+    },
+    {
+      "productId": "PRD-FRS-002",
+      "productName": "1073 LBN 360",
+      "category": "fresh",
+      "quantity": 20,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a1"
+      }
+    },
+    {
+      "productId": "PRD-FRS-003",
+      "productName": "1117 STRW LBN 340",
+      "category": "fresh",
+      "quantity": 18,
+      "unitPrice": 2.48,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a2"
+      }
+    },
+    {
+      "productId": "PRD-FRS-004",
+      "productName": "1115 MANG LBN 340",
+      "category": "fresh",
+      "quantity": 14,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a3"
+      }
+    },
+    {
+      "productId": "PRD-FRS-005",
+      "productName": "1107 LBN 2 LTR",
+      "category": "fresh",
+      "quantity": 7,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a4"
+      }
+    },
+    {
+      "productId": "PRD-FRS-006",
+      "productName": "2040 MILK 2 LTR",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a5"
+      }
+    },
+    {
+      "productId": "PRD-FRS-007",
+      "productName": "2121 MILK 1 LTR",
+      "category": "fresh",
+      "quantity": 16,
+      "unitPrice": 6.33,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a6"
+      }
+    },
+    {
+      "productId": "PRD-FRS-008",
+      "productName": "2123 500 MILK",
+      "category": "fresh",
+      "quantity": 144,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a7"
+      }
+    },
+    {
+      "productId": "PRD-FRS-009",
+      "productName": "2124 500 LOW FAT MILK",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a8"
+      }
+    },
+    {
+      "productId": "PRD-FRS-010",
+      "productName": "2081 MILK 180",
+      "category": "fresh",
+      "quantity": 36,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0a9"
+      }
+    },
+    {
+      "productId": "PRD-FRS-011",
+      "productName": "2206 FLV MILK 225 ML",
+      "category": "fresh",
+      "quantity": 60,
+      "unitPrice": 1.87,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0aa"
+      }
+    },
+    {
+      "productId": "PRD-FRS-012",
+      "productName": "3193 YGT 1 KG",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 6.61,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0ab"
+      }
+    },
+    {
+      "productId": "PRD-FRS-013",
+      "productName": "3115 YGT 500 GM",
+      "category": "fresh",
+      "quantity": 18,
+      "unitPrice": 3.73,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0ac"
+      }
+    },
+    {
+      "productId": "PRD-FRS-014",
+      "productName": "3863 YGT 170 ML OUTER",
+      "category": "fresh",
+      "quantity": 23,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0ad"
+      }
+    },
+    {
+      "productId": "PRD-FRS-015",
+      "productName": "3469 GHISTA 100 GM",
+      "category": "fresh",
+      "quantity": 8,
+      "unitPrice": 3.22,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0ae"
+      }
+    },
+    {
+      "productId": "PRD-FRS-018",
+      "productName": "2196 MNGO MILK FLV 360 ML",
+      "category": "fresh",
+      "quantity": 4,
+      "unitPrice": 3,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0af"
+      }
+    },
+    {
+      "productId": "PRD-FRS-019",
+      "productName": "3521 CUSTRD 85GM",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 1.03,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b0"
+      }
+    },
+    {
+      "productId": "PRD-FRS-021",
+      "productName": "3413 VETLAY",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.57,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b1"
+      }
+    },
+    {
+      "productId": "PRD-FRS-022",
+      "productName": "7037 200 ML JUICE",
+      "category": "fresh",
+      "quantity": 240,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b2"
+      }
+    },
+    {
+      "productId": "PRD-FRS-023",
+      "productName": "7101 300 ML JUICE",
+      "category": "fresh",
+      "quantity": 42,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b3"
+      }
+    },
+    {
+      "productId": "PRD-FRS-024",
+      "productName": "7902 1.4 LTR JUICE",
+      "category": "fresh",
+      "quantity": 10,
+      "unitPrice": 11.25,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b4"
+      }
+    },
+    {
+      "productId": "PRD-FRS-026",
+      "productName": "1068 FLVD LBN 180 ML",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b5"
+      }
+    },
+    {
+      "productId": "PRD-FRS-035",
+      "productName": "5948 SLICE BURGER",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 21,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b6"
+      }
+    },
+    {
+      "productId": "PRD-FRS-036",
+      "productName": "50007 MOZZARILLA 180 GM",
+      "category": "fresh",
+      "quantity": 8,
+      "unitPrice": 13.22,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b7"
+      }
+    },
+    {
+      "productId": "PRD-FRS-040",
+      "productName": "5998 BUTTER UNSALT",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 17.5,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b8"
+      }
+    },
+    {
+      "productId": "PRD-BAK-001",
+      "productName": "8078 WHITE BREAD",
+      "category": "bakery",
+      "quantity": 42,
+      "unitPrice": 4.35,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0b9"
+      }
+    },
+    {
+      "productId": "PRD-BAK-002",
+      "productName": "8013 BROWN BREAD",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 4.5,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0ba"
+      }
+    },
+    {
+      "productId": "PRD-BAK-004",
+      "productName": "8071 BURGEN BUN",
+      "category": "bakery",
+      "quantity": 6,
+      "unitPrice": 3.43,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0bb"
+      }
+    },
+    {
+      "productId": "PRD-BAK-007",
+      "productName": "8627 CHEESE PUFF 70 GM",
+      "category": "bakery",
+      "quantity": 45,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0bc"
+      }
+    },
+    {
+      "productId": "PRD-BAK-008",
+      "productName": "8867 7 DAYS 5+1",
+      "category": "bakery",
+      "quantity": 28,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0bd"
+      }
+    },
+    {
+      "productId": "PRD-BAK-009",
+      "productName": "8707 SWISS ROLL 330 GM",
+      "category": "bakery",
+      "quantity": 6,
+      "unitPrice": 7.8,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0be"
+      }
+    },
+    {
+      "productId": "PRD-BAK-010",
+      "productName": "8709 HAZZLENUT",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0bf"
+      }
+    },
+    {
+      "productId": "PRD-BAK-011",
+      "productName": "8686 BUTTER JUMBO 85 GM",
+      "category": "bakery",
+      "quantity": 16,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0c0"
+      }
+    },
+    {
+      "productId": "PRD-BAK-012",
+      "productName": "JUMBO BISCUT CREAM BUTTEI",
+      "category": "bakery",
+      "quantity": 8,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0c1"
+      }
+    },
+    {
+      "productId": "PRD-BAK-013",
+      "productName": "JUMBO DBL STR & VAN",
+      "category": "bakery",
+      "quantity": 3,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0c2"
+      }
+    },
+    {
+      "productId": "PRD-BAK-015",
+      "productName": "8793 PUFF MIX",
+      "category": "bakery",
+      "quantity": 55,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0c3"
+      }
+    },
+    {
+      "productId": "PRD-BAK-018",
+      "productName": "8655 PIZZA PUFF",
+      "category": "bakery",
+      "quantity": 10,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe211138c444946ba7f0c4"
+      }
+    }
+  ],
+  "transfer": {
+    "isProductTransferred": false,
+    "transferredProducts": []
+  },
+  "acceptedProducts": [],
+  "collectionAmount": 3690,
+  "purchaseAmount": 3593,
+  "expiry": 334,
+  "discount": 65,
+  "petrol": 145,
+  "totalAmount": 3910.99,
+  "netTotal": 3423.07155,
+  "grandTotal": 3594.2251275000003,
+  "profit": 0,
+  "createdAt": {
+    "$date": "2025-08-29T18:30:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-26T13:24:33.699Z"
+  },
+  "createdBy": "EMP-010",
+  "updatedBy": "68fe1f526759c882fe0d5b98",
+  "__v": 0,
+  "amountToBe": 0,
+  "balance": 0,
+  "expiryAfterTax": 0,
+  "salesDifference": 0
+},
+{
+  "_id": {
+    "$oid": "68fe1f596759c882fe0d5c1f"
+  },
+  "id": "TRP-003",
+  "driverId": "EMP-011",
+  "driverName": "FAROOK",
+  "date": {
+    "$date": "2025-08-30T00:00:00.000Z"
+  },
+  "products": [
+    {
+      "productId": "PRD-FRS-001",
+      "productName": "1089 LBN 180",
+      "category": "fresh",
+      "quantity": 144,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f117"
+      }
+    },
+    {
+      "productId": "PRD-FRS-002",
+      "productName": "1073 LBN 360",
+      "category": "fresh",
+      "quantity": 20,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f118"
+      }
+    },
+    {
+      "productId": "PRD-FRS-003",
+      "productName": "1117 STRW LBN 340",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 2.48,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f119"
+      }
+    },
+    {
+      "productId": "PRD-FRS-004",
+      "productName": "1115 MANG LBN 340",
+      "category": "fresh",
+      "quantity": 4,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f11a"
+      }
+    },
+    {
+      "productId": "PRD-FRS-005",
+      "productName": "1107 LBN 2 LTR",
+      "category": "fresh",
+      "quantity": 10,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f11b"
+      }
+    },
+    {
+      "productId": "PRD-FRS-006",
+      "productName": "2040 MILK 2 LTR",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f11c"
+      }
+    },
+    {
+      "productId": "PRD-FRS-007",
+      "productName": "2121 MILK 1 LTR",
+      "category": "fresh",
+      "quantity": 9,
+      "unitPrice": 6.33,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f11d"
+      }
+    },
+    {
+      "productId": "PRD-FRS-008",
+      "productName": "2123 500 MILK",
+      "category": "fresh",
+      "quantity": 96,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f11e"
+      }
+    },
+    {
+      "productId": "PRD-FRS-009",
+      "productName": "2124 500 LOW FAT MILK",
+      "category": "fresh",
+      "quantity": 1,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f11f"
+      }
+    },
+    {
+      "productId": "PRD-FRS-010",
+      "productName": "2081 MILK 180",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f120"
+      }
+    },
+    {
+      "productId": "PRD-FRS-011",
+      "productName": "2206 FLV MILK 225 ML",
+      "category": "fresh",
+      "quantity": 48,
+      "unitPrice": 1.87,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f121"
+      }
+    },
+    {
+      "productId": "PRD-FRS-012",
+      "productName": "3193 YGT 1 KG",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 6.61,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f122"
+      }
+    },
+    {
+      "productId": "PRD-FRS-014",
+      "productName": "3863 YGT 170 ML OUTER",
+      "category": "fresh",
+      "quantity": 43,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f123"
+      }
+    },
+    {
+      "productId": "PRD-FRS-015",
+      "productName": "3469 GHISTA 100 GM",
+      "category": "fresh",
+      "quantity": 5,
+      "unitPrice": 3.22,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f124"
+      }
+    },
+    {
+      "productId": "PRD-FRS-017",
+      "productName": "3902 PROTIN MILK 400 ML",
+      "category": "fresh",
+      "quantity": 4,
+      "unitPrice": 6.5,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f125"
+      }
+    },
+    {
+      "productId": "PRD-FRS-019",
+      "productName": "3521 CUSTRD 85GM",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.03,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f126"
+      }
+    },
+    {
+      "productId": "PRD-FRS-021",
+      "productName": "3413 VETLAY",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.57,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f127"
+      }
+    },
+    {
+      "productId": "PRD-FRS-022",
+      "productName": "7037 200 ML JUICE",
+      "category": "fresh",
+      "quantity": 288,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f128"
+      }
+    },
+    {
+      "productId": "PRD-FRS-023",
+      "productName": "7101 300 ML JUICE",
+      "category": "fresh",
+      "quantity": 28,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f129"
+      }
+    },
+    {
+      "productId": "PRD-FRS-024",
+      "productName": "7902 1.4 LTR JUICE",
+      "category": "fresh",
+      "quantity": 10,
+      "unitPrice": 11.25,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f12a"
+      }
+    },
+    {
+      "productId": "PRD-FRS-025",
+      "productName": "7778 KIDS JUICE",
+      "category": "fresh",
+      "quantity": 48,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f12b"
+      }
+    },
+    {
+      "productId": "PRD-FRS-026",
+      "productName": "1068 FLVD LBN 180 ML",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f12c"
+      }
+    },
+    {
+      "productId": "PRD-FRS-027",
+      "productName": "5771 FETTA 400 GM",
+      "category": "fresh",
+      "quantity": 10,
+      "unitPrice": 14.4,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f12d"
+      }
+    },
+    {
+      "productId": "PRD-FRS-035",
+      "productName": "5948 SLICE BURGER",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 21,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f12e"
+      }
+    },
+    {
+      "productId": "PRD-FRS-038",
+      "productName": "5817 SANDICH SLICE 200 GM",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 21,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f12f"
+      }
+    },
+    {
+      "productId": "PRD-FRS-040",
+      "productName": "5015 TEA MILK 180 GM",
+      "category": "fresh",
+      "quantity": 8,
+      "unitPrice": 10.25,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f130"
+      }
+    },
+    {
+      "productId": "PRD-FRS-050",
+      "productName": "7975 JUICE MANGO 140 ML",
+      "category": "fresh",
+      "quantity": 126,
+      "unitPrice": 1.25,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f131"
+      }
+    },
+    {
+      "productId": "PRD-BAK-001",
+      "productName": "8078 WHITE BREAD",
+      "category": "bakery",
+      "quantity": 60,
+      "unitPrice": 4.35,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f132"
+      }
+    },
+    {
+      "productId": "PRD-BAK-002",
+      "productName": "8013 BROWN BREAD",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 4.5,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f133"
+      }
+    },
+    {
+      "productId": "PRD-BAK-003",
+      "productName": "8037 MILK BREAD",
+      "category": "bakery",
+      "quantity": 6,
+      "unitPrice": 6.3,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f134"
+      }
+    },
+    {
+      "productId": "PRD-BAK-004",
+      "productName": "8071 BURGEN BUN",
+      "category": "bakery",
+      "quantity": 30,
+      "unitPrice": 3.43,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f135"
+      }
+    },
+    {
+      "productId": "PRD-BAK-007",
+      "productName": "8627 CHEESE PUFF 70 GM",
+      "category": "bakery",
+      "quantity": 64,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f136"
+      }
+    },
+    {
+      "productId": "PRD-BAK-008",
+      "productName": "8867 7 DAYS 5+1",
+      "category": "bakery",
+      "quantity": 32,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f137"
+      }
+    },
+    {
+      "productId": "PRD-BAK-009",
+      "productName": "8707 SWISS ROLL 330 GM",
+      "category": "bakery",
+      "quantity": 8,
+      "unitPrice": 7.8,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f138"
+      }
+    },
+    {
+      "productId": "PRD-BAK-010",
+      "productName": "8709 HAZZLENUT",
+      "category": "bakery",
+      "quantity": 20,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f139"
+      }
+    },
+    {
+      "productId": "PRD-BAK-011",
+      "productName": "8686 BUTTER JUMBO 85 GM",
+      "category": "bakery",
+      "quantity": 16,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f13a"
+      }
+    },
+    {
+      "productId": "PRD-BAK-012",
+      "productName": "JUMBO BISCUT CREAM BUTTEI",
+      "category": "bakery",
+      "quantity": 5,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f13b"
+      }
+    },
+    {
+      "productId": "PRD-BAK-013",
+      "productName": "JUMBO DBL STR & VAN",
+      "category": "bakery",
+      "quantity": 5,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f13c"
+      }
+    },
+    {
+      "productId": "PRD-BAK-015",
+      "productName": "8793 PUFF MIX",
+      "category": "bakery",
+      "quantity": 75,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f13d"
+      }
+    },
+    {
+      "productId": "PRD-BAK-016",
+      "productName": "SANDWICH ROLL",
+      "category": "bakery",
+      "quantity": 5,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f13e"
+      }
+    },
+    {
+      "productId": "PRD-BAK-018",
+      "productName": "8655 PIZZA PUFF",
+      "category": "bakery",
+      "quantity": 10,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe214a38c444946ba7f13f"
+      }
+    }
+  ],
+  "transfer": {
+    "isProductTransferred": false,
+    "transferredProducts": []
+  },
+  "acceptedProducts": [],
+  "collectionAmount": 3900,
+  "purchaseAmount": 3999,
+  "expiry": 336,
+  "discount": 52,
+  "petrol": 187,
+  "totalAmount": 4364.63,
+  "netTotal": 3808.8563999999997,
+  "grandTotal": 3999.29922,
+  "profit": 0,
+  "createdAt": {
+    "$date": "2025-08-29T18:30:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-26T13:25:30.953Z"
+  },
+  "createdBy": "EMP-011",
+  "updatedBy": "68fe1f526759c882fe0d5b98",
+  "__v": 0,
+  "amountToBe": 0,
+  "balance": 0,
+  "expiryAfterTax": 0,
+  "salesDifference": 0
+},
+{
+  "_id": {
+    "$oid": "68fe1f596759c882fe0d5c21"
+  },
+  "id": "TRP-004",
+  "driverId": "EMP-005",
+  "driverName": "SEBEH",
+  "date": {
+    "$date": "2025-08-31T00:00:00.000Z"
+  },
+  "products": [
+    {
+      "productId": "PRD-FRS-001",
+      "productName": "1089 LBN 180",
+      "category": "fresh",
+      "quantity": 108,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eecf"
+      }
+    },
+    {
+      "productId": "PRD-FRS-002",
+      "productName": "1073 LBN 360",
+      "category": "fresh",
+      "quantity": 20,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed0"
+      }
+    },
+    {
+      "productId": "PRD-FRS-003",
+      "productName": "1117 STRW LBN 340",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 2.48,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed1"
+      }
+    },
+    {
+      "productId": "PRD-FRS-004",
+      "productName": "1115 MANG LBN 340",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed2"
+      }
+    },
+    {
+      "productId": "PRD-FRS-005",
+      "productName": "1107 LBN 2 LTR",
+      "category": "fresh",
+      "quantity": 10,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed3"
+      }
+    },
+    {
+      "productId": "PRD-FRS-006",
+      "productName": "2040 MILK 2 LTR",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed4"
+      }
+    },
+    {
+      "productId": "PRD-FRS-007",
+      "productName": "2121 MILK 1 LTR",
+      "category": "fresh",
+      "quantity": 14,
+      "unitPrice": 6.33,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed5"
+      }
+    },
+    {
+      "productId": "PRD-FRS-008",
+      "productName": "2123 500 MILK",
+      "category": "fresh",
+      "quantity": 112,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed6"
+      }
+    },
+    {
+      "productId": "PRD-FRS-009",
+      "productName": "2124 500 LOW FAT MILK",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed7"
+      }
+    },
+    {
+      "productId": "PRD-FRS-010",
+      "productName": "2081 MILK 180",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed8"
+      }
+    },
+    {
+      "productId": "PRD-FRS-011",
+      "productName": "2206 FLV MILK 225 ML",
+      "category": "fresh",
+      "quantity": 60,
+      "unitPrice": 1.87,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eed9"
+      }
+    },
+    {
+      "productId": "PRD-FRS-012",
+      "productName": "3193 YGT 1 KG",
+      "category": "fresh",
+      "quantity": 27,
+      "unitPrice": 6.61,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eeda"
+      }
+    },
+    {
+      "productId": "PRD-FRS-013",
+      "productName": "3115 YGT 500 GM",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 3.73,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eedb"
+      }
+    },
+    {
+      "productId": "PRD-FRS-014",
+      "productName": "3863 YGT 170 ML OUTER",
+      "category": "fresh",
+      "quantity": 42,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eedc"
+      }
+    },
+    {
+      "productId": "PRD-FRS-015",
+      "productName": "3469 GHISTA 100 GM",
+      "category": "fresh",
+      "quantity": 5,
+      "unitPrice": 3.22,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eedd"
+      }
+    },
+    {
+      "productId": "PRD-FRS-017",
+      "productName": "3902 PROTIN MILK 400 ML",
+      "category": "fresh",
+      "quantity": 4,
+      "unitPrice": 6.5,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eede"
+      }
+    },
+    {
+      "productId": "PRD-FRS-019",
+      "productName": "3521 CUSTRD 85GM",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.03,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eedf"
+      }
+    },
+    {
+      "productId": "PRD-FRS-020",
+      "productName": "3327 CARML 100 GM",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.14,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee0"
+      }
+    },
+    {
+      "productId": "PRD-FRS-021",
+      "productName": "3413 VETLAY",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.57,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee1"
+      }
+    },
+    {
+      "productId": "PRD-FRS-022",
+      "productName": "7037 200 ML JUICE",
+      "category": "fresh",
+      "quantity": 216,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee2"
+      }
+    },
+    {
+      "productId": "PRD-FRS-023",
+      "productName": "7101 300 ML JUICE",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee3"
+      }
+    },
+    {
+      "productId": "PRD-FRS-024",
+      "productName": "7902 1.4 LTR JUICE",
+      "category": "fresh",
+      "quantity": 9,
+      "unitPrice": 11.25,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee4"
+      }
+    },
+    {
+      "productId": "PRD-FRS-026",
+      "productName": "1068 FLVD LBN 180 ML",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee5"
+      }
+    },
+    {
+      "productId": "PRD-FRS-036",
+      "productName": "50007 MOZZARILLA 180 GM",
+      "category": "fresh",
+      "quantity": 8,
+      "unitPrice": 13.22,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee6"
+      }
+    },
+    {
+      "productId": "PRD-BAK-001",
+      "productName": "8078 WHITE BREAD",
+      "category": "bakery",
+      "quantity": 48,
+      "unitPrice": 4.35,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee7"
+      }
+    },
+    {
+      "productId": "PRD-BAK-002",
+      "productName": "8013 BROWN BREAD",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 4.5,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee8"
+      }
+    },
+    {
+      "productId": "PRD-BAK-003",
+      "productName": "8037 MILK BREAD",
+      "category": "bakery",
+      "quantity": 3,
+      "unitPrice": 6.3,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eee9"
+      }
+    },
+    {
+      "productId": "PRD-BAK-004",
+      "productName": "8071 BURGEN BUN",
+      "category": "bakery",
+      "quantity": 24,
+      "unitPrice": 3.43,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eeea"
+      }
+    },
+    {
+      "productId": "PRD-BAK-007",
+      "productName": "8627 CHEESE PUFF 70 GM",
+      "category": "bakery",
+      "quantity": 45,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eeeb"
+      }
+    },
+    {
+      "productId": "PRD-BAK-008",
+      "productName": "8867 7 DAYS 5+1",
+      "category": "bakery",
+      "quantity": 19,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eeec"
+      }
+    },
+    {
+      "productId": "PRD-BAK-009",
+      "productName": "8707 SWISS ROLL 330 GM",
+      "category": "bakery",
+      "quantity": 4,
+      "unitPrice": 7.8,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eeed"
+      }
+    },
+    {
+      "productId": "PRD-BAK-010",
+      "productName": "8709 HAZZLENUT",
+      "category": "bakery",
+      "quantity": 32,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eeee"
+      }
+    },
+    {
+      "productId": "PRD-BAK-011",
+      "productName": "8686 BUTTER JUMBO 85 GM",
+      "category": "bakery",
+      "quantity": 38,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eeef"
+      }
+    },
+    {
+      "productId": "PRD-BAK-012",
+      "productName": "JUMBO BISCUT CREAM BUTTEI",
+      "category": "bakery",
+      "quantity": 4,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eef0"
+      }
+    },
+    {
+      "productId": "PRD-BAK-015",
+      "productName": "8793 PUFF MIX",
+      "category": "bakery",
+      "quantity": 69,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eef1"
+      }
+    },
+    {
+      "productId": "PRD-BAK-016",
+      "productName": "SANDWICH ROLL",
+      "category": "bakery",
+      "quantity": 6,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eef2"
+      }
+    },
+    {
+      "productId": "PRD-BAK-018",
+      "productName": "8655 PIZZA PUFF",
+      "category": "bakery",
+      "quantity": 20,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe1fc138c444946ba7eef3"
+      }
+    }
+  ],
+  "transfer": {
+    "isProductTransferred": false,
+    "transferredProducts": []
+  },
+  "acceptedProducts": [],
+  "collectionAmount": 3630,
+  "purchaseAmount": 3421,
+  "expiry": 273,
+  "discount": 51,
+  "petrol": 91,
+  "totalAmount": 3734.41,
+  "netTotal": 3259.0262999999995,
+  "grandTotal": 3421.9776149999993,
+  "profit": 0,
+  "createdAt": {
+    "$date": "2025-08-30T18:30:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-26T13:18:57.488Z"
+  },
+  "createdBy": "EMP-005",
+  "updatedBy": "68fe1f526759c882fe0d5b98",
+  "__v": 0,
+  "amountToBe": 0,
+  "balance": 0,
+  "expiryAfterTax": 0,
+  "salesDifference": 0
+},
+{
+  "_id": {
+    "$oid": "68fe1f596759c882fe0d5c23"
+  },
+  "id": "TRP-005",
+  "driverId": "EMP-011",
+  "driverName": "FAROOK",
+  "date": {
+    "$date": "2025-08-31T00:00:00.000Z"
+  },
+  "products": [
+    {
+      "productId": "PRD-FRS-001",
+      "productName": "1089 LBN 180",
+      "category": "fresh",
+      "quantity": 144,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef46"
+      }
+    },
+    {
+      "productId": "PRD-FRS-002",
+      "productName": "1073 LBN 360",
+      "category": "fresh",
+      "quantity": 20,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef47"
+      }
+    },
+    {
+      "productId": "PRD-FRS-003",
+      "productName": "1117 STRW LBN 340",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 2.48,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef48"
+      }
+    },
+    {
+      "productId": "PRD-FRS-004",
+      "productName": "1115 MANG LBN 340",
+      "category": "fresh",
+      "quantity": 4,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef49"
+      }
+    },
+    {
+      "productId": "PRD-FRS-005",
+      "productName": "1107 LBN 2 LTR",
+      "category": "fresh",
+      "quantity": 10,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef4a"
+      }
+    },
+    {
+      "productId": "PRD-FRS-006",
+      "productName": "2040 MILK 2 LTR",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef4b"
+      }
+    },
+    {
+      "productId": "PRD-FRS-007",
+      "productName": "2121 MILK 1 LTR",
+      "category": "fresh",
+      "quantity": 10,
+      "unitPrice": 6.33,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef4c"
+      }
+    },
+    {
+      "productId": "PRD-FRS-008",
+      "productName": "2123 500 MILK",
+      "category": "fresh",
+      "quantity": 96,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef4d"
+      }
+    },
+    {
+      "productId": "PRD-FRS-009",
+      "productName": "2124 500 LOW FAT MILK",
+      "category": "fresh",
+      "quantity": 1,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef4e"
+      }
+    },
+    {
+      "productId": "PRD-FRS-010",
+      "productName": "2081 MILK 180",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef4f"
+      }
+    },
+    {
+      "productId": "PRD-FRS-011",
+      "productName": "2206 FLV MILK 225 ML",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.87,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef50"
+      }
+    },
+    {
+      "productId": "PRD-FRS-012",
+      "productName": "3193 YGT 1 KG",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 6.61,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef51"
+      }
+    },
+    {
+      "productId": "PRD-FRS-014",
+      "productName": "3863 YGT 170 ML OUTER",
+      "category": "fresh",
+      "quantity": 42,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef52"
+      }
+    },
+    {
+      "productId": "PRD-FRS-015",
+      "productName": "3469 GHISTA 100 GM",
+      "category": "fresh",
+      "quantity": 5,
+      "unitPrice": 3.22,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef53"
+      }
+    },
+    {
+      "productId": "PRD-FRS-018",
+      "productName": "2196 MNGO MILK FLV 360 ML",
+      "category": "fresh",
+      "quantity": 18,
+      "unitPrice": 3,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef54"
+      }
+    },
+    {
+      "productId": "PRD-FRS-019",
+      "productName": "3521 CUSTRD 85GM",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.03,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef55"
+      }
+    },
+    {
+      "productId": "PRD-FRS-020",
+      "productName": "3327 CARML 100 GM",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.14,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef56"
+      }
+    },
+    {
+      "productId": "PRD-FRS-021",
+      "productName": "3413 VETLAY",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.57,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef57"
+      }
+    },
+    {
+      "productId": "PRD-FRS-022",
+      "productName": "7037 200 ML JUICE",
+      "category": "fresh",
+      "quantity": 240,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef58"
+      }
+    },
+    {
+      "productId": "PRD-FRS-023",
+      "productName": "7101 300 ML JUICE",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef59"
+      }
+    },
+    {
+      "productId": "PRD-FRS-024",
+      "productName": "7902 1.4 LTR JUICE",
+      "category": "fresh",
+      "quantity": 9,
+      "unitPrice": 11.25,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef5a"
+      }
+    },
+    {
+      "productId": "PRD-FRS-025",
+      "productName": "7778 KIDS JUICE",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef5b"
+      }
+    },
+    {
+      "productId": "PRD-FRS-026",
+      "productName": "1068 FLVD LBN 180 ML",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef5c"
+      }
+    },
+    {
+      "productId": "PRD-FRS-033",
+      "productName": "5492 FETTA 200 GM",
+      "category": "fresh",
+      "quantity": 14,
+      "unitPrice": 7.6,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef5d"
+      }
+    },
+    {
+      "productId": "PRD-FRS-070",
+      "productName": "4424 UHT MILK STRAWBERRY",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 7.2,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef5e"
+      }
+    },
+    {
+      "productId": "PRD-BAK-001",
+      "productName": "8078 WHITE BREAD",
+      "category": "bakery",
+      "quantity": 60,
+      "unitPrice": 4.35,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef5f"
+      }
+    },
+    {
+      "productId": "PRD-BAK-002",
+      "productName": "8013 BROWN BREAD",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 4.5,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef60"
+      }
+    },
+    {
+      "productId": "PRD-BAK-003",
+      "productName": "8037 MILK BREAD",
+      "category": "bakery",
+      "quantity": 6,
+      "unitPrice": 6.3,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef61"
+      }
+    },
+    {
+      "productId": "PRD-BAK-004",
+      "productName": "8071 BURGEN BUN",
+      "category": "bakery",
+      "quantity": 30,
+      "unitPrice": 3.43,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef62"
+      }
+    },
+    {
+      "productId": "PRD-BAK-007",
+      "productName": "8627 CHEESE PUFF 70 GM",
+      "category": "bakery",
+      "quantity": 90,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef63"
+      }
+    },
+    {
+      "productId": "PRD-BAK-008",
+      "productName": "8867 7 DAYS 5+1",
+      "category": "bakery",
+      "quantity": 28,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef64"
+      }
+    },
+    {
+      "productId": "PRD-BAK-009",
+      "productName": "8707 SWISS ROLL 330 GM",
+      "category": "bakery",
+      "quantity": 8,
+      "unitPrice": 7.8,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef65"
+      }
+    },
+    {
+      "productId": "PRD-BAK-010",
+      "productName": "8709 HAZZLENUT",
+      "category": "bakery",
+      "quantity": 30,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef66"
+      }
+    },
+    {
+      "productId": "PRD-BAK-011",
+      "productName": "8686 BUTTER JUMBO 85 GM",
+      "category": "bakery",
+      "quantity": 16,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef67"
+      }
+    },
+    {
+      "productId": "PRD-BAK-012",
+      "productName": "JUMBO BISCUT CREAM BUTTEI",
+      "category": "bakery",
+      "quantity": 5,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef68"
+      }
+    },
+    {
+      "productId": "PRD-BAK-013",
+      "productName": "JUMBO DBL STR & VAN",
+      "category": "bakery",
+      "quantity": 5,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef69"
+      }
+    },
+    {
+      "productId": "PRD-BAK-015",
+      "productName": "8793 PUFF MIX",
+      "category": "bakery",
+      "quantity": 92,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef6a"
+      }
+    },
+    {
+      "productId": "PRD-BAK-016",
+      "productName": "SANDWICH ROLL",
+      "category": "bakery",
+      "quantity": 5,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef6b"
+      }
+    },
+    {
+      "productId": "PRD-BAK-018",
+      "productName": "8655 PIZZA PUFF",
+      "category": "bakery",
+      "quantity": 10,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe201f38c444946ba7ef6c"
+      }
+    }
+  ],
+  "transfer": {
+    "isProductTransferred": false,
+    "transferredProducts": []
+  },
+  "acceptedProducts": [],
+  "collectionAmount": 3900,
+  "purchaseAmount": 3602,
+  "expiry": 364,
+  "discount": 50,
+  "petrol": 186,
+  "totalAmount": 3941.6899999999996,
+  "netTotal": 3431.5489499999994,
+  "grandTotal": 3603.1263975,
+  "profit": 0,
+  "createdAt": {
+    "$date": "2025-08-30T18:30:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-26T13:20:31.949Z"
+  },
+  "createdBy": "EMP-011",
+  "updatedBy": "68fe1f526759c882fe0d5b98",
+  "__v": 0,
+  "amountToBe": 0,
+  "balance": 0,
+  "expiryAfterTax": 0,
+  "salesDifference": 0
+},
+{
+  "_id": {
+    "$oid": "68fe1f596759c882fe0d5c25"
+  },
+  "id": "TRP-006",
+  "driverId": "EMP-010",
+  "driverName": "RIJAS",
+  "date": {
+    "$date": "2025-08-31T00:00:00.000Z"
+  },
+  "products": [
+    {
+      "productId": "PRD-FRS-001",
+      "productName": "1089 LBN 180",
+      "category": "fresh",
+      "quantity": 108,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efbd"
+      }
+    },
+    {
+      "productId": "PRD-FRS-002",
+      "productName": "1073 LBN 360",
+      "category": "fresh",
+      "quantity": 25,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efbe"
+      }
+    },
+    {
+      "productId": "PRD-FRS-003",
+      "productName": "1117 STRW LBN 340",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 2.48,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efbf"
+      }
+    },
+    {
+      "productId": "PRD-FRS-004",
+      "productName": "1115 MANG LBN 340",
+      "category": "fresh",
+      "quantity": 15,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc0"
+      }
+    },
+    {
+      "productId": "PRD-FRS-005",
+      "productName": "1107 LBN 2 LTR",
+      "category": "fresh",
+      "quantity": 7,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc1"
+      }
+    },
+    {
+      "productId": "PRD-FRS-006",
+      "productName": "2040 MILK 2 LTR",
+      "category": "fresh",
+      "quantity": 30,
+      "unitPrice": 11.5,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc2"
+      }
+    },
+    {
+      "productId": "PRD-FRS-007",
+      "productName": "2121 MILK 1 LTR",
+      "category": "fresh",
+      "quantity": 18,
+      "unitPrice": 6.33,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc3"
+      }
+    },
+    {
+      "productId": "PRD-FRS-008",
+      "productName": "2123 500 MILK",
+      "category": "fresh",
+      "quantity": 144,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc4"
+      }
+    },
+    {
+      "productId": "PRD-FRS-009",
+      "productName": "2124 500 LOW FAT MILK",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 3.16,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc5"
+      }
+    },
+    {
+      "productId": "PRD-FRS-010",
+      "productName": "2081 MILK 180",
+      "category": "fresh",
+      "quantity": 42,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc6"
+      }
+    },
+    {
+      "productId": "PRD-FRS-011",
+      "productName": "2206 FLV MILK 225 ML",
+      "category": "fresh",
+      "quantity": 60,
+      "unitPrice": 1.87,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc7"
+      }
+    },
+    {
+      "productId": "PRD-FRS-012",
+      "productName": "3193 YGT 1 KG",
+      "category": "fresh",
+      "quantity": 24,
+      "unitPrice": 6.61,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc8"
+      }
+    },
+    {
+      "productId": "PRD-FRS-013",
+      "productName": "3115 YGT 500 GM",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 3.73,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efc9"
+      }
+    },
+    {
+      "productId": "PRD-FRS-014",
+      "productName": "3863 YGT 170 ML OUTER",
+      "category": "fresh",
+      "quantity": 42,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efca"
+      }
+    },
+    {
+      "productId": "PRD-FRS-015",
+      "productName": "3469 GHISTA 100 GM",
+      "category": "fresh",
+      "quantity": 8,
+      "unitPrice": 3.22,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efcb"
+      }
+    },
+    {
+      "productId": "PRD-FRS-018",
+      "productName": "2196 MNGO MILK FLV 360 ML",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 3,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efcc"
+      }
+    },
+    {
+      "productId": "PRD-FRS-019",
+      "productName": "3521 CUSTRD 85GM",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.03,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efcd"
+      }
+    },
+    {
+      "productId": "PRD-FRS-020",
+      "productName": "3327 CARML 100 GM",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.14,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efce"
+      }
+    },
+    {
+      "productId": "PRD-FRS-021",
+      "productName": "3413 VETLAY",
+      "category": "fresh",
+      "quantity": 6,
+      "unitPrice": 1.57,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efcf"
+      }
+    },
+    {
+      "productId": "PRD-FRS-022",
+      "productName": "7037 200 ML JUICE",
+      "category": "fresh",
+      "quantity": 264,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd0"
+      }
+    },
+    {
+      "productId": "PRD-FRS-023",
+      "productName": "7101 300 ML JUICE",
+      "category": "fresh",
+      "quantity": 50,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd1"
+      }
+    },
+    {
+      "productId": "PRD-FRS-024",
+      "productName": "7902 1.4 LTR JUICE",
+      "category": "fresh",
+      "quantity": 9,
+      "unitPrice": 11.25,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd2"
+      }
+    },
+    {
+      "productId": "PRD-FRS-026",
+      "productName": "1068 FLVD LBN 180 ML",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 1.55,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd3"
+      }
+    },
+    {
+      "productId": "PRD-FRS-070",
+      "productName": "4424 UHT MILK STRAWBERRY",
+      "category": "fresh",
+      "quantity": 12,
+      "unitPrice": 7.2,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd4"
+      }
+    },
+    {
+      "productId": "PRD-BAK-001",
+      "productName": "8078 WHITE BREAD",
+      "category": "bakery",
+      "quantity": 36,
+      "unitPrice": 4.35,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd5"
+      }
+    },
+    {
+      "productId": "PRD-BAK-002",
+      "productName": "8013 BROWN BREAD",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 4.5,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd6"
+      }
+    },
+    {
+      "productId": "PRD-BAK-003",
+      "productName": "8037 MILK BREAD",
+      "category": "bakery",
+      "quantity": 3,
+      "unitPrice": 6.3,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd7"
+      }
+    },
+    {
+      "productId": "PRD-BAK-004",
+      "productName": "8071 BURGEN BUN",
+      "category": "bakery",
+      "quantity": 6,
+      "unitPrice": 3.43,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd8"
+      }
+    },
+    {
+      "productId": "PRD-BAK-007",
+      "productName": "8627 CHEESE PUFF 70 GM",
+      "category": "bakery",
+      "quantity": 45,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efd9"
+      }
+    },
+    {
+      "productId": "PRD-BAK-008",
+      "productName": "8867 7 DAYS 5+1",
+      "category": "bakery",
+      "quantity": 28,
+      "unitPrice": 8.65,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efda"
+      }
+    },
+    {
+      "productId": "PRD-BAK-010",
+      "productName": "8709 HAZZLENUT",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efdb"
+      }
+    },
+    {
+      "productId": "PRD-BAK-011",
+      "productName": "8686 BUTTER JUMBO 85 GM",
+      "category": "bakery",
+      "quantity": 12,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efdc"
+      }
+    },
+    {
+      "productId": "PRD-BAK-012",
+      "productName": "JUMBO BISCUT CREAM BUTTEI",
+      "category": "bakery",
+      "quantity": 18,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efdd"
+      }
+    },
+    {
+      "productId": "PRD-BAK-013",
+      "productName": "JUMBO DBL STR & VAN",
+      "category": "bakery",
+      "quantity": 4,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efde"
+      }
+    },
+    {
+      "productId": "PRD-BAK-015",
+      "productName": "8793 PUFF MIX",
+      "category": "bakery",
+      "quantity": 69,
+      "unitPrice": 1.73,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efdf"
+      }
+    },
+    {
+      "productId": "PRD-BAK-016",
+      "productName": "SANDWICH ROLL",
+      "category": "bakery",
+      "quantity": 4,
+      "unitPrice": 2.7,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efe0"
+      }
+    },
+    {
+      "productId": "PRD-BAK-018",
+      "productName": "8655 PIZZA PUFF",
+      "category": "bakery",
+      "quantity": 10,
+      "unitPrice": 2.6,
+      "_id": {
+        "$oid": "68fe206438c444946ba7efe1"
+      }
+    }
+  ],
+  "transfer": {
+    "isProductTransferred": false,
+    "transferredProducts": []
+  },
+  "acceptedProducts": [],
+  "collectionAmount": 3050,
+  "purchaseAmount": 3480,
+  "expiry": 384,
+  "discount": 49,
+  "petrol": 131,
+  "totalAmount": 3789.0500000000006,
+  "netTotal": 3315.1897500000005,
+  "grandTotal": 3480.9492375000004,
+  "profit": 0,
+  "createdAt": {
+    "$date": "2025-08-30T18:30:00.000Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-26T13:21:40.478Z"
+  },
+  "createdBy": "EMP-010",
+  "updatedBy": "68fe1f526759c882fe0d5b98",
+  "__v": 0,
+  "amountToBe": 0,
+  "balance": 0,
+  "expiryAfterTax": 0,
+  "salesDifference": 0
+}]
