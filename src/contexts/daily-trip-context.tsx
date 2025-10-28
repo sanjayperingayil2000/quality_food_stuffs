@@ -47,6 +47,7 @@ export interface DailyTrip {
   transfer: ProductTransfer; // Product transfer information
   acceptedProducts: TripProduct[]; // Products accepted from other drivers
   // Financial fields
+  previousBalance?: number; // Previous balance carried into this trip (derived when needed)
   collectionAmount: number;
   purchaseAmount: number;
   expiry: number; // Expiry amount in AED
@@ -1073,9 +1074,17 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
               transferredFromDriverName: newTrip.driverName,
             }));
             
+            // Combine existing accepted products with new ones
+            const combinedAcceptedProducts = [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts];
+            
+            // Deduplicate based on productId, quantity, and transferredFromDriverId
+            const uniqueAcceptedProducts = [...new Map(
+              combinedAcceptedProducts.map(p => [p.productId + p.quantity + (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId, p])
+            ).values()];
+            
             const updatedDriverTrip = {
               ...driverTrip,
-              acceptedProducts: [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts],
+              acceptedProducts: uniqueAcceptedProducts,
             };
             
             // Recalculate totals for the receiving driver
@@ -1193,8 +1202,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       }
       
       // Update local state only if API call succeeded
-      setTrips(prev => 
-        prev.map(trip => {
+      setTrips(prev => {
+        const updatedTrips = prev.map(trip => {
           if (trip.id === id) {
             const updatedTrip = { ...trip, ...updates, updatedAt: new Date().toISOString() };
             
@@ -1277,8 +1286,95 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             return updatedTrip;
           }
           return trip;
-        })
-      );
+        });
+
+        // After updating the trip, update receiving driver trips if needed
+        const currentTrips = [...updatedTrips];
+        if (updates.transfer && updates.transfer.isProductTransferred && updates.transfer.transferredProducts) {
+          const transferProducts = updates.transfer.transferredProducts;
+          if (transferProducts.length > 0) {
+            // Find the updated trip
+            const theUpdatedTrip = updatedTrips.find(t => t.id === id);
+            if (theUpdatedTrip) {
+              // Group by receiving driver
+              const productsByDriver = transferProducts.reduce((acc, product) => {
+                if (!acc[product.receivingDriverId]) {
+                  acc[product.receivingDriverId] = [];
+                }
+                acc[product.receivingDriverId].push({
+                  productId: product.productId,
+                  productName: product.productName,
+                  category: product.category,
+                  quantity: product.quantity,
+                  unitPrice: product.unitPrice,
+                });
+                return acc;
+              }, {} as Record<string, TripProduct[]>);
+              
+              // Update each receiving driver's trip
+              for (const [driverId, receivedProducts] of Object.entries(productsByDriver)) {
+                const driverTrip = currentTrips.find(t => 
+                  t.driverId === driverId && 
+                  t.id !== id &&
+                  dayjs(t.date).format('YYYY-MM-DD') === dayjs(theUpdatedTrip.date).format('YYYY-MM-DD')
+                );
+                
+                if (driverTrip) {
+                  const enrichedAcceptedProducts = receivedProducts.map(product => ({
+                    ...product,
+                    transferredFromDriverId: theUpdatedTrip.driverId,
+                    transferredFromDriverName: theUpdatedTrip.driverName,
+                  }));
+                  
+                  // Combine and deduplicate
+                  const combinedAcceptedProducts = [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts];
+                  const uniqueAcceptedProducts = [...new Map(
+                    combinedAcceptedProducts.map(p => [p.productId + p.quantity + (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId, p])
+                  ).values()];
+                  
+                  // Update the receiving driver's trip
+                  const driverTripIndex = currentTrips.findIndex(t => t.id === driverTrip.id);
+                  if (driverTripIndex !== -1) {
+                    const driverTotals = calculateTotals(
+                      currentTrips[driverTripIndex].products,
+                      uniqueAcceptedProducts,
+                      currentTrips[driverTripIndex].transfer.transferredProducts
+                    );
+                    
+                    const driverPreviousBalance = getPreviousBalance(driverTrip.driverId, new Date(driverTrip.date), currentTrips);
+                    
+                    const driverFinancialMetrics = calculateFinancialMetrics(
+                      currentTrips[driverTripIndex].expiry,
+                      currentTrips[driverTripIndex].purchaseAmount,
+                      currentTrips[driverTripIndex].collectionAmount,
+                      currentTrips[driverTripIndex].discount,
+                      driverTotals.fresh.netTotal,
+                      driverTotals.bakery.netTotal,
+                      driverPreviousBalance
+                    );
+                    
+                    currentTrips[driverTripIndex] = {
+                      ...currentTrips[driverTripIndex],
+                      acceptedProducts: uniqueAcceptedProducts,
+                      totalAmount: driverTotals.overall.total,
+                      netTotal: driverTotals.overall.netTotal,
+                      grandTotal: driverTotals.overall.grandTotal,
+                      expiryAfterTax: driverFinancialMetrics.expiryAfterTax,
+                      amountToBe: driverFinancialMetrics.amountToBe,
+                      salesDifference: driverFinancialMetrics.salesDifference,
+                      profit: driverFinancialMetrics.profit,
+                      balance: driverFinancialMetrics.balance,
+                      updatedAt: new Date().toISOString(),
+                    };
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        return currentTrips;
+      });
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to update trip');
     }

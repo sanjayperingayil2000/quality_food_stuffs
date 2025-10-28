@@ -252,32 +252,20 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
         })),
         updatedBy
       };
-
-      // Update local state immediately for better UX
-      const updatedEmployees = employees.map(emp => {
-        if (emp.id === driverId && emp.designation === 'driver') {
-          return {
-            ...emp,
-            balance: roundedNewBalance,
-            balanceHistory: updatedBalanceHistory,
-            updatedAt: new Date(),
-            updatedBy,
-          };
-        }
-        return emp;
-      });
-      setEmployees(updatedEmployees);
       
       // Save to backend with full balance history
       const result = await apiClient.updateEmployee(driverId, updatePayload);
       
       if (result.error) {
-        // Revert local state on error
-        await refreshEmployees();
         setError(result.error);
+      } else {
+        // Refresh to get the latest data from backend
+        await refreshEmployees();
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to update driver balance');
+      // Refresh on error to get consistent state
+      await refreshEmployees();
     }
   }, [employees, refreshEmployees]);
 

@@ -505,6 +505,7 @@ export default function Page(): React.JSX.Element {
       products: filteredProducts,
       transfer,
       acceptedProducts: editingTrip ? editingTrip.acceptedProducts : acceptedProductsForForm,
+      previousBalance: data.previousBalance,
       collectionAmount: data.collectionAmount,
       purchaseAmount: calculatedPurchaseAmount, // Use calculated value
       expiry: data.expiry,
@@ -1009,33 +1010,51 @@ export default function Page(): React.JSX.Element {
                             
                             // Check for accepted products (transfers TO this driver) for the selected date
                             const selectedDate = watchedDate ? dayjs(watchedDate).format('YYYY-MM-DD') : '';
-                            const acceptedProductsForThisDriver = trips
-                              .filter(trip => {
-                                // Find trips where products were transferred TO this driver
-                                return trip.transfer?.transferredProducts?.some(
-                                  tp => tp.receivingDriverId === driver.id &&
-                                  dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
-                                );
-                              })
-                              .flatMap(trip => 
-                                trip.transfer?.transferredProducts
-                                  ?.filter(tp => tp.receivingDriverId === driver.id)
-                                  .map(tp => ({
-                                    productId: tp.productId,
-                                    productName: tp.productName,
-                                    category: tp.category as 'fresh' | 'bakery',
-                                    quantity: tp.quantity,
-                                    unitPrice: tp.unitPrice,
-                                    transferredFromDriverId: trip.driverId,
-                                    transferredFromDriverName: trip.driverName,
-                                  })) || []
-                              );
                             
-                            if (acceptedProductsForThisDriver.length > 0) {
-                              console.log('Found accepted products for driver:', driver.id, acceptedProductsForThisDriver);
-                              setAcceptedProductsForForm(acceptedProductsForThisDriver);
+                            // First, get the trip for this driver on this date (if it exists)
+                            const driverTripForDate = trips.find(trip => 
+                              trip.driverId === driver.id && 
+                              dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
+                            );
+                            
+                            // Use accepted products from the driver's trip (if exists), otherwise check pending transfers
+                            if (driverTripForDate && driverTripForDate.acceptedProducts && driverTripForDate.acceptedProducts.length > 0) {
+                              // Deduplicate accepted products
+                              const uniqueProducts = [...new Map(
+                                driverTripForDate.acceptedProducts.map(p => [p.productId + p.quantity + p.transferredFromDriverId, p])
+                              ).values()];
+                              console.log('Found accepted products for driver:', driver.id, uniqueProducts);
+                              setAcceptedProductsForForm(uniqueProducts);
                             } else {
-                              setAcceptedProductsForForm([]);
+                              // Fallback to finding pending transfers
+                              const acceptedProductsForThisDriver = trips
+                                .filter(trip => {
+                                  // Find trips where products were transferred TO this driver
+                                  return trip.transfer?.transferredProducts?.some(
+                                    tp => tp.receivingDriverId === driver.id &&
+                                    dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
+                                  );
+                                })
+                                .flatMap(trip => 
+                                  trip.transfer?.transferredProducts
+                                    ?.filter(tp => tp.receivingDriverId === driver.id)
+                                    .map(tp => ({
+                                      productId: tp.productId,
+                                      productName: tp.productName,
+                                      category: tp.category as 'fresh' | 'bakery',
+                                      quantity: tp.quantity,
+                                      unitPrice: tp.unitPrice,
+                                      transferredFromDriverId: trip.driverId,
+                                      transferredFromDriverName: trip.driverName,
+                                    })) || []
+                                );
+                              
+                              // Deduplicate
+                              const uniqueProducts = [...new Map(
+                                acceptedProductsForThisDriver.map(p => [p.productId + p.quantity + p.transferredFromDriverId, p])
+                              ).values()];
+                              console.log('Found accepted products for driver:', driver.id, uniqueProducts);
+                              setAcceptedProductsForForm(uniqueProducts);
                             }
                           }}
                         >
@@ -1674,7 +1693,7 @@ export default function Page(): React.JSX.Element {
                   <Typography variant="h6" sx={{ mb: 2 }}>Calculations</Typography>
                   {(() => {
                     // Calculate accepted products for the receiving driver
-                    const acceptedProducts: TripProduct[] = editingTrip?.acceptedProducts || [];
+                    const acceptedProducts: TripProduct[] = editingTrip?.acceptedProducts || acceptedProductsForForm || [];
                     
                     const totals = calculateTotals(
                       watchedProducts, 

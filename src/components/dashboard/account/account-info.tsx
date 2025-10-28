@@ -97,9 +97,9 @@ export function AccountInfo(): React.JSX.Element {
             />
           </div>
           <Stack spacing={1} sx={{ textAlign: 'center' }}>
-            <Typography variant="h5">{user?.name || 'Loading...'}</Typography>
+            <Typography variant="h5">{user?.name || 'Quality Food Stuffs'}</Typography>
             <Typography color="text.secondary" variant="body2">
-              {user?.phone || 'Not provided'}
+              {user?.phone || 'Quality Food Stuffs'}
             </Typography>
             <Typography color="text.secondary" variant="body2">
               {user?.email || 'Not provided'}

@@ -29,6 +29,7 @@ export interface IDailyTrip {
   transfer: ProductTransfer; // Product transfer information
   acceptedProducts: TripProduct[]; // Products accepted from other drivers
   // Financial fields
+  previousBalance: number; // Previous balance carried into this trip
   collectionAmount: number;
   purchaseAmount: number;
   expiry: number; // Expiry amount in AED
@@ -90,6 +91,7 @@ const DailyTripSchema = new Schema<IDailyTripDocument>(
       unitPrice: { type: Number, required: true, min: 0 }
     }],
     // Financial fields
+    previousBalance: { type: Number, required: true, min: 0 },
     collectionAmount: { type: Number, required: true, min: 0 },
     purchaseAmount: { type: Number, required: true, min: 0 },
     expiry: { type: Number, required: true, min: 0 },
