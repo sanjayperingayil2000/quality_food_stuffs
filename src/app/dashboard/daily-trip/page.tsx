@@ -236,6 +236,16 @@ export default function Page(): React.JSX.Element {
     // console.log('========================');
   }, [drivers, currentDriverId, transferForm.receivingDriverId]);
 
+  // Auto-populate previous balance when driver is selected (only for new trips, not editing)
+  React.useEffect(() => {
+    if (currentDriverId && !editingTrip) {
+      const driver = drivers.find(d => d.id === currentDriverId);
+      if (driver && driver.balance !== undefined) {
+        setValue('previousBalance', driver.balance);
+      }
+    }
+  }, [currentDriverId, drivers, editingTrip, setValue]);
+
   // Filter products based on search
   React.useEffect(() => {
     if (productSearch.trim() === '') {
@@ -1609,10 +1619,10 @@ export default function Page(): React.JSX.Element {
                         type="number"
                         fullWidth
                         error={Boolean(errors.previousBalance)}
-                        helperText={errors.previousBalance?.message}
+                        helperText={errors.previousBalance?.message || 'Enter the driver\'s previous balance'}
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                        value={field.value ?? ''}
+                        value={field.value || ''}
                       />
                     )}
                   />
