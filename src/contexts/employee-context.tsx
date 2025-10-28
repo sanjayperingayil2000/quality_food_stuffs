@@ -240,6 +240,17 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
 
       const updatedBalanceHistory = [...(currentEmployee.balanceHistory || []), newHistoryEntry];
 
+      // Optimistically update local state so the list reflects the change immediately
+      setEmployees(prev => prev.map(emp => {
+        if (emp.id !== driverId) return emp;
+        return {
+          ...emp,
+          balance: roundedNewBalance,
+          balanceHistory: updatedBalanceHistory,
+          updatedAt: new Date(),
+        };
+      }));
+
       // Build the update payload with balance history
       const updatePayload = {
         balance: roundedNewBalance,
@@ -258,8 +269,10 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       
       if (result.error) {
         setError(result.error);
+        // If server failed, reload from server to revert optimistic update
+        await refreshEmployees();
       } else {
-        // Refresh to get the latest data from backend
+        // Refresh to get the latest data from backend (confirms optimistic state)
         await refreshEmployees();
       }
     } catch (error_) {

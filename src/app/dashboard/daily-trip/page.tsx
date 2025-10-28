@@ -313,7 +313,7 @@ export default function Page(): React.JSX.Element {
       transferredProducts: trip.transfer.transferredProducts,
       selectedCategory: 'bakery',
       products: trip.products,
-      previousBalance: 0, // Will be calculated from context
+      previousBalance: typeof trip.previousBalance === 'number' ? trip.previousBalance : 0,
       collectionAmount: safeCollectionAmount,
       purchaseAmount: safePurchaseAmount,
       expiry: safeExpiry,
@@ -1612,7 +1612,7 @@ export default function Page(): React.JSX.Element {
                         helperText={errors.previousBalance?.message}
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                        value={field.value || ''}
+                        value={field.value ?? ''}
                       />
                     )}
                   />
