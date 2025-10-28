@@ -242,7 +242,14 @@ export default function Page(): React.JSX.Element {
           // Balance is intentionally excluded here as it's handled by updateDriverBalance
         };
 
-        await updateEmployee(selectedEmployee.id, updates);
+        // Only update other fields if balance update didn't happen
+        // This avoids overwriting the balance update
+        const previousBalanceForCheck = selectedEmployee.balance || 0;
+        const didBalanceUpdate = formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString() && Number(formData.balance) !== previousBalanceForCheck;
+        
+        if (!didBalanceUpdate) {
+          await updateEmployee(selectedEmployee.id, updates);
+        }
         
         // Refresh to get the latest data including balance history
         await refreshEmployees();

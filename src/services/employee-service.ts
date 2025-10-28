@@ -105,7 +105,8 @@ export async function updateEmployee(id: string, data: UpdateEmployeeData) {
   const beforeData = employee.toObject();
   
   // If balance is being updated, add to balance history
-  if (data.balance !== undefined && data.balance !== employee.balance) {
+  // UNLESS balanceHistory is already provided (in which case use that directly)
+  if (data.balance !== undefined && data.balance !== employee.balance && !data.balanceHistory) {
     const currentVersion = employee.balanceHistory?.length || 0;
     data.balanceHistory = [
       ...(employee.balanceHistory || []),
@@ -113,6 +114,7 @@ export async function updateEmployee(id: string, data: UpdateEmployeeData) {
         version: currentVersion + 1,
         balance: data.balance,
         updatedAt: new Date(),
+        reason: 'Balance updated',
         updatedBy: data.updatedBy,
       }
     ];
