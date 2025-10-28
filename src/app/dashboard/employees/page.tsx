@@ -213,24 +213,25 @@ export default function Page(): React.JSX.Element {
     if (selectedEmployee && validateForm()) {
       setIsUpdating(true);
       try {
-        // Handle balance update for drivers first
-        if (formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString()) {
-          const newBalance = Number(formData.balance);
-          const previousBalance = selectedEmployee.balance || 0;
+        const newBalance = formData.role === 'driver' ? Number(formData.balance) : selectedEmployee.balance;
+        const previousBalance = selectedEmployee.balance || 0;
+        const balanceChanged = formData.role === 'driver' && newBalance !== previousBalance;
+        
+        // Handle balance update for drivers if it changed
+        if (balanceChanged) {
+          // Use the updateDriverBalance method to maintain history
+          await updateDriverBalance(
+            selectedEmployee.id, 
+            newBalance, 
+            `Balance edited from ${previousBalance} to ${newBalance}`, 
+            user?.email || user?.name || 'System'
+          );
           
-          if (newBalance !== previousBalance) {
-            // Use the updateDriverBalance method to maintain history
-            await updateDriverBalance(
-              selectedEmployee.id, 
-              newBalance, 
-              `Balance edited from ${previousBalance} to ${newBalance}`, 
-              user?.email || user?.name || 'System'
-            );
-            // Don't refresh here - let updateDriverBalance handle it
-          }
+          // Small delay to ensure update is processed before updating other fields
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
 
-        // Update other employee fields (excluding balance for drivers, as it's handled by updateDriverBalance)
+        // Always update other employee fields
         const updates: Partial<Employee> = {
           name: formData.name,
           phoneNumber: `+971${formData.phoneNumber}`,
@@ -239,17 +240,11 @@ export default function Page(): React.JSX.Element {
           designation: formData.role,
           location: formData.role === 'driver' ? formData.location : undefined,
           routeName: formData.role === 'driver' ? formData.routeName : undefined,
-          // Balance is intentionally excluded here as it's handled by updateDriverBalance
+          // Only include balance for non-drivers (drivers handled above with history)
+          ...(formData.role !== 'driver' && newBalance !== undefined ? { balance: newBalance } : {}),
         };
 
-        // Only update other fields if balance update didn't happen
-        // This avoids overwriting the balance update
-        const previousBalanceForCheck = selectedEmployee.balance || 0;
-        const didBalanceUpdate = formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString() && Number(formData.balance) !== previousBalanceForCheck;
-        
-        if (!didBalanceUpdate) {
-          await updateEmployee(selectedEmployee.id, updates);
-        }
+        await updateEmployee(selectedEmployee.id, updates);
         
         // Refresh to get the latest data including balance history
         await refreshEmployees();
@@ -257,7 +252,8 @@ export default function Page(): React.JSX.Element {
         showSuccess('Employee updated successfully!');
         setEditDialogOpen(false);
         setSelectedEmployee(null);
-      } catch {
+      } catch (error) {
+        console.error('Failed to update employee:', error);
         showError('Failed to update employee. Please try again.');
       } finally {
         setIsUpdating(false);
