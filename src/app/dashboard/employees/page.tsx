@@ -223,8 +223,8 @@ export default function Page(): React.JSX.Element {
             await updateDriverBalance(
               selectedEmployee.id, 
               newBalance, 
-              'Balance edited by user', 
-              user?.email || 'System'
+              `Balance edited from ${previousBalance} to ${newBalance}`, 
+              user?.email || user?.name || 'System'
             );
             // Refresh employees to get updated data
             await refreshEmployees();

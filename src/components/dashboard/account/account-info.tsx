@@ -99,11 +99,13 @@ export function AccountInfo(): React.JSX.Element {
           <Stack spacing={1} sx={{ textAlign: 'center' }}>
             <Typography variant="h5">{user?.name || 'Quality Food Stuffs'}</Typography>
             <Typography color="text.secondary" variant="body2">
-              {user?.phone || 'Quality Food Stuffs'}
-            </Typography>
-            <Typography color="text.secondary" variant="body2">
               {user?.email || 'Not provided'}
             </Typography>
+            {user?.phone && (
+              <Typography color="text.secondary" variant="body2">
+                {user.phone}
+              </Typography>
+            )}
             {(user?.city || user?.state) && (
               <Typography color="text.secondary" variant="body2">
                 {user?.city || ''} {user?.state || ''}

@@ -28,7 +28,7 @@ const states = [
 ] as const;
 
 export function AccountDetailsForm(): React.JSX.Element {
-  const { user } = useUser();
+  const { user, checkSession } = useUser();
   const { showSuccess, showError } = useNotifications();
   
   const [formData, setFormData] = React.useState({
@@ -59,6 +59,10 @@ export function AccountDetailsForm(): React.JSX.Element {
         state: formData.state,
         city: formData.city,
       });
+      
+      // Refresh user data after update
+      await checkSession?.();
+      
       showSuccess('Profile updated successfully!');
     } catch {
       showError('Failed to update profile. Please try again.');
@@ -88,7 +92,7 @@ export function AccountDetailsForm(): React.JSX.Element {
               <FormControl fullWidth required>
                 <InputLabel>Full name</InputLabel>
                 <OutlinedInput 
-                  value={formData.name}
+                  value={user?.name || formData.name}
                   label="Full name" 
                   name="name"
                   disabled={true}

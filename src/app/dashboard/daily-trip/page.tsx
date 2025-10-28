@@ -660,31 +660,43 @@ export default function Page(): React.JSX.Element {
                 </>
               )}
 
-              {trip.acceptedProducts && trip.acceptedProducts.length > 0 && (
-                <>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Products Accepted from Other Drivers
-                  </Typography>
-                  
-                  <Stack spacing={1}>
-                    {trip.acceptedProducts.map((acceptedProduct, index) => (
-                      <Box key={index} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}>
-                        <Typography variant="body2">
-                          {acceptedProduct.productName} (Qty: {acceptedProduct.quantity})
-                          {acceptedProduct.transferredFromDriverName && (
-                            <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
-                              {' '}- From: {acceptedProduct.transferredFromDriverName}
-                            </span>
-                          )}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          AED {acceptedProduct.unitPrice.toFixed(2)} × {acceptedProduct.quantity} = AED {(acceptedProduct.unitPrice * acceptedProduct.quantity).toFixed(2)}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                </>
-              )}
+              {trip.acceptedProducts && trip.acceptedProducts.length > 0 && (() => {
+                // Deduplicate accepted products based on productId, quantity, and transferredFromDriverId
+                const uniqueAcceptedProducts = [
+                  ...new Map(
+                    trip.acceptedProducts.map(p => [
+                      `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}`,
+                      p
+                    ])
+                  ).values()
+                ];
+                
+                return uniqueAcceptedProducts.length > 0 ? (
+                  <>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      Products Accepted from Other Drivers
+                    </Typography>
+                    
+                    <Stack spacing={1}>
+                      {uniqueAcceptedProducts.map((acceptedProduct, index) => (
+                        <Box key={index} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}>
+                          <Typography variant="body2">
+                            {acceptedProduct.productName} (Qty: {acceptedProduct.quantity})
+                            {acceptedProduct.transferredFromDriverName && (
+                              <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                {' '}- From: {acceptedProduct.transferredFromDriverName}
+                              </span>
+                            )}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            AED {acceptedProduct.unitPrice.toFixed(2)} × {acceptedProduct.quantity} = AED {(acceptedProduct.unitPrice * acceptedProduct.quantity).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </>
+                ) : null;
+              })()}
 
               <Box sx={{ 
                 border: '1px solid', 
