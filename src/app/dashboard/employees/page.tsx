@@ -218,7 +218,7 @@ export default function Page(): React.JSX.Element {
         const balanceChanged = formData.role === 'driver' && newBalance !== previousBalance;
         
         // Handle balance update for drivers if it changed
-        if (balanceChanged) {
+        if (balanceChanged && newBalance !== undefined) {
           // Use the updateDriverBalance method to maintain history
           await updateDriverBalance(
             selectedEmployee.id, 
