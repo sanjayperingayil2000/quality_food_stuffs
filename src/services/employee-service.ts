@@ -148,9 +148,36 @@ export async function updateEmployee(id: string, data: UpdateEmployeeData) {
       }
     } else if (patch.balance !== undefined && patch.balance !== employee.balance) {
       // If only balance provided, append a history entry automatically
-      const currentVersion = employee.balanceHistory?.length || 0;
+      interface LegacyBalanceHistory {
+        version?: number;
+        balance?: number;
+        newBalance?: number;
+        updatedAt?: Date | string;
+        date?: Date | string;
+        reason?: string;
+        updatedBy?: string;
+        id?: string;
+      }
+
+      const normalizedExisting: BalanceHistoryEntry[] = (employee.balanceHistory || []).map((entry, index) => {
+        const legacy = entry as unknown as LegacyBalanceHistory;
+        const version = typeof legacy.version === 'number' ? legacy.version : index + 1;
+        const computedBalance =
+          typeof legacy.balance === 'number'
+            ? legacy.balance
+            : typeof legacy.newBalance === 'number'
+              ? legacy.newBalance
+              : employee.balance || 0;
+        const rawDate = legacy.updatedAt ?? legacy.date;
+        const updatedAt = rawDate instanceof Date ? rawDate : new Date(typeof rawDate === 'string' ? rawDate : Date.now());
+        const reason = typeof legacy.reason === 'string' ? legacy.reason : 'Balance updated';
+        const updatedBy = typeof legacy.updatedBy === 'string' ? legacy.updatedBy : patch.updatedBy;
+        return { version, balance: computedBalance, updatedAt, reason, updatedBy };
+      });
+
+      const currentVersion = normalizedExisting.length;
       patch.balanceHistory = [
-        ...(employee.balanceHistory || []),
+        ...normalizedExisting,
         {
           version: currentVersion + 1,
           balance: patch.balance,
