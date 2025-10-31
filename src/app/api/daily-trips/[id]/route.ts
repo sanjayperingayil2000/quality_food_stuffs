@@ -7,6 +7,7 @@ import { connectToDatabase } from '@/lib/db';
 import { DailyTrip } from '@/models/daily-trip';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
+import { updateEmployee as updateEmployeeService } from '@/services/employee-service';
 
 const tripProductSchema = z.object({
   productId: z.string().min(1),
@@ -106,6 +107,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updateData,
       { new: true, runValidators: true }
     );
+    
+    // Sync employee balance if balance changed
+    try {
+      if (updatedTrip?.balance !== undefined) {
+        const tripDate = updatedTrip.date instanceof Date ? updatedTrip.date : new Date(updatedTrip.date);
+        const yyyy = tripDate.getFullYear();
+        const mm = String(tripDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(tripDate.getDate()).padStart(2, '0');
+        const reason = `Daily trip updated on ${yyyy}-${mm}-${dd}`;
+        await updateEmployeeService(updatedTrip.driverId, {
+          balance: updatedTrip.balance,
+          updatedBy: user?.sub,
+          balanceUpdateReason: reason,
+        });
+      }
+    } catch (balanceUpdateError) {
+      console.error('Failed to sync driver balance after trip update:', balanceUpdateError);
+    }
     
     // Log to history
     await History.create({
