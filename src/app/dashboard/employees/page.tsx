@@ -240,9 +240,12 @@ export default function Page(): React.JSX.Element {
           designation: formData.role,
           location: formData.role === 'driver' ? formData.location : undefined,
           routeName: formData.role === 'driver' ? formData.routeName : undefined,
-          // Include balance for both drivers and non-drivers to guarantee persistence
-          ...(newBalance !== undefined ? { balance: newBalance } : {}),
         };
+
+        // Include balance for both drivers and non-drivers to guarantee persistence
+        if (typeof newBalance === 'number') {
+          updates.balance = newBalance;
+        }
 
         await updateEmployee(selectedEmployee.id, updates);
         
