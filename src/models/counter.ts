@@ -24,14 +24,20 @@ export async function getNextSequence(key: string): Promise<number> {
 
 // Ensure the counter is at least a minimum value (useful when seeding after existing data)
 export async function ensureCounterMinValue(key: string, minValue: number): Promise<void> {
-  await Counter.findOneAndUpdate(
+  // Step 1: Ensure a document exists with at least initial seq via setOnInsert
+  const doc = await Counter.findOneAndUpdate(
     { key },
-    {
-      $setOnInsert: { key, seq: minValue },
-      $max: { seq: minValue },
-    },
-    { upsert: true, new: false }
+    { $setOnInsert: { key, seq: minValue } },
+    { upsert: true, new: true }
   );
+
+  // Step 2: If an existing doc has lower seq, raise it using $max (avoids operator path conflicts)
+  if ((doc?.seq ?? 0) < minValue) {
+    await Counter.updateOne(
+      { key },
+      { $max: { seq: minValue } }
+    );
+  }
 }
 
 
