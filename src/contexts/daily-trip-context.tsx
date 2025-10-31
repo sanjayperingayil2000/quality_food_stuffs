@@ -1162,6 +1162,15 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
         setError(result.error);
         return;
       }
+
+    // Optimistically sync employee balance immediately so the Employees page reflects without reload
+    const immediateReason = `Daily trip on ${dayjs(tripData.date).format('YYYY-MM-DD')}`;
+    await updateDriverBalance(
+      tripData.driverId,
+      Math.round(financialMetrics.balance),
+      immediateReason,
+      user?.email || user?.name || 'System'
+    );
     } catch (error_) {
       console.error('Error saving trip to backend:', error_);
       // Revert local state on error
@@ -1189,7 +1198,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
         updatedBy: 'EMP-001'
       });
     }
-  }, [trips, pendingTransfers, getPreviousBalance]);
+  }, [trips, pendingTransfers, getPreviousBalance, updateDriverBalance, user]);
 
   const updateTrip = React.useCallback(async (id: string, updates: Partial<DailyTrip>) => {
     try {
@@ -1271,7 +1280,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
               const allDriverTrips = prev.filter(t => t.driverId === updatedTrip.driverId);
               const isLatestTrip = !allDriverTrips.some(t => t.id !== id && dayjs(t.date).isAfter(dayjs(updatedTrip.date), 'day'));
               
-              if (isLatestTrip) {
+            if (isLatestTrip) {
                 // Store the balance update to be processed after state update
                 balanceUpdatesRef.current.push({
                   driverId: updatedTrip.driverId,
@@ -1280,6 +1289,16 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                   date: dayjs(updatedTrip.date).format('YYYY-MM-DD'),
                   updatedBy: 'EMP-001'
                 });
+              // Also sync immediately to reflect on Employees page without reload
+              (async () => {
+                const immediateReason = `Daily trip updated on ${dayjs(updatedTrip.date).format('YYYY-MM-DD')}`;
+                await updateDriverBalance(
+                  updatedTrip.driverId,
+                  Math.round(updatedTrip.balance),
+                  immediateReason,
+                  user?.email || user?.name || 'System'
+                );
+              })().catch(() => {});
               }
             }
             
