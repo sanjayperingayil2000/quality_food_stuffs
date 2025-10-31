@@ -390,10 +390,10 @@ async function seedDefaultData(): Promise<void> {
   const defaultEmployees: Partial<IEmployee>[] = [
    {
        id: 'EMP-001',
-       name: 'Ahmed Al-Rashid',
+       name: 'Satheesh Thalekkara',
        designation: 'ceo',
        phoneNumber: '+971 50 123 4567',
-       email: 'ahmed.ceo@company.com',
+       email: 'satheesh.ceo@company.com',
        address: 'Dubai Marina, UAE',
        salary: 50_000,
        hireDate: dayjs().subtract(2, 'year').toDate(),
@@ -402,36 +402,21 @@ async function seedDefaultData(): Promise<void> {
        updatedAt: dayjs().subtract(1, 'month').toDate(),
      },
    
-     // Staff
+     // Manager
      {
        id: 'EMP-002',
-       name: 'Sarah Johnson',
+       name: 'Dinesh',
        designation: 'staff',
        phoneNumber: '+971 50 123 4568',
-       email: 'sarah.staff@company.com',
+       email: 'dinesh@company.com',
        address: 'Jumeirah, Dubai, UAE',
-       salary: 25_000,
+       salary: 40_000,
        hireDate: dayjs().subtract(18, 'month').toDate(),
        isActive: true,
        createdAt: dayjs().subtract(18, 'month').toDate(),
        updatedAt: dayjs().subtract(2, 'week').toDate(),
        createdBy: 'EMP-001',
        updatedBy: 'EMP-001',
-     },
-     {
-       id: 'EMP-003',
-       name: 'Mohammed Hassan',
-       designation: 'staff',
-       phoneNumber: '+971 50 123 4569',
-       email: 'mohammed.staff@company.com',
-       address: 'Downtown Dubai, UAE',
-       salary: 25_000,
-       hireDate: dayjs().subtract(15, 'month').toDate(),
-       isActive: true,
-       createdAt: dayjs().subtract(15, 'month').toDate(),
-       updatedAt: dayjs().subtract(1, 'week').toDate(),
-       createdBy: 'EMP-001',
-       updatedBy: 'EMP-002',
      },
    
      // Drivers
@@ -2664,180 +2649,11 @@ async function seedDefaultData(): Promise<void> {
   await DailyTrip.createCollection().catch(() => {});
   console.log('daily_trips collection ensured');
 
-  // Additional Expenses
-  const defaultAdditionalExpenses: Partial<IAdditionalExpense>[] = [
-    {
-      title: 'Fuel Refill - Route A',
-      description: 'Regular fuel refill for Route A vehicle',
-      category: 'petrol',
-      amount: 150.75,
-      currency: 'AED',
-      date: dayjs().subtract(1, 'day').toDate(),
-      driverId: 'EMP-004',
-      driverName: 'IQBAL',
-      designation: 'driver',
-      receiptNumber: 'RCP-001-2024',
-      vendor: 'ADNOC Station - Downtown',
-      isReimbursable: true,
-      status: 'approved',
-      approvedBy: 'EMP-002',
-      approvedAt: dayjs().subtract(1, 'day').add(2, 'hour').toDate(),
-      createdAt: dayjs().subtract(1, 'day').toDate(),
-      updatedAt: dayjs().subtract(1, 'day').add(2, 'hour').toDate(),
-      createdBy: 'EMP-004',
-      updatedBy: 'EMP-002',
-    },
-    {
-      title: 'Vehicle Maintenance',
-      description: 'Oil change and brake inspection',
-      category: 'maintenance',
-      amount: 320.5,
-      currency: 'AED',
-      date: dayjs().subtract(3, 'day').toDate(),
-      driverId: 'EMP-005',
-      driverName: 'SEBEH',
-      designation: 'driver',
-      receiptNumber: 'RCP-002-2024',
-      vendor: 'AutoCare Center - Marina',
-      isReimbursable: true,
-      status: 'approved',
-      approvedBy: 'EMP-003',
-      approvedAt: dayjs().subtract(3, 'day').add(1, 'hour').toDate(),
-      createdAt: dayjs().subtract(3, 'day').toDate(),
-      updatedAt: dayjs().subtract(3, 'day').add(1, 'hour').toDate(),
-      createdBy: 'EMP-005',
-      updatedBy: 'EMP-003',
-    },
-    {
-      title: 'Toll Charges',
-      description: 'Salik toll charges for the week',
-      category: 'variance',
-      amount: 45.25,
-      currency: 'AED',
-      date: dayjs().subtract(5, 'day').toDate(),
-      driverId: 'EMP-006',
-      driverName: 'RASHEED',
-      designation: 'driver',
-      receiptNumber: 'RCP-003-2024',
-      vendor: 'RTA - Salik',
-      isReimbursable: true,
-      status: 'pending',
-      createdAt: dayjs().subtract(5, 'day').toDate(),
-      updatedAt: dayjs().subtract(5, 'day').toDate(),
-      createdBy: 'EMP-006',
-    },
-    {
-      title: 'Parking Fees',
-      description: 'Parking fees at customer locations',
-      category: 'variance',
-      amount: 25.5,
-      currency: 'AED',
-      date: dayjs().subtract(2, 'day').toDate(),
-      driverId: 'EMP-007',
-      driverName: 'SHINOOF',
-      designation: 'driver',
-      receiptNumber: 'RCP-004-2024',
-      vendor: 'Various Parking Lots',
-      isReimbursable: true,
-      status: 'approved',
-      approvedBy: 'EMP-002',
-      approvedAt: dayjs().subtract(2, 'day').add(3, 'hour').toDate(),
-      createdAt: dayjs().subtract(2, 'day').toDate(),
-      updatedAt: dayjs().subtract(2, 'day').add(3, 'hour').toDate(),
-      createdBy: 'EMP-007',
-      updatedBy: 'EMP-002',
-    },
-    {
-      title: 'Vehicle Insurance Renewal',
-      description: 'Annual vehicle insurance renewal',
-      category: 'variance',
-      amount: 1200,
-      currency: 'AED',
-      date: dayjs().subtract(7, 'day').toDate(),
-      designation: 'manager',
-      receiptNumber: 'RCP-005-2024',
-      vendor: 'National Insurance Co.',
-      isReimbursable: false,
-      status: 'approved',
-      approvedBy: 'EMP-001',
-      approvedAt: dayjs().subtract(7, 'day').add(1, 'hour').toDate(),
-      createdAt: dayjs().subtract(7, 'day').toDate(),
-      updatedAt: dayjs().subtract(7, 'day').add(1, 'hour').toDate(),
-      createdBy: 'EMP-002',
-      updatedBy: 'EMP-001',
-    },
-    {
-      title: 'Emergency Repair',
-      description: 'Flat tire repair on the road',
-      category: 'maintenance',
-      amount: 85.25,
-      currency: 'AED',
-      date: dayjs().subtract(4, 'day').toDate(),
-      driverId: 'EMP-008',
-      driverName: 'ABHIJITH',
-      designation: 'driver',
-      receiptNumber: 'RCP-006-2024',
-      vendor: 'Quick Fix Garage',
-      isReimbursable: true,
-      status: 'approved',
-      approvedBy: 'EMP-003',
-      approvedAt: dayjs().subtract(4, 'day').add(2, 'hour').toDate(),
-      createdAt: dayjs().subtract(4, 'day').toDate(),
-      updatedAt: dayjs().subtract(4, 'day').add(2, 'hour').toDate(),
-      createdBy: 'EMP-008',
-      updatedBy: 'EMP-003',
-    },
-    {
-      title: 'Office Supplies',
-      description: 'Delivery forms and stationery',
-      category: 'others',
-      amount: 45.75,
-      currency: 'AED',
-      date: dayjs().subtract(6, 'day').toDate(),
-      designation: 'manager',
-      receiptNumber: 'RCP-007-2024',
-      vendor: 'Office Depot',
-      isReimbursable: true,
-      status: 'rejected',
-      rejectedReason: 'Not related to vehicle operations',
-      createdAt: dayjs().subtract(6, 'day').toDate(),
-      updatedAt: dayjs().subtract(6, 'day').add(1, 'hour').toDate(),
-      createdBy: 'EMP-002',
-      updatedBy: 'EMP-001',
-    },
-    {
-      title: 'Fuel Refill - Route B',
-      description: 'Regular fuel refill for Route B vehicle',
-      category: 'petrol',
-      amount: 165.5,
-      currency: 'AED',
-      date: dayjs().subtract(1, 'day').toDate(),
-      driverId: 'EMP-005',
-      driverName: 'SEBEH',
-      designation: 'driver',
-      receiptNumber: 'RCP-008-2024',
-      vendor: 'ENOC Station - Marina',
-      isReimbursable: true,
-      status: 'pending',
-      createdAt: dayjs().subtract(1, 'day').toDate(),
-      updatedAt: dayjs().subtract(1, 'day').toDate(),
-      createdBy: 'EMP-005',
-    },
-  ];
+  // Additional Expenses - removed seed data
+  console.log('No additional expenses to seed');
 
-  for (const expense of defaultAdditionalExpenses) {
-    await AdditionalExpense.create(expense);
-  }
-
-  console.log('Additional expenses seeded');
-
-  // Daily Trips - check if already seeded
-  const existingTripCount = await DailyTrip.countDocuments();
-  if (existingTripCount > 0) {
-    console.log('Daily trips already exist, skipping...');
-  } else {
-    await seedDailyTrips();
-  }
+  // Daily Trips - removed seed data
+  console.log('No daily trips to seed');
 }
 
 async function seedDailyTrips(): Promise<void> {

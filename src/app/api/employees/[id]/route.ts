@@ -7,7 +7,15 @@ import { connectToDatabase } from '@/lib/db';
 import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
-import { updateEmployee } from '@/services/employee-service';
+import { updateEmployee as updateEmployeeService } from '@/services/employee-service';
+
+const balanceHistoryEntrySchema = z.object({
+  version: z.number(),
+  balance: z.number(),
+  updatedAt: z.string().transform(str => new Date(str)).or(z.date()),
+  reason: z.string().optional(),
+  updatedBy: z.string().optional(),
+});
 
 const employeeUpdateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -19,6 +27,7 @@ const employeeUpdateSchema = z.object({
   location: z.string().optional(),
   salary: z.number().min(0).optional(),
   balance: z.number().min(0).optional(),
+  balanceHistory: z.array(balanceHistoryEntrySchema).optional(),
   hireDate: z.string().transform(str => new Date(str)).optional(),
   isActive: z.boolean().optional(),
 }).partial();
@@ -62,12 +71,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    const updateData = {
+    const updatedEmployee = await updateEmployeeService(id, {
       ...parsed.data,
       updatedBy: user?.sub,
-    };
-    
-    const updatedEmployee = await updateEmployee(id, updateData);
+    });
     
     return withCors(NextResponse.json({ employee: updatedEmployee }, { status: 200 }));
   } catch (error) {
