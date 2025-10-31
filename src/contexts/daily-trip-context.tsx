@@ -47,6 +47,7 @@ export interface DailyTrip {
   transfer: ProductTransfer; // Product transfer information
   acceptedProducts: TripProduct[]; // Products accepted from other drivers
   // Financial fields
+  previousBalance?: number; // Previous balance carried into this trip (derived when needed)
   collectionAmount: number;
   purchaseAmount: number;
   expiry: number; // Expiry amount in AED
@@ -868,6 +869,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     driverId: string;
     balance: number;
     reason: string;
+    date?: string;
     updatedBy: string;
   }>>([]);
 
@@ -906,16 +908,42 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
 
   // Process balance updates after state changes to avoid setState during render
   React.useEffect(() => {
-    if (balanceUpdatesRef.current.length > 0) {
-      const updates = [...balanceUpdatesRef.current];
-      balanceUpdatesRef.current = []; // Clear the ref
-      
-      // Process each balance update
-      for (const update of updates) {
-        updateDriverBalance(update.driverId, update.balance, update.reason, update.updatedBy);
+    const processUpdates = async () => {
+      if (balanceUpdatesRef.current.length > 0) {
+        const updates = [...balanceUpdatesRef.current];
+        balanceUpdatesRef.current = []; // Clear the ref
+        
+        console.log('Processing balance updates:', updates);
+        
+        // Process each balance update
+        for (const update of updates) {
+          console.log('Updating driver balance:', update);
+          await updateDriverBalance(update.driverId, update.balance, update.reason, update.updatedBy);
+        }
       }
-    }
+    };
+    
+    processUpdates().catch(error => {
+      console.error('Error processing balance updates:', error);
+    });
   }, [trips, updateDriverBalance]);
+
+  // Helper to check if a trip has the latest date for its driver
+  const _checkAndUpdateBalanceForLatestTrip = React.useCallback((driverId: string, tripDate: string, calculatedBalance: number) => {
+    const allDriverTrips = trips.filter(t => t.driverId === driverId);
+    const isLatestTrip = allDriverTrips.length === 0 || 
+      !allDriverTrips.some(t => dayjs(t.date).isAfter(dayjs(tripDate), 'day'));
+    
+    if (isLatestTrip) {
+      balanceUpdatesRef.current.push({
+        driverId,
+        balance: calculatedBalance,
+        reason: `trip_added_${tripDate}`,
+        date: tripDate,
+        updatedBy: 'EMP-001'
+      });
+    }
+  }, [trips]);
 
   // Helper to get previous balance for a driver
   const getPreviousBalance = React.useCallback((driverId: string, currentDate: Date, allTrips: DailyTrip[]): number => {
@@ -938,8 +966,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       return previousTrips[0].balance;
     }
     
-    // For first trip, return a random balance between 100 and 200
-    return Math.round(Math.floor(Math.random() * 101) + 100); // 100 to 200
+    // For first trip, return 0 or the initial balance from employee
+    return employee?.balance || 0;
   }, [getEmployeeById]);
 
   const getTripById = React.useCallback((id: string): DailyTrip | undefined => {
@@ -1046,9 +1074,17 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
               transferredFromDriverName: newTrip.driverName,
             }));
             
+            // Combine existing accepted products with new ones
+            const combinedAcceptedProducts = [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts];
+            
+            // Deduplicate based on productId, quantity, and transferredFromDriverId
+            const uniqueAcceptedProducts = [...new Map(
+              combinedAcceptedProducts.map(p => [p.productId + p.quantity + (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId, p])
+            ).values()];
+            
             const updatedDriverTrip = {
               ...driverTrip,
-              acceptedProducts: [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts],
+              acceptedProducts: uniqueAcceptedProducts,
             };
             
             // Recalculate totals for the receiving driver
@@ -1135,12 +1171,24 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     }
 
     // Track balance update to be processed after state change
-    balanceUpdatesRef.current.push({
-      driverId: tripData.driverId,
-      balance: Math.round(financialMetrics.balance),
-      reason: 'trip_update',
-      updatedBy: 'EMP-001'
-    });
+    // Check if this is the latest trip for this driver
+    // We check if any existing trip for this driver has a later date
+    const existingTripsForDriver = trips.filter(t => t.driverId === tripData.driverId);
+    const hasLaterTrip = existingTripsForDriver.some(t => dayjs(t.date).isAfter(dayjs(tripData.date), 'day'));
+    
+    if (!hasLaterTrip) {
+      // This is the latest trip, update the balance
+      const balanceReason = `Daily trip on ${dayjs(tripData.date).format('DD-MM-YYYY')}`;
+      console.log('Updating balance for driver:', tripData.driverId, 'New balance:', Math.round(financialMetrics.balance), 'Reason:', balanceReason);
+      
+      balanceUpdatesRef.current.push({
+        driverId: tripData.driverId,
+        balance: Math.round(financialMetrics.balance),
+        reason: balanceReason,
+        date: tripDate,
+        updatedBy: 'EMP-001'
+      });
+    }
   }, [trips, pendingTransfers, getPreviousBalance]);
 
   const updateTrip = React.useCallback(async (id: string, updates: Partial<DailyTrip>) => {
@@ -1154,8 +1202,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       }
       
       // Update local state only if API call succeeded
-      setTrips(prev => 
-        prev.map(trip => {
+      setTrips(prev => {
+        const updatedTrips = prev.map(trip => {
           if (trip.id === id) {
             const updatedTrip = { ...trip, ...updates, updatedAt: new Date().toISOString() };
             
@@ -1219,20 +1267,114 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             
             // Track balance changes to update after state change
             if (updatedTrip.balance !== trip.balance) {
-              // Store the balance update to be processed after state update
-              balanceUpdatesRef.current.push({
-                driverId: updatedTrip.driverId,
-                balance: updatedTrip.balance,
-                reason: 'trip_update',
-                updatedBy: 'EMP-001'
-              });
+              // Check if this is the latest trip for this driver
+              const allDriverTrips = prev.filter(t => t.driverId === updatedTrip.driverId);
+              const isLatestTrip = !allDriverTrips.some(t => t.id !== id && dayjs(t.date).isAfter(dayjs(updatedTrip.date), 'day'));
+              
+              if (isLatestTrip) {
+                // Store the balance update to be processed after state update
+                balanceUpdatesRef.current.push({
+                  driverId: updatedTrip.driverId,
+                  balance: updatedTrip.balance,
+                  reason: `Daily trip updated on ${dayjs(updatedTrip.date).format('DD-MM-YYYY')}`,
+                  date: dayjs(updatedTrip.date).format('YYYY-MM-DD'),
+                  updatedBy: 'EMP-001'
+                });
+              }
             }
             
             return updatedTrip;
           }
           return trip;
-        })
-      );
+        });
+
+        // After updating the trip, update receiving driver trips if needed
+        const currentTrips = [...updatedTrips];
+        if (updates.transfer && updates.transfer.isProductTransferred && updates.transfer.transferredProducts) {
+          const transferProducts = updates.transfer.transferredProducts;
+          if (transferProducts.length > 0) {
+            // Find the updated trip
+            const theUpdatedTrip = updatedTrips.find(t => t.id === id);
+            if (theUpdatedTrip) {
+              // Group by receiving driver
+              const productsByDriver = transferProducts.reduce((acc, product) => {
+                if (!acc[product.receivingDriverId]) {
+                  acc[product.receivingDriverId] = [];
+                }
+                acc[product.receivingDriverId].push({
+                  productId: product.productId,
+                  productName: product.productName,
+                  category: product.category,
+                  quantity: product.quantity,
+                  unitPrice: product.unitPrice,
+                });
+                return acc;
+              }, {} as Record<string, TripProduct[]>);
+              
+              // Update each receiving driver's trip
+              for (const [driverId, receivedProducts] of Object.entries(productsByDriver)) {
+                const driverTrip = currentTrips.find(t => 
+                  t.driverId === driverId && 
+                  t.id !== id &&
+                  dayjs(t.date).format('YYYY-MM-DD') === dayjs(theUpdatedTrip.date).format('YYYY-MM-DD')
+                );
+                
+                if (driverTrip) {
+                  const enrichedAcceptedProducts = receivedProducts.map(product => ({
+                    ...product,
+                    transferredFromDriverId: theUpdatedTrip.driverId,
+                    transferredFromDriverName: theUpdatedTrip.driverName,
+                  }));
+                  
+                  // Combine and deduplicate
+                  const combinedAcceptedProducts = [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts];
+                  const uniqueAcceptedProducts = [...new Map(
+                    combinedAcceptedProducts.map(p => [p.productId + p.quantity + (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId, p])
+                  ).values()];
+                  
+                  // Update the receiving driver's trip
+                  const driverTripIndex = currentTrips.findIndex(t => t.id === driverTrip.id);
+                  if (driverTripIndex !== -1) {
+                    const driverTotals = calculateTotals(
+                      currentTrips[driverTripIndex].products,
+                      uniqueAcceptedProducts,
+                      currentTrips[driverTripIndex].transfer.transferredProducts
+                    );
+                    
+                    const driverPreviousBalance = getPreviousBalance(driverTrip.driverId, new Date(driverTrip.date), currentTrips);
+                    
+                    const driverFinancialMetrics = calculateFinancialMetrics(
+                      currentTrips[driverTripIndex].expiry,
+                      currentTrips[driverTripIndex].purchaseAmount,
+                      currentTrips[driverTripIndex].collectionAmount,
+                      currentTrips[driverTripIndex].discount,
+                      driverTotals.fresh.netTotal,
+                      driverTotals.bakery.netTotal,
+                      driverPreviousBalance
+                    );
+                    
+                    currentTrips[driverTripIndex] = {
+                      ...currentTrips[driverTripIndex],
+                      acceptedProducts: uniqueAcceptedProducts,
+                      totalAmount: driverTotals.overall.total,
+                      netTotal: driverTotals.overall.netTotal,
+                      grandTotal: driverTotals.overall.grandTotal,
+                      expiryAfterTax: driverFinancialMetrics.expiryAfterTax,
+                      amountToBe: driverFinancialMetrics.amountToBe,
+                      salesDifference: driverFinancialMetrics.salesDifference,
+                      profit: driverFinancialMetrics.profit,
+                      balance: driverFinancialMetrics.balance,
+                      updatedAt: new Date().toISOString(),
+                    };
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        return currentTrips;
+      });
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to update trip');
     }

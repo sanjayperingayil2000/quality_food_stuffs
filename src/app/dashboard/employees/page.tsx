@@ -28,10 +28,12 @@ import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 
 import { useEmployees, Employee } from '@/contexts/employee-context';
 import { useNotifications } from '@/contexts/notification-context';
+import { useUser } from '@/hooks/use-user';
 import { Tooltip } from '@mui/material';
 
 export default function Page(): React.JSX.Element {
   const { employees, addEmployee, updateEmployee, deleteEmployee, updateDriverBalance, refreshEmployees } = useEmployees();
+  const { user } = useUser();
   const { showSuccess, showError } = useNotifications();
 
   // Dialog states
@@ -211,20 +213,25 @@ export default function Page(): React.JSX.Element {
     if (selectedEmployee && validateForm()) {
       setIsUpdating(true);
       try {
-        // Handle balance update for drivers first
-        if (formData.role === 'driver' && formData.balance !== selectedEmployee.balance?.toString()) {
-          const newBalance = Number(formData.balance);
-          const previousBalance = selectedEmployee.balance || 0;
+        const newBalance = formData.role === 'driver' ? Number(formData.balance) : selectedEmployee.balance;
+        const previousBalance = selectedEmployee.balance || 0;
+        const balanceChanged = formData.role === 'driver' && newBalance !== previousBalance;
+        
+        // Handle balance update for drivers if it changed
+        if (balanceChanged && newBalance !== undefined) {
+          // Use the updateDriverBalance method to maintain history
+          await updateDriverBalance(
+            selectedEmployee.id, 
+            newBalance, 
+            `Balance edited from ${previousBalance} to ${newBalance}`, 
+            user?.email || user?.name || 'System'
+          );
           
-          if (newBalance !== previousBalance) {
-            // Use the updateDriverBalance method to maintain history
-            await updateDriverBalance(selectedEmployee.id, newBalance, 'manual_adjustment', 'EMP-001');
-            // Refresh employees to get updated data
-            await refreshEmployees();
-          }
+          // Small delay to ensure update is processed before updating other fields
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
 
-        // Update other employee fields (excluding balance for drivers, as it's handled by updateDriverBalance)
+        // Always update other employee fields, and include balance so server persists it even if history call fails
         const updates: Partial<Employee> = {
           name: formData.name,
           phoneNumber: `+971${formData.phoneNumber}`,
@@ -233,8 +240,12 @@ export default function Page(): React.JSX.Element {
           designation: formData.role,
           location: formData.role === 'driver' ? formData.location : undefined,
           routeName: formData.role === 'driver' ? formData.routeName : undefined,
-          // Balance is intentionally excluded here as it's handled by updateDriverBalance
         };
+
+        // Include balance for both drivers and non-drivers to guarantee persistence
+        if (typeof newBalance === 'number') {
+          updates.balance = newBalance;
+        }
 
         await updateEmployee(selectedEmployee.id, updates);
         
@@ -244,7 +255,8 @@ export default function Page(): React.JSX.Element {
         showSuccess('Employee updated successfully!');
         setEditDialogOpen(false);
         setSelectedEmployee(null);
-      } catch {
+      } catch (error) {
+        console.error('Failed to update employee:', error);
         showError('Failed to update employee. Please try again.');
       } finally {
         setIsUpdating(false);
@@ -718,7 +730,40 @@ export default function Page(): React.JSX.Element {
                             <TableCell>AED {entry.balance?.toFixed(2) || '0.00'}</TableCell>
                             <TableCell>
                               <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                                {entry.reason?.replace('_', ' ') || 'N/A'}
+                                {(() => {
+                                  const reason = entry.reason || 'N/A';
+                                  // Format trip reasons to show date
+                                  if (reason.includes('Daily trip on') || reason.includes('Daily trip updated on')) {
+                                    return reason; // Already formatted
+                                  }
+                                  if (reason.includes('trip_added_')) {
+                                    const dateStr = reason.replace('trip_added_', '');
+                                    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                                      const date = new Date(dateStr);
+                                      return `Daily trip added on ${date.toLocaleDateString()}`;
+                                    }
+                                    return reason.replaceAll('_', ' ');
+                                  }
+                                  if (reason.includes('trip_updated_')) {
+                                    const dateStr = reason.replace('trip_updated_', '');
+                                    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                                      const date = new Date(dateStr);
+                                      return `Daily trip updated on ${date.toLocaleDateString()}`;
+                                    }
+                                    return reason.replaceAll('_', ' ');
+                                  }
+                                  if (reason.includes('trip_update')) {
+                                    return reason.replaceAll('trip_update', 'Manual balance update').replaceAll('_', ' ');
+                                  }
+                                  if (reason.includes('Balance edited by user')) {
+                                    const entryUpdatedBy = entry.updatedBy;
+                                    if (entryUpdatedBy) {
+                                      return `Balance edited by ${entryUpdatedBy}`;
+                                    }
+                                    return 'Balance edited manually';
+                                  }
+                                  return reason.replaceAll('_', ' ');
+                                })()}
                               </Typography>
                             </TableCell>
                           </TableRow>

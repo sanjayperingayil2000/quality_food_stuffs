@@ -32,6 +32,7 @@ export interface UpdateEmployeeData {
   hireDate?: Date;
   isActive?: boolean;
   updatedBy?: string;
+  balanceUpdateReason?: string;
 }
 
 export interface EmployeeFilters {
@@ -103,24 +104,99 @@ export async function updateEmployee(id: string, data: UpdateEmployeeData) {
   }
   
   const beforeData = employee.toObject();
-  
-  // If balance is being updated, add to balance history
-  if (data.balance !== undefined && data.balance !== employee.balance) {
-    const currentVersion = employee.balanceHistory?.length || 0;
-    data.balanceHistory = [
-      ...(employee.balanceHistory || []),
-      {
-        version: currentVersion + 1,
-        balance: data.balance,
-        updatedAt: new Date(),
-        updatedBy: data.updatedBy,
+
+  // --- Normalize and enforce balance & balanceHistory updates (handles legacy shapes) ---
+  const isDriver = (employee.designation === 'driver') || (data.designation === 'driver');
+
+  // Work on a mutable copy to satisfy type-safety for deletes below
+  const patch: UpdateEmployeeData = { ...data };
+
+  if (isDriver) {
+    // Normalize provided balanceHistory if present (accept legacy shape)
+    if (Array.isArray(patch.balanceHistory)) {
+      interface LegacyBalanceHistory {
+        version?: number;
+        balance?: number;
+        newBalance?: number;
+        updatedAt?: Date | string;
+        date?: Date | string;
+        reason?: string;
+        updatedBy?: string;
+        id?: string;
       }
-    ];
+
+      patch.balanceHistory = patch.balanceHistory.map((entry, index) => {
+        const legacy = entry as unknown as LegacyBalanceHistory;
+        const version = typeof legacy.version === 'number' ? legacy.version : index + 1;
+        const computedBalance =
+          typeof legacy.balance === 'number'
+            ? legacy.balance
+            : typeof legacy.newBalance === 'number'
+              ? legacy.newBalance
+              : employee.balance || 0;
+        const rawDate = legacy.updatedAt ?? legacy.date;
+        const updatedAt = rawDate instanceof Date ? rawDate : new Date(typeof rawDate === 'string' ? rawDate : Date.now());
+        const reason = typeof legacy.reason === 'string' ? legacy.reason : 'Balance updated';
+        const updatedBy = typeof legacy.updatedBy === 'string' ? legacy.updatedBy : patch.updatedBy;
+        const normalized: BalanceHistoryEntry = { version, balance: computedBalance, updatedAt, reason, updatedBy };
+        return normalized;
+      });
+
+      // Ensure "balance" aligns with the latest history entry
+      const latest = patch.balanceHistory.at(-1);
+      if (latest && typeof latest.balance === 'number') {
+        patch.balance = latest.balance;
+      }
+    } else if (patch.balance !== undefined && patch.balance !== employee.balance) {
+      // If only balance provided, append a history entry automatically
+      interface LegacyBalanceHistory {
+        version?: number;
+        balance?: number;
+        newBalance?: number;
+        updatedAt?: Date | string;
+        date?: Date | string;
+        reason?: string;
+        updatedBy?: string;
+        id?: string;
+      }
+
+      const normalizedExisting: BalanceHistoryEntry[] = (employee.balanceHistory || []).map((entry, index) => {
+        const legacy = entry as unknown as LegacyBalanceHistory;
+        const version = typeof legacy.version === 'number' ? legacy.version : index + 1;
+        const computedBalance =
+          typeof legacy.balance === 'number'
+            ? legacy.balance
+            : typeof legacy.newBalance === 'number'
+              ? legacy.newBalance
+              : employee.balance || 0;
+        const rawDate = legacy.updatedAt ?? legacy.date;
+        const updatedAt = rawDate instanceof Date ? rawDate : new Date(typeof rawDate === 'string' ? rawDate : Date.now());
+        const reason = typeof legacy.reason === 'string' ? legacy.reason : 'Balance updated';
+        const updatedBy = typeof legacy.updatedBy === 'string' ? legacy.updatedBy : patch.updatedBy;
+        return { version, balance: computedBalance, updatedAt, reason, updatedBy };
+      });
+
+      const currentVersion = normalizedExisting.length;
+      patch.balanceHistory = [
+        ...normalizedExisting,
+        {
+          version: currentVersion + 1,
+          balance: patch.balance,
+          updatedAt: new Date(),
+          reason: patch.balanceUpdateReason || 'Balance updated',
+          updatedBy: patch.updatedBy,
+        }
+      ];
+    }
+  } else {
+    // Not a driver: strip driver-only fields to avoid accidental writes
+    delete (patch as Partial<UpdateEmployeeData>).balance;
+    delete (patch as Partial<UpdateEmployeeData>).balanceHistory;
   }
   
   const updatedEmployee = await Employee.findOneAndUpdate(
     { id },
-    data,
+    patch,
     { new: true, runValidators: true }
   );
   
@@ -129,7 +205,7 @@ export async function updateEmployee(id: string, data: UpdateEmployeeData) {
     collectionName: 'employees',
     documentId: employee._id,
     action: 'update',
-    actor: data.updatedBy && Types.ObjectId.isValid(data.updatedBy) ? new Types.ObjectId(data.updatedBy) : undefined,
+    actor: patch.updatedBy && Types.ObjectId.isValid(patch.updatedBy) ? new Types.ObjectId(patch.updatedBy) : undefined,
     before: beforeData,
     after: updatedEmployee?.toObject(),
     timestamp: new Date(),

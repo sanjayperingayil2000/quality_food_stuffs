@@ -34,6 +34,21 @@ export function UserProvider({ children }: UserProviderProps): React.JSX.Element
     isLoading: true,
   });
 
+  // Load user from localStorage on mount
+  React.useEffect(() => {
+    if (globalThis.window !== undefined) {
+      try {
+        const storedUser = globalThis.localStorage.getItem('user_data');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          setState((prev) => ({ ...prev, user, isLoading: false }));
+        }
+      } catch (error) {
+        console.error('Error loading user from localStorage:', error);
+      }
+    }
+  }, []);
+
   const checkSession = React.useCallback(async (): Promise<void> => {
     try {
       const { data, error } = await authClient.getUser();
@@ -44,13 +59,27 @@ export function UserProvider({ children }: UserProviderProps): React.JSX.Element
           logger.error(error);
         }
         setState((prev) => ({ ...prev, user: null, error: null, isLoading: false }));
+        // Clear localStorage on error
+        if (globalThis.window) {
+          globalThis.localStorage.removeItem('user_data');
+        }
         return;
       }
 
-      setState((prev) => ({ ...prev, user: data ?? null, error: null, isLoading: false }));
+      const userData = data ?? null;
+      setState((prev) => ({ ...prev, user: userData, error: null, isLoading: false }));
+      
+      // Save user data to localStorage
+      if (globalThis.window && userData) {
+        globalThis.localStorage.setItem('user_data', JSON.stringify(userData));
+      }
     } catch (error) {
       logger.error(error);
       setState((prev) => ({ ...prev, user: null, error: null, isLoading: false }));
+      // Clear localStorage on error
+      if (globalThis.window) {
+        globalThis.localStorage.removeItem('user_data');
+      }
     }
   }, []);
 

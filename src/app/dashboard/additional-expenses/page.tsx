@@ -651,6 +651,9 @@ export default function Page(): React.JSX.Element {
                     <FormControl fullWidth error={Boolean(errors.employeeId)}>
                       <InputLabel>Employee/Company</InputLabel>
                       <Select {...field} label="Employee/Company">
+                        <MenuItem value="COMPANY">
+                          Company
+                        </MenuItem>
                         {employees.map((employee) => (
                           <MenuItem key={employee.id} value={employee.id}>
                             {employee.name} ({employee.designation.charAt(0).toUpperCase() + employee.designation.slice(1).toLowerCase()})
