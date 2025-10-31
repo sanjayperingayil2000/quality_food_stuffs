@@ -230,15 +230,42 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
       console.log('New balance:', roundedNewBalance);
       console.log('Balance history length:', currentEmployee.balanceHistory?.length || 0);
       
+      // Normalize any existing history entries to the canonical schema (version/balance/updatedAt/reason/updatedBy)
+      const normalizeHistory = (entries: unknown[]): BalanceHistoryEntry[] => {
+        const safeEntries = Array.isArray(entries) ? entries : [];
+        return safeEntries.map((entry, index) => {
+          const e = entry as Record<string, unknown>;
+          const version = typeof e.version === 'number' ? e.version : index + 1;
+          const balance = typeof e.balance === 'number'
+            ? e.balance
+            : typeof e.newBalance === 'number'
+              ? e.newBalance
+              : 0;
+          const rawDate = (e.updatedAt as Date | string | undefined) ?? (e.date as Date | string | undefined);
+          const updatedAt = rawDate instanceof Date ? rawDate : new Date(typeof rawDate === 'string' ? rawDate : Date.now());
+          const reasonText = (typeof e.reason === 'string' && e.reason) || (typeof e.id === 'string' ? `Legacy entry ${e.id}` : undefined);
+          const updatedById = typeof e.updatedBy === 'string' ? e.updatedBy : undefined;
+          return {
+            version,
+            balance,
+            updatedAt,
+            reason: reasonText,
+            updatedBy: updatedById,
+          };
+        });
+      };
+
+      const existingHistoryNormalized = normalizeHistory(currentEmployee.balanceHistory as unknown as unknown[]);
+
       const newHistoryEntry: BalanceHistoryEntry = {
-        version: (currentEmployee.balanceHistory?.length || 0) + 1,
+        version: (existingHistoryNormalized.length || 0) + 1,
         balance: roundedNewBalance,
         updatedAt: new Date(),
         reason,
         updatedBy,
       };
 
-      const updatedBalanceHistory = [...(currentEmployee.balanceHistory || []), newHistoryEntry];
+      const updatedBalanceHistory = [...existingHistoryNormalized, newHistoryEntry];
 
       // Optimistically update local state so the list reflects the change immediately
       setEmployees(prev => prev.map(emp => {
