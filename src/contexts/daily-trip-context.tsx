@@ -1198,7 +1198,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
         updatedBy: 'EMP-001'
       });
     }
-  }, [trips, pendingTransfers, getPreviousBalance, updateDriverBalance, user]);
+  }, [trips, pendingTransfers, getPreviousBalance, updateDriverBalance, user?.email, user?.name]);
 
   const updateTrip = React.useCallback(async (id: string, updates: Partial<DailyTrip>) => {
     try {
@@ -1397,7 +1397,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to update trip');
     }
-  }, [getPreviousBalance]);
+  }, [getPreviousBalance, updateDriverBalance, user?.email, user?.name]);
 
   const deleteTrip = React.useCallback(async (id: string) => {
     try {

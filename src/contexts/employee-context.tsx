@@ -126,38 +126,45 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
 
   const addEmployee = React.useCallback(async (employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const newEmployee: Employee = {
+      // Build payload for API (let backend assign the ID atomically)
+      const payload = {
         ...employeeData,
-        id: `EMP-${String(employees.length + 1).padStart(3, '0')}`,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      // Update local state immediately for better UX
-      setEmployees(prev => [...prev, newEmployee]);
-      
-      // Save to backend - convert Date objects to strings for API
-      const apiEmployee = {
-        ...newEmployee,
-        hireDate: newEmployee.hireDate.toISOString(),
-        createdAt: newEmployee.createdAt.toISOString(),
-        updatedAt: newEmployee.updatedAt.toISOString(),
-        balanceHistory: newEmployee.balanceHistory?.map(entry => ({
+        hireDate: employeeData.hireDate.toISOString(),
+      } as unknown as Record<string, unknown>;
+
+      if (Array.isArray(employeeData.balanceHistory)) {
+        payload.balanceHistory = employeeData.balanceHistory.map(entry => ({
           ...entry,
-          updatedAt: entry.updatedAt.toISOString()
-        }))
-      };
-      const result = await apiClient.createEmployee(apiEmployee);
-      
+          updatedAt: entry.updatedAt.toISOString(),
+        }));
+      }
+
+      const result = await apiClient.createEmployee(payload as never);
+
       if (result.error) {
-        // Revert local state on error
-        setEmployees(prev => prev.filter(emp => emp.id !== newEmployee.id));
         setError(result.error);
+        return;
+      }
+
+      if (result.data?.employee) {
+        const created = result.data.employee;
+        const transformed = {
+          ...created,
+          hireDate: new Date(created.hireDate),
+          createdAt: new Date(created.createdAt),
+          updatedAt: new Date(created.updatedAt),
+          balanceHistory: created.balanceHistory?.map(entry => ({
+            ...entry,
+            updatedAt: new Date(entry.updatedAt as unknown as string),
+          }))
+        } as unknown as Employee;
+
+        setEmployees(prev => [...prev, transformed]);
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to add employee');
     }
-  }, [employees]);
+  }, []);
 
   const updateEmployee = React.useCallback(async (id: string, updates: Partial<Employee>) => {
     try {

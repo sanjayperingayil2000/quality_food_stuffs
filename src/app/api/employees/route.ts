@@ -7,6 +7,7 @@ import { connectToDatabase } from '@/lib/db';
 import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
+import { getNextSequence } from '@/models/counter';
 
 const employeeCreateSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -65,9 +66,9 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    // Generate unique ID
-    const count = await Employee.countDocuments();
-    const id = `EMP-${String(count + 1).padStart(3, '0')}`;
+    // Generate unique sequential ID using counters collection (atomic)
+    const seq = await getNextSequence('employee');
+    const id = `EMP-${String(seq).padStart(3, '0')}`;
     
     const employeeData = {
       ...parsed.data,

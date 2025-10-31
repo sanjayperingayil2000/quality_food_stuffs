@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
 import { Employee, BalanceHistoryEntry } from '@/models/employee';
 import { History } from '@/models/history';
+import { getNextSequence } from '@/models/counter';
 
 export interface CreateEmployeeData {
   name: string;
@@ -44,9 +45,9 @@ export interface EmployeeFilters {
 export async function createEmployee(data: CreateEmployeeData) {
   await connectToDatabase();
   
-  // Generate unique ID
-  const count = await Employee.countDocuments();
-  const id = `EMP-${String(count + 1).padStart(3, '0')}`;
+  // Generate unique ID using atomic counter
+  const seq = await getNextSequence('employee');
+  const id = `EMP-${String(seq).padStart(3, '0')}`;
   
   const employeeData = {
     ...data,
