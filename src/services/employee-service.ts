@@ -32,6 +32,7 @@ export interface UpdateEmployeeData {
   hireDate?: Date;
   isActive?: boolean;
   updatedBy?: string;
+  balanceUpdateReason?: string;
 }
 
 export interface EmployeeFilters {
@@ -182,7 +183,7 @@ export async function updateEmployee(id: string, data: UpdateEmployeeData) {
           version: currentVersion + 1,
           balance: patch.balance,
           updatedAt: new Date(),
-          reason: 'Balance updated',
+          reason: patch.balanceUpdateReason || 'Balance updated',
           updatedBy: patch.updatedBy,
         }
       ];

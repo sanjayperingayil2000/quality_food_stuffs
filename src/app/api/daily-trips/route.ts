@@ -5,6 +5,7 @@ import { withCors } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { connectToDatabase } from '@/lib/db';
 import { DailyTrip } from '@/models/daily-trip';
+import { updateEmployee as updateEmployeeService } from '@/services/employee-service';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
 
@@ -114,6 +115,26 @@ export async function POST(req: NextRequest) {
     };
     
     const trip = await DailyTrip.create(tripData);
+
+    // After creating the trip, update the driver's current balance in employees
+    try {
+      const tripDate = parsed.data.date instanceof Date
+        ? parsed.data.date
+        : new Date(parsed.data.date as unknown as string);
+      const yyyy = tripDate.getFullYear();
+      const mm = String(tripDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(tripDate.getDate()).padStart(2, '0');
+      const reason = `Daily trip on ${yyyy}-${mm}-${dd}`;
+
+      await updateEmployeeService(parsed.data.driverId, {
+        balance: parsed.data.balance,
+        updatedBy: user?.sub,
+        balanceUpdateReason: reason,
+      });
+    } catch (balanceUpdateError) {
+      // Do not fail trip creation on balance sync error; it will be handled separately
+      console.error('Failed to sync driver balance after trip creation:', balanceUpdateError);
+    }
     
     // Log to history
     await History.create({
