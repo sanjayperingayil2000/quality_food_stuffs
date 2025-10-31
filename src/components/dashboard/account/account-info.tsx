@@ -97,16 +97,20 @@ export function AccountInfo(): React.JSX.Element {
             />
           </div>
           <Stack spacing={1} sx={{ textAlign: 'center' }}>
-            <Typography variant="h5">{user?.name || 'Loading...'}</Typography>
+            <Typography variant="h5">{user?.name || 'Quality Food Stuffs'}</Typography>
             <Typography color="text.secondary" variant="body2">
-              {user?.city || 'N/A'} {user?.state || 'N/A'}
+              {user?.email || 'Not provided'}
             </Typography>
-            <Typography color="text.secondary" variant="body2">
-              {user?.email || 'N/A'}
-            </Typography>
-            <Typography color="text.secondary" variant="body2">
-              {user?.phone || 'N/A'}
-            </Typography>
+            {user?.phone && (
+              <Typography color="text.secondary" variant="body2">
+                {user.phone}
+              </Typography>
+            )}
+            {(user?.city || user?.state) && (
+              <Typography color="text.secondary" variant="body2">
+                {user?.city || ''} {user?.state || ''}
+              </Typography>
+            )}
           </Stack>
         </Stack>
       </CardContent>

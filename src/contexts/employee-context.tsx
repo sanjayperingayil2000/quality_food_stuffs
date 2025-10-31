@@ -215,27 +215,72 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
 
   const updateDriverBalance = React.useCallback(async (driverId: string, newBalance: number, reason: string, updatedBy?: string) => {
     try {
+      console.log('updateDriverBalance called:', { driverId, newBalance, reason, updatedBy });
+      
       // Get the current employee to build proper history
       const currentEmployee = employees.find(emp => emp.id === driverId && emp.designation === 'driver');
       if (!currentEmployee) {
+        console.error('Driver not found:', driverId);
         throw new Error('Driver not found');
       }
 
       const roundedNewBalance = Math.round(newBalance);
       
+      console.log('Current employee balance:', currentEmployee.balance);
+      console.log('New balance:', roundedNewBalance);
+      console.log('Balance history length:', currentEmployee.balanceHistory?.length || 0);
+      
+      // Normalize any existing history entries to the canonical schema (version/balance/updatedAt/reason/updatedBy)
+      const normalizeHistory = (entries: unknown[]): BalanceHistoryEntry[] => {
+        const safeEntries = Array.isArray(entries) ? entries : [];
+        return safeEntries.map((entry, index) => {
+          const e = entry as Record<string, unknown>;
+          const version = typeof e.version === 'number' ? e.version : index + 1;
+          const balance = typeof e.balance === 'number'
+            ? e.balance
+            : typeof e.newBalance === 'number'
+              ? e.newBalance
+              : 0;
+          const rawDate = (e.updatedAt as Date | string | undefined) ?? (e.date as Date | string | undefined);
+          const updatedAt = rawDate instanceof Date ? rawDate : new Date(typeof rawDate === 'string' ? rawDate : Date.now());
+          const reasonText = (typeof e.reason === 'string' && e.reason) || (typeof e.id === 'string' ? `Legacy entry ${e.id}` : undefined);
+          const updatedById = typeof e.updatedBy === 'string' ? e.updatedBy : undefined;
+          return {
+            version,
+            balance,
+            updatedAt,
+            reason: reasonText,
+            updatedBy: updatedById,
+          };
+        });
+      };
+
+      const existingHistoryNormalized = normalizeHistory(currentEmployee.balanceHistory as unknown as unknown[]);
+
       const newHistoryEntry: BalanceHistoryEntry = {
-        version: (currentEmployee.balanceHistory?.length || 0) + 1,
+        version: (existingHistoryNormalized.length || 0) + 1,
         balance: roundedNewBalance,
         updatedAt: new Date(),
         reason,
         updatedBy,
       };
 
-      const updatedBalanceHistory = [...(currentEmployee.balanceHistory || []), newHistoryEntry];
+      const updatedBalanceHistory = [...existingHistoryNormalized, newHistoryEntry];
+
+      // Optimistically update local state so the list reflects the change immediately
+      setEmployees(prev => prev.map(emp => {
+        if (emp.id !== driverId) return emp;
+        return {
+          ...emp,
+          balance: roundedNewBalance,
+          balanceHistory: updatedBalanceHistory,
+          updatedAt: new Date(),
+        };
+      }));
 
       // Build the update payload with balance history
       const updatePayload = {
-        balance: newBalance,
+        balance: roundedNewBalance,
         balanceHistory: updatedBalanceHistory.map(entry => ({
           version: entry.version,
           balance: entry.balance,
@@ -245,32 +290,22 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
         })),
         updatedBy
       };
-
-      // Update local state immediately for better UX
-      const updatedEmployees = employees.map(emp => {
-        if (emp.id === driverId && emp.designation === 'driver') {
-          return {
-            ...emp,
-            balance: roundedNewBalance,
-            balanceHistory: updatedBalanceHistory,
-            updatedAt: new Date(),
-            updatedBy,
-          };
-        }
-        return emp;
-      });
-      setEmployees(updatedEmployees);
       
       // Save to backend with full balance history
       const result = await apiClient.updateEmployee(driverId, updatePayload);
       
       if (result.error) {
-        // Revert local state on error
-        await refreshEmployees();
         setError(result.error);
+        // If server failed, reload from server to revert optimistic update
+        await refreshEmployees();
+      } else {
+        // Refresh to get the latest data from backend (confirms optimistic state)
+        await refreshEmployees();
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to update driver balance');
+      // Refresh on error to get consistent state
+      await refreshEmployees();
     }
   }, [employees, refreshEmployees]);
 
