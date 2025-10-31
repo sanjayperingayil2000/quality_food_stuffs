@@ -22,4 +22,16 @@ export async function getNextSequence(key: string): Promise<number> {
   return result.seq;
 }
 
+// Ensure the counter is at least a minimum value (useful when seeding after existing data)
+export async function ensureCounterMinValue(key: string, minValue: number): Promise<void> {
+  await Counter.findOneAndUpdate(
+    { key },
+    {
+      $setOnInsert: { key, seq: minValue },
+      $max: { seq: minValue },
+    },
+    { upsert: true, new: false }
+  );
+}
+
 

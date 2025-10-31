@@ -7,7 +7,7 @@ import { connectToDatabase } from '@/lib/db';
 import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
-import { getNextSequence } from '@/models/counter';
+import { ensureCounterMinValue, getNextSequence } from '@/models/counter';
 
 const employeeCreateSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -66,6 +66,17 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const user = getRequestUser(authed);
     
+    // Initialize counter to current max if needed (handles pre-existing data)
+    const maxExisting = await Employee.find({ id: { $regex: /^EMP-\d+$/ } })
+      .sort({ id: -1 })
+      .limit(1)
+      .then(docs => {
+        if (docs.length === 0) return 0;
+        const match = docs[0].id.match(/^EMP-(\d+)$/);
+        return match ? Number.parseInt(match[1] || '0', 10) : 0;
+      });
+    await ensureCounterMinValue('employee', maxExisting);
+
     // Generate unique sequential ID using counters collection (atomic)
     const seq = await getNextSequence('employee');
     const id = `EMP-${String(seq).padStart(3, '0')}`;

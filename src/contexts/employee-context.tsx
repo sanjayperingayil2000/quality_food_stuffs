@@ -143,7 +143,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
 
       if (result.error) {
         setError(result.error);
-        return;
+        throw new Error(result.error);
       }
 
       if (result.data?.employee) {
@@ -162,7 +162,9 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }): R
         setEmployees(prev => [...prev, transformed]);
       }
     } catch (error_) {
-      setError(error_ instanceof Error ? error_.message : 'Failed to add employee');
+      const message = error_ instanceof Error ? error_.message : 'Failed to add employee';
+      setError(message);
+      throw new Error(message);
     }
   }, []);
 

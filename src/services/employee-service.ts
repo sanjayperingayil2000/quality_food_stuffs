@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { connectToDatabase } from '@/lib/db';
 import { Employee, BalanceHistoryEntry } from '@/models/employee';
 import { History } from '@/models/history';
-import { getNextSequence } from '@/models/counter';
+import { ensureCounterMinValue, getNextSequence } from '@/models/counter';
 
 export interface CreateEmployeeData {
   name: string;
@@ -45,6 +45,17 @@ export interface EmployeeFilters {
 export async function createEmployee(data: CreateEmployeeData) {
   await connectToDatabase();
   
+  // Initialize counter to current max if needed (handles pre-existing data)
+  const maxExisting = await Employee.find({ id: { $regex: /^EMP-\d+$/ } })
+    .sort({ id: -1 })
+    .limit(1)
+    .then(docs => {
+      if (docs.length === 0) return 0;
+      const match = docs[0].id.match(/^EMP-(\d+)$/);
+      return match ? Number.parseInt(match[1] || '0', 10) : 0;
+    });
+  await ensureCounterMinValue('employee', maxExisting);
+
   // Generate unique ID using atomic counter
   const seq = await getNextSequence('employee');
   const id = `EMP-${String(seq).padStart(3, '0')}`;
