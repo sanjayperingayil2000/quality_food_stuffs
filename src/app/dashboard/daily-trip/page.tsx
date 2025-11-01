@@ -1619,9 +1619,8 @@ export default function Page(): React.JSX.Element {
                         type="number"
                         fullWidth
                         error={Boolean(errors.previousBalance)}
-                        helperText={errors.previousBalance?.message || 'Enter the driver\'s previous balance'}
-                        inputProps={{ min: 0, step: 0.01 }}
-                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        helperText={errors.previousBalance?.message || 'Auto-filled from employee balance'}
+                        inputProps={{ min: 0, step: 0.01, readOnly: true }}
                         value={field.value || ''}
                       />
                     )}

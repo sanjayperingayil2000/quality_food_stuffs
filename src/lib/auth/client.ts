@@ -90,6 +90,7 @@ class AuthClient {
               avatar: '/assets/avatar.png',
               firstName: (result.data as UserResponse).user.name.split(' ')[0] || 'User',
               lastName: (result.data as UserResponse).user.name.split(' ').slice(1).join(' ') || '',
+              name: (result.data as UserResponse).user.name,
               email: (result.data as UserResponse).user.email,
               roles: (result.data as UserResponse).user.roles,
             } as User
@@ -115,6 +116,7 @@ class AuthClient {
           avatar: '/assets/avatar.png',
           firstName: (result.data as UserResponse).user.name.split(' ')[0] || 'User',
           lastName: (result.data as UserResponse).user.name.split(' ').slice(1).join(' ') || '',
+          name: (result.data as UserResponse).user.name,
           email: (result.data as UserResponse).user.email,
           roles: (result.data as UserResponse).user.roles,
         } as User
