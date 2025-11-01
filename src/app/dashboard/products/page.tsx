@@ -41,6 +41,7 @@ import { ExportPdfButton } from '@/components/products/export-pdf';
 import { useNotifications } from '@/contexts/notification-context';
 import { useEmployees } from '@/contexts/employee-context';
 import { useUser } from '@/hooks/use-user';
+import { apiClient } from '@/lib/api-client';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -78,22 +79,55 @@ const PriceHistoryDialog: React.FC<PriceHistoryDialogProps> = ({ open, onClose, 
   const { employees } = useEmployees();
   const { user } = useUser();
   
-  // Helper function to get user name from ID
+  // Resolve and cache userId -> display name (handles ObjectId from backend)
+  const [userNameCache, setUserNameCache] = React.useState<Record<string, string>>({});
+
   const getUserName = (userId: string | undefined): string => {
     if (!userId) return 'Unknown';
-    
-    // Check if it's an employee ID
+
+    // From cache
+    if (userNameCache[userId]) return userNameCache[userId];
+
+    // Check employee IDs (e.g., EMP-001)
     const employee = employees.find(emp => emp.id === userId);
     if (employee) return employee.name;
-    
-    // Check if it's the current user's ID
+
+    // Current logged-in user
     if (user?.id === userId) {
       return user.name || user.firstName || 'Current User';
     }
-    
-    // If it's a MongoDB ObjectId or other format, return a default
-    return 'System';
+
+    // Fallback while we resolve asynchronously
+    return 'Loading...';
   };
+
+  // When dialog opens, resolve any unknown ObjectId userIds to names via API and cache them
+  React.useEffect(() => {
+    const resolveUnknowns = async () => {
+      if (!product || !open) return;
+      const uniqueIds = [...new Set(product.priceHistory?.map(h => h.updatedBy).filter(Boolean) as string[])];
+      const toFetch = uniqueIds.filter(id => !userNameCache[id] && !employees.some(e => e.id === id));
+      if (toFetch.length === 0) return;
+      const updates: Record<string, string> = {};
+      await Promise.all(toFetch.map(async (id) => {
+        try {
+          // Heuristic: likely a Mongo ObjectId (24 hex chars)
+          if (/^[a-f\d]{24}$/i.test(id)) {
+            const res = await apiClient.getUser(id);
+            if (!res.error && res.data?.user) {
+              updates[id] = res.data.user.name;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }));
+      if (Object.keys(updates).length > 0) {
+        setUserNameCache(prev => ({ ...prev, ...updates }));
+      }
+    };
+    resolveUnknowns();
+  }, [product, open, employees, userNameCache]);
   
   if (!product) return null;
   return (

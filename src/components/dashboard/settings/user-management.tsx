@@ -139,8 +139,11 @@ export function UserManagement(): React.JSX.Element {
   }, []);
 
   React.useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    // Only fetch when current user is loaded and is super_admin
+    if (currentUser?.roles?.includes('super_admin')) {
+      fetchUsers();
+    }
+  }, [fetchUsers, currentUser]);
 
   const handleOpen = () => {
     setEditingUser(null);
