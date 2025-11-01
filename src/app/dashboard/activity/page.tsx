@@ -340,8 +340,11 @@ export default function Page(): React.JSX.Element {
       }
     };
 
-    fetchActivities();
-  }, []);
+    // Only fetch after user is known (prevents 401 before token is ready)
+    if (user && user.roles?.includes('super_admin')) {
+      fetchActivities();
+    }
+  }, [user]);
 
   // Access control
   if (!user?.roles?.includes('super_admin')) {
