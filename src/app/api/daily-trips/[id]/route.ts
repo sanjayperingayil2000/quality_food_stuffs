@@ -164,6 +164,27 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     console.log('Before data:', beforeData);
     const deleteResult = await DailyTrip.findOneAndDelete({ id });
     console.log('Delete result:', deleteResult);
+
+    // After deletion, recalculate driver's balance based on latest remaining trip
+    try {
+      const driverId = trip.driverId;
+      const latestRemainingTrip = await DailyTrip.findOne({ driverId }).sort({ date: -1, createdAt: -1 });
+      const newBalance = latestRemainingTrip?.balance ?? 0;
+
+      const tripDate = trip.date instanceof Date ? trip.date : new Date(trip.date);
+      const yyyy = tripDate.getFullYear();
+      const mm = String(tripDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(tripDate.getDate()).padStart(2, '0');
+      const reason = `Daily trip on ${yyyy}-${mm}-${dd} deleted`;
+
+      await updateEmployeeService(driverId, {
+        balance: newBalance,
+        updatedBy: user?.sub,
+        balanceUpdateReason: reason,
+      });
+    } catch (balanceUpdateError) {
+      console.error('Failed to sync driver balance after trip deletion:', balanceUpdateError);
+    }
     
     // Log to history
     await History.create({

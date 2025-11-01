@@ -24,6 +24,8 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
 import { FilePdfIcon } from '@phosphor-icons/react/dist/ssr/FilePdf';
+import { ArrowClockwiseIcon } from '@phosphor-icons/react';
+import { Tooltip } from '@mui/material';
 import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { TableIcon } from '@phosphor-icons/react/dist/ssr/Table';
@@ -261,6 +263,13 @@ export default function Page(): React.JSX.Element {
   React.useEffect(() => {
     applyFilters();
   }, [applyFilters]);
+
+  const handleResetFilters = () => {
+    setDateFrom(dayjs().subtract(30, 'day').format('YYYY-MM-DD'));
+    setDateTo(dayjs().format('YYYY-MM-DD'));
+    setExpenseTypeFilter('allTypes');
+    setEmployeeFilter('allEmployees');
+  };
 
 
   const handleExportPdf = () => {
@@ -515,6 +524,12 @@ export default function Page(): React.JSX.Element {
             ))}
           </Select>
         </FormControl>
+
+        <Tooltip title="Reset Filters">
+          <IconButton onClick={handleResetFilters} color="primary">
+            <ArrowClockwiseIcon />
+          </IconButton>
+        </Tooltip>
       </Stack>
 
       {filteredExpenses.length > 0 ? (
