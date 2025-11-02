@@ -665,7 +665,7 @@ export default function Page(): React.JSX.Element {
             </Typography>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Box sx={{ p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+                <Box sx={{ p: 2, bgcolor: 'rgba(76, 175, 80, 0.08)', borderRadius: 1, maxHeight: '400px', overflow: 'auto' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
                     Fresh Products
                   </Typography>
@@ -683,7 +683,7 @@ export default function Page(): React.JSX.Element {
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Box sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
+                <Box sx={{ p: 2, bgcolor: 'rgba(25, 118, 210, 0.08)', borderRadius: 1, maxHeight: '400px', overflow: 'auto' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'primary.dark' }}>
                     Bakery Products
                   </Typography>
@@ -1578,7 +1578,7 @@ export default function Page(): React.JSX.Element {
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 gap: 2,
-                                bgcolor: isHighlighted ? 'warning.light' : 'transparent',
+                                bgcolor: isHighlighted ? 'grey.100' : 'transparent',
                                 p: isHighlighted ? 1 : 0,
                                 borderRadius: isHighlighted ? 1 : 0,
                                 transition: 'all 0.2s'
@@ -1660,7 +1660,7 @@ export default function Page(): React.JSX.Element {
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 gap: 2,
-                                bgcolor: isHighlighted ? 'warning.light' : 'transparent',
+                                bgcolor: isHighlighted ? 'grey.100' : 'transparent',
                                 p: isHighlighted ? 1 : 0,
                                 borderRadius: isHighlighted ? 1 : 0,
                                 transition: 'all 0.2s'
