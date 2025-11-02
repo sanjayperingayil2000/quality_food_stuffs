@@ -675,7 +675,7 @@ export default function Page(): React.JSX.Element {
                       if (quantity === 0) return null;
                       return (
                         <Typography key={product.id} variant="body2">
-                          {product.displayNumber} - {product.name}: {quantity} qty
+                          {product.displayNumber || `F${String(product.id).split('-')[2]}`} - {product.name}: {quantity} qty
                         </Typography>
                       );
                     })}
@@ -693,7 +693,7 @@ export default function Page(): React.JSX.Element {
                       if (quantity === 0) return null;
                       return (
                         <Typography key={product.id} variant="body2">
-                          {product.displayNumber} - {product.name}: {quantity} qty
+                          {product.displayNumber || `B${String(product.id).split('-')[2]}`} - {product.name}: {quantity} qty
                         </Typography>
                       );
                     })}
