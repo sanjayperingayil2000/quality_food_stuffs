@@ -11,8 +11,10 @@ import { User } from './src/models/user';
 // import { freshProducts } from './data/fresh-products.ts';
 // import { bakeryProducts } from './data/bakery-products.ts';
 
-// Load env
-dotenv.config();
+// Load env: prefer .env.local if present, otherwise .env
+const localEnvPath = path.resolve(process.cwd(), '.env.local');
+const defaultEnvPath = path.resolve(process.cwd(), '.env');
+dotenv.config({ path: fs.existsSync(localEnvPath) ? localEnvPath : defaultEnvPath, override: true });
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -34,7 +36,11 @@ async function connectToDatabase(): Promise<typeof mongoose> {
   isConnected = 1;
 
   mongoose.set('strictQuery', true);
-  await mongoose.connect(mongoUrl, { dbName: 'qualityfoodstuffs' });
+  // Respect DB name from URL if provided; otherwise default to 'qualityfoodstuffs'
+  const urlWithoutQuery = mongoUrl.split('?')[0];
+  const urlParts = urlWithoutQuery.split('/');
+  const hasDatabaseInUrl = urlParts.length > 3 && urlParts[urlParts.length - 1] !== '';
+  await mongoose.connect(mongoUrl, hasDatabaseInUrl ? {} : { dbName: 'qualityfoodstuffs' });
   isConnected = 2;
 
   return mongoose;
