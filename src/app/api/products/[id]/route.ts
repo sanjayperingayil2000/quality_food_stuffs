@@ -96,31 +96,52 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Handle display number reordering if displayNumber was changed
     if (parsed.data.displayNumber && parsed.data.displayNumber !== product.displayNumber && updatedProduct) {
       const newDisplayNumber = parsed.data.displayNumber;
+      const oldDisplayNumber = product.displayNumber;
       
-      // Get all products in the same category
-      const categoryProducts = await Product.find({ 
-        category: product.category,
-        _id: { $ne: updatedProduct._id }
-      }).sort({ displayNumber: 1 });
+      // Parse display numbers to extract prefix and numeric value
+      const oldMatch = oldDisplayNumber.match(/^(F|B)(\d+)$/);
+      const newMatch = newDisplayNumber.match(/^(F|B)(\d+)$/);
       
-      // Find the insertion point for the new display number
-      const targetIndex = categoryProducts.findIndex(p => p.displayNumber > newDisplayNumber);
-      
-      // Update display numbers - shift products that come after the new display number
-      if (targetIndex !== -1) {
-        const productsToReassign = categoryProducts.slice(targetIndex);
+      if (oldMatch && newMatch && oldMatch[1] === newMatch[1]) {
+        const prefix = oldMatch[1];
+        const oldNum = Number.parseInt(oldMatch[2], 10);
+        const newNum = Number.parseInt(newMatch[2], 10);
         
-        // Shift display numbers
-        for (const p of productsToReassign) {
-          const match = p.displayNumber.match(/^(F|B)(\d+)$/);
-          if (match) {
-            const currentNumber = Number.parseInt(match[2], 10);
-            const prefix = match[1];
-            const newNum = (currentNumber + 1).toString().padStart(2, '0');
-            await Product.findOneAndUpdate(
-              { _id: p._id },
-              { displayNumber: `${prefix}${newNum}`, updatedBy: user?.sub }
-            );
+        // Get all products in the same category (excluding the one being updated)
+        const categoryProducts = await Product.find({ 
+          category: product.category,
+          _id: { $ne: updatedProduct._id }
+        }).sort({ displayNumber: 1 });
+        
+        if (newNum < oldNum) {
+          // Moving forward (e.g., F06 -> F03): shift affected products backward
+          for (const p of categoryProducts) {
+            const match = p.displayNumber.match(/^(F|B)(\d+)$/);
+            if (match && match[1] === prefix) {
+              const currentNum = Number.parseInt(match[2], 10);
+              if (currentNum >= newNum && currentNum < oldNum) {
+                const shiftedNum = (currentNum + 1).toString().padStart(2, '0');
+                await Product.findOneAndUpdate(
+                  { _id: p._id },
+                  { displayNumber: `${prefix}${shiftedNum}`, updatedBy: user?.sub }
+                );
+              }
+            }
+          }
+        } else if (newNum > oldNum) {
+          // Moving backward (e.g., F03 -> F06): shift affected products forward
+          for (const p of categoryProducts) {
+            const match = p.displayNumber.match(/^(F|B)(\d+)$/);
+            if (match && match[1] === prefix) {
+              const currentNum = Number.parseInt(match[2], 10);
+              if (currentNum > oldNum && currentNum <= newNum) {
+                const shiftedNum = (currentNum - 1).toString().padStart(2, '0');
+                await Product.findOneAndUpdate(
+                  { _id: p._id },
+                  { displayNumber: `${prefix}${shiftedNum}`, updatedBy: user?.sub }
+                );
+              }
+            }
           }
         }
       }

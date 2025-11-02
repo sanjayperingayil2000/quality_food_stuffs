@@ -245,6 +245,7 @@ const EmployeeSchema = new Schema<IEmployee>({
 
 const ProductSchema = new Schema<IProduct>({
   id: { type: String, unique: true, index: true },
+  displayNumber: { type: String },
   name: String,
   category: { type: String, enum: ['bakery', 'fresh'] },
   price: Number,
@@ -748,8 +749,9 @@ async function seedDefaultData(): Promise<void> {
     const match = id.match(/PRD-(FRS|BKR)-(\d+)/);
     if (match) {
       const prefix = match[1] === 'FRS' ? 'F' : 'B';
-      const number = match[2];
-      return `${prefix}${number}`;
+      const number = Number.parseInt(match[2], 10);
+      const paddedNumber = number.toString().padStart(2, '0');
+      return `${prefix}${paddedNumber}`;
     }
     return id;
   };
@@ -2751,11 +2753,13 @@ async function seedDefaultData(): Promise<void> {
 
   // Add displayNumber to all products if not present
   for (const pr of defaultProducts) {
-    const productWithDisplayNumber = {
-      ...pr,
-      displayNumber: pr.displayNumber || generateDisplayNumber(pr.id!),
-    };
-    await Product.updateOne({ id: pr.id }, { $set: productWithDisplayNumber }, { upsert: true });
+    const displayNumberValue = pr.displayNumber || generateDisplayNumber(pr.id!);
+    const { displayNumber: _, ...restProduct } = pr;
+    await Product.updateOne(
+      { id: pr.id },
+      { $set: { ...restProduct, displayNumber: displayNumberValue } },
+      { upsert: true }
+    );
   }
 
   console.log('Product data seeded');

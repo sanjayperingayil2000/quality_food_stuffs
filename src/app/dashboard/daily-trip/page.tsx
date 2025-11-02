@@ -659,7 +659,7 @@ export default function Page(): React.JSX.Element {
         const bakeryProductsList = products.filter(p => p.category === 'bakery');
         
         return (
-          <Card sx={{ p: 2, mb: 2, bgcolor: 'grey.50' }}>
+          <Card sx={{ p: 2, mb: 2, bgcolor: 'grey.50', border: '3px solid red' }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
               Total Products Summary
             </Typography>
