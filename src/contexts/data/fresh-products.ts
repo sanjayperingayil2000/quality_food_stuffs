@@ -3,6 +3,7 @@ import { Product } from "../product-context";
 export const freshProducts: Product[] = [
    {
     id: 'PRD-FRS-001',
+    displayNumber: 'F001',
     name: '1089 LBN 180',
     category: 'fresh',
     price: 1.55,
@@ -24,6 +25,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-002',
+    displayNumber: 'F002',
     name: '1073 LBN 360',
     category: 'fresh',
     price: 2.6,
@@ -45,6 +47,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-003',
+    displayNumber: 'F003',
     name: '1117 STRW LBN 340',
     category: 'fresh',
     price: 2.48,
@@ -66,6 +69,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-004',
+    displayNumber: 'F004',
     name: '1115 MANG LBN 340',
     category: 'fresh',
     price: 2.6,
@@ -87,6 +91,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-005',
+    displayNumber: 'F005',
     name: '1107 LBN 2 LTR',
     category: 'fresh',
     price: 11.5,
@@ -108,6 +113,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-006',
+    displayNumber: 'F006',
     name: '2040 MILK 2 LTR',
     category: 'fresh',
     price: 11.5,
@@ -129,6 +135,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-007',
+    displayNumber: 'F007',
     name: '2121 MILK 1 LTR',
     category: 'fresh',
     price: 6.33,
@@ -150,6 +157,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-008',
+    displayNumber: 'F008',
     name: '2123 500 MILK',
     category: 'fresh',
     price: 3.16,
@@ -171,6 +179,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-009',
+    displayNumber: 'F009',
     name: '2124 500 LOW FAT MILK',
     category: 'fresh',
     price: 3.16,
@@ -192,6 +201,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-010',
+    displayNumber: 'F010',
     name: '2081 MILK 180',
     category: 'fresh',
     price: 1.55,
@@ -213,6 +223,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-011',
+    displayNumber: 'F011',
     name: '2206 FLV MILK 225 ML',
     category: 'fresh',
     price: 1.87,
@@ -234,6 +245,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-012',
+    displayNumber: 'F012',
     name: '3193 YGT 1 KG',
     category: 'fresh',
     price: 6.61,
@@ -255,6 +267,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-013',
+    displayNumber: 'F013',
     name: '3115 YGT 500 GM',
     category: 'fresh',
     price: 3.73,
@@ -276,6 +289,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-014',
+    displayNumber: 'F014',
     name: '3863 YGT 170 ML OUTER',
     category: 'fresh',
     price: 8.65,
@@ -297,6 +311,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-015',
+    displayNumber: 'F015',
     name: '3469 GHISTA 100 GM',
     category: 'fresh',
     price: 3.22,
@@ -318,6 +333,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-016',
+    displayNumber: 'F016',
     name: '3554 LABNAH PREMIUM 180 GM',
     category: 'fresh',
     price: 6.9,
@@ -339,6 +355,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-017',
+    displayNumber: 'F017',
     name: '3902 PROTIN MILK 400 ML',
     category: 'fresh',
     price: 6.5,
@@ -360,6 +377,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-018',
+    displayNumber: 'F018',
     name: '2196 MNGO MILK FLV 360 ML',
     category: 'fresh',
     price: 3,
@@ -381,6 +399,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-019',
+    displayNumber: 'F019',
     name: '3521 CUSTRD 85GM',
     category: 'fresh',
     price: 1.03,
@@ -402,6 +421,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-020',
+    displayNumber: 'F020',
     name: '3327 CARML 100 GM',
     category: 'fresh',
     price: 1.14,
@@ -423,6 +443,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-021',
+    displayNumber: 'F021',
     name: '3413 VETLAY',
     category: 'fresh',
     price: 1.57,
@@ -444,6 +465,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-022',
+    displayNumber: 'F022',
     name: '7037 200 ML JUICE',
     category: 'fresh',
     price: 1.73,
@@ -465,6 +487,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-023',
+    displayNumber: 'F023',
     name: '7101 300 ML JUICE',
     category: 'fresh',
     price: 2.6,
@@ -486,6 +509,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-024',
+    displayNumber: 'F024',
     name: '7902 1.4 LTR JUICE',
     category: 'fresh',
     price: 11.25,
@@ -507,6 +531,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-025',
+    displayNumber: 'F025',
     name: '7778 KIDS JUICE',
     category: 'fresh',
     price: 1.73,
@@ -528,6 +553,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-026',
+    displayNumber: 'F026',
     name: '1068 FLVD LBN 180 ML',
     category: 'fresh',
     price: 1.55,
@@ -549,6 +575,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-027',
+    displayNumber: 'F027',
     name: '5771 FETTA 400 GM',
     category: 'fresh',
     price: 14.4,
@@ -570,6 +597,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-028',
+    displayNumber: 'F028',
     name: '7977 ICE TEA 240 ML',
     category: 'fresh',
     price: 1.63,
@@ -591,6 +619,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-029',
+    displayNumber: 'F029',
     name: '4242 LACTO FREE',
     category: 'fresh',
     price: 7.31,
@@ -612,6 +641,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-030',
+    displayNumber: 'F030',
     name: '4304 BUTTER GHEE 400 GM',
     category: 'fresh',
     price: 36.2,
@@ -633,6 +663,7 @@ export const freshProducts: Product[] = [
   },
    {
     id: 'PRD-FRS-031',
+    displayNumber: 'F031',
     name: '4303 CONDNS MILK 397 GM',
     category: 'fresh',
     price: 14.1,
@@ -654,6 +685,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-032',
+    displayNumber: 'F032',
     name: '5027 JAR CHEESE BLUE 200 GM',
     category: 'fresh',
     price: 18,
@@ -675,6 +707,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-033',
+    displayNumber: 'F033',
     name: '5492 FETTA 200 GM',
     category: 'fresh',
     price: 7.6,
@@ -696,6 +729,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-034',
+    displayNumber: 'F034',
     name: '50044 TRIANGLE 120 GM',
     category: 'fresh',
     price: 11,
@@ -717,6 +751,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-035',
+    displayNumber: 'F035',
     name: '5948 SLICE BURGER',
     category: 'fresh',
     price: 21,
@@ -738,6 +773,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-036',
+    displayNumber: 'F036',
     name: '50007 MOZZARILLA 180 GM',
     category: 'fresh',
     price: 13.22,
@@ -759,6 +795,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-037',
+    displayNumber: 'F037',
     name: '4317 COOKING CREAM 500 ML',
     category: 'fresh',
     price: 21,
@@ -780,6 +817,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-038',
+    displayNumber: 'F038',
     name: '5817 SANDICH SLICE 200 GM',
     category: 'fresh',
     price: 21,
@@ -801,6 +839,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-039',
+    displayNumber: 'F039',
     name: '4364 COOKING CREAM 1 LTR',
     category: 'fresh',
     price: 39.22,
@@ -822,6 +861,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-040',
+    displayNumber: 'F040',
     name: '5015 TEA MILK 180 GM',
     category: 'fresh',
     price: 10.25,
@@ -843,6 +883,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-041',
+    displayNumber: 'F041',
     name: '4414 PLFLRA HNY 250 GM',
     category: 'fresh',
     price: 16.38,
@@ -864,6 +905,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-042',
+    displayNumber: 'F042',
     name: '5005 HALLOUMI 200GM',
     category: 'fresh',
     price: 13.65,
@@ -885,6 +927,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-043',
+    displayNumber: 'F043',
     name: '50054 LONG LIFE CREAM',
     category: 'fresh',
     price: 15.26,
@@ -906,6 +949,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-044',
+    displayNumber: 'F044',
     name: '4245 UHT MILK 200 ML',
     category: 'fresh',
     price: 1.72,
@@ -927,6 +971,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-045',
+    displayNumber: 'F045',
     name: '5671 CREAM CHEESE PORTION',
     category: 'fresh',
     price: 14.1,
@@ -948,6 +993,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-046',
+    displayNumber: 'F046',
     name: '5998 BUTTER UNSALT',
     category: 'fresh',
     price: 17.5,
@@ -969,6 +1015,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-047',
+    displayNumber: 'F047',
     name: '5901 SLICE CHEDDAR 200 GM',
     category: 'fresh',
     price: 22.2,
@@ -990,6 +1037,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-048',
+    displayNumber: 'F048',
     name: '4402 MILK POWDER 2.25 KG',
     category: 'fresh',
     price: 48.3,
@@ -1011,6 +1059,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-049',
+    displayNumber: 'F049',
     name: '5642 CREAM CHEESE PORTION',
     category: 'fresh',
     price: 31.5,
@@ -1032,6 +1081,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-050',
+    displayNumber: 'F050',
     name: '5317 SLICE SANDWICH 200 GM',
     category: 'fresh',
     price: 7,
@@ -1053,6 +1103,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-051',
+    displayNumber: 'F051',
     name: '5319 SLICE LITE 200 GM',
     category: 'fresh',
     price: 8.23,
@@ -1074,6 +1125,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-052',
+    displayNumber: 'F052',
     name: '50006 MOZZARILLA 900 GM',
     category: 'fresh',
     price: 31,
@@ -1095,6 +1147,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-053',
+    displayNumber: 'F053',
     name: '4529 NATURAL BUTTER UNSALT',
     category: 'fresh',
     price: 20.8,
@@ -1116,6 +1169,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-054',
+    displayNumber: 'F054',
     name: '5646 BLUE JAR',
     category: 'fresh',
     price: 51.8,
@@ -1137,6 +1191,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-055',
+    displayNumber: 'F055',
     name: '4528 BUTTER UNSALT 200 GM',
     category: 'fresh',
     price: 9.6,
@@ -1158,6 +1213,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-056',
+    displayNumber: 'F056',
     name: '5656 TIN CHEESE',
     category: 'fresh',
     price: 25.4,
@@ -1179,6 +1235,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-057',
+    displayNumber: 'F057',
     name: '4224 COOKING CREAM 250 ML',
     category: 'fresh',
     price: 8.5,
@@ -1200,6 +1257,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-058',
+    displayNumber: 'F058',
     name: '4222 WHIPPING CREAM 250 ML',
     category: 'fresh',
     price: 6.45,
@@ -1221,6 +1279,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-059',
+    displayNumber: 'F059',
     name: '5526 JAR CHEESE 120 GM',
     category: 'fresh',
     price: 5.7,
@@ -1242,6 +1301,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-060',
+    displayNumber: 'F060',
     name: '50002 CHEDDAR BLK',
     category: 'fresh',
     price: 9.3,
@@ -1263,6 +1323,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-061',
+    displayNumber: 'F061',
     name: '7975 JUICE MANGO 140 ML',
     category: 'fresh',
     price: 1.25,
@@ -1284,6 +1345,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-062',
+    displayNumber: 'F062',
     name: '3867 YGT 100 GM',
     category: 'fresh',
     price: 0.95,
@@ -1305,6 +1367,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-063',
+    displayNumber: 'F063',
     name: '5949 SLICE LITE 200 GM',
     category: 'fresh',
     price: 25.98,
@@ -1326,6 +1389,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-064',
+    displayNumber: 'F064',
     name: '50005 MOZZARILLA 450 GM',
     category: 'fresh',
     price: 23.58,
@@ -1347,6 +1411,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-065',
+    displayNumber: 'F065',
     name: '4318 WHIPPING CREAM 500 ML',
     category: 'fresh',
     price: 21,
@@ -1368,6 +1433,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-066',
+    displayNumber: 'F066',
     name: '50051 HALLOUMI 200 GM',
     category: 'fresh',
     price: 13.65,
@@ -1389,6 +1455,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-067',
+    displayNumber: 'F067',
     name: '5316 SLICE BURGER 200 GM',
     category: 'fresh',
     price: 7,
@@ -1410,6 +1477,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-068',
+    displayNumber: 'F068',
     name: '4426 UHT MILK NIJOOM 150 ML',
     category: 'fresh',
     price: 7.2,
@@ -1431,6 +1499,7 @@ export const freshProducts: Product[] = [
   },
   {
     id: 'PRD-FRS-069',
+    displayNumber: 'F069',
     name: '5917 FETA LITE',
     category: 'fresh',
     price: 5.78,

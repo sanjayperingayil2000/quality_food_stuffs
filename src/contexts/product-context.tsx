@@ -22,6 +22,7 @@ export interface PriceHistoryEntry {
 
 export interface Product {
   id: string;
+  displayNumber: string; // Editable display number (F01, B01, etc.)
   name: string;
   category: ProductCategory;
   price: number;
@@ -47,7 +48,7 @@ interface ProductContextType {
   isLoading: boolean;
   error: string | null;
   getProductById: (id: string) => Product | undefined;
-  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> & { displayNumber?: string }) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   refreshProducts: () => Promise<void>;
@@ -117,7 +118,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
     return products.find(prod => prod.id === id);
   }, [products]);
 
-  const addProduct = React.useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addProduct = React.useCallback(async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'> & { displayNumber?: string }) => {
     try {
       // Generate category-specific ID
       const categoryProducts = products.filter(p => p.category === productData.category);
@@ -135,9 +136,20 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       const prefix = productData.category === 'fresh' ? 'FRS' : 'BAK';
       const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
       
+      // Generate display number (if not provided)
+      let displayNumber = '';
+      if (productData.displayNumber) {
+        displayNumber = productData.displayNumber;
+      } else {
+        // Auto-generate display number
+        const categoryPrefix = productData.category === 'fresh' ? 'F' : 'B';
+        displayNumber = `${categoryPrefix}${String(nextNumber).padStart(3, '0')}`;
+      }
+      
       const newProduct: Product = {
         ...productData,
         id,
+        displayNumber,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

@@ -112,6 +112,7 @@ interface IPriceHistory {
 
 interface IProduct extends Document {
   id: string;
+  displayNumber?: string;
   name: string;
   category: 'bakery' | 'fresh';
   price: number;
@@ -741,6 +742,17 @@ async function seedDefaultData(): Promise<void> {
   }
 
   console.log('Default settings seeded');
+
+  // Helper function to generate displayNumber from ID
+  const generateDisplayNumber = (id: string): string => {
+    const match = id.match(/PRD-(FRS|BAK)-(\d+)/);
+    if (match) {
+      const prefix = match[1] === 'FRS' ? 'F' : 'B';
+      const number = match[2];
+      return `${prefix}${number}`;
+    }
+    return id;
+  };
 
   // Products
   const defaultProducts: Partial<IProduct>[] = [
@@ -2647,8 +2659,13 @@ async function seedDefaultData(): Promise<void> {
     { upsert: true }
   );
 
+  // Add displayNumber to all products if not present
   for (const pr of defaultProducts) {
-    await Product.updateOne({ id: pr.id }, { $set: pr }, { upsert: true });
+    const productWithDisplayNumber = {
+      ...pr,
+      displayNumber: pr.displayNumber || generateDisplayNumber(pr.id!),
+    };
+    await Product.updateOne({ id: pr.id }, { $set: productWithDisplayNumber }, { upsert: true });
   }
 
   console.log('Product data seeded');

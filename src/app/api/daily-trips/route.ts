@@ -15,6 +15,7 @@ const tripProductSchema = z.object({
   category: z.enum(['bakery', 'fresh']),
   quantity: z.number().min(0),
   unitPrice: z.number().min(0),
+  displayNumber: z.string().optional(),
 });
 
 const transferredProductSchema = tripProductSchema.extend({

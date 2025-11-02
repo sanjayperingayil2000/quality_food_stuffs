@@ -20,6 +20,7 @@ const productUpdateSchema = z.object({
   isActive: z.boolean().optional(),
   expiryDays: z.number().min(0).optional(),
   supplier: z.string().optional(),
+  displayNumber: z.string().min(1).optional(),
 }).partial();
 
 export async function OPTIONS() {
@@ -91,6 +92,39 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updateData,
       { new: true, runValidators: true }
     );
+    
+    // Handle display number reordering if displayNumber was changed
+    if (parsed.data.displayNumber && parsed.data.displayNumber !== product.displayNumber && updatedProduct) {
+      const newDisplayNumber = parsed.data.displayNumber;
+      
+      // Get all products in the same category
+      const categoryProducts = await Product.find({ 
+        category: product.category,
+        _id: { $ne: updatedProduct._id }
+      }).sort({ displayNumber: 1 });
+      
+      // Find the insertion point for the new display number
+      const targetIndex = categoryProducts.findIndex(p => p.displayNumber > newDisplayNumber);
+      
+      // Update display numbers - shift products that come after the new display number
+      if (targetIndex !== -1) {
+        const productsToReassign = categoryProducts.slice(targetIndex);
+        
+        // Shift display numbers
+        for (const p of productsToReassign) {
+          const match = p.displayNumber.match(/^(F|B)(\d+)$/);
+          if (match) {
+            const currentNumber = Number.parseInt(match[2], 10);
+            const prefix = match[1];
+            const newNum = (currentNumber + 1).toString().padStart(3, '0');
+            await Product.findOneAndUpdate(
+              { _id: p._id },
+              { displayNumber: `${prefix}${newNum}`, updatedBy: user?.sub }
+            );
+          }
+        }
+      }
+    }
     
     // Log to history
     await History.create({

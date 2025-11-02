@@ -218,6 +218,23 @@ export default function Page(): React.JSX.Element {
     return `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
   };
 
+  // Helper function to generate display number based on category
+  const generateDisplayNumber = (category: 'bakery' | 'fresh'): string => {
+    const categoryPrefix = category === 'fresh' ? 'F' : 'B';
+    const categoryProducts = products.filter(p => p.category === category);
+    const lastId = categoryProducts.length > 0 ? categoryProducts.at(-1)?.id : null;
+    
+    let nextNumber = 1;
+    if (lastId) {
+      const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+      if (match) {
+        nextNumber = Number.parseInt(match[2], 10) + 1;
+      }
+    }
+    
+    return `${categoryPrefix}${String(nextNumber).padStart(3, '0')}`;
+  };
+
   React.useEffect(() => {
     const query = searchQuery.trim().toLowerCase();
     let filtered = products as ProductWithHistory[];
@@ -355,8 +372,10 @@ export default function Page(): React.JSX.Element {
         showSuccess('Product updated successfully!');
       } else {
         const newProductId = generateProductId(data.category);
+        const newDisplayNumber = generateDisplayNumber(data.category);
         const newProduct: Product = {
           id: newProductId,
+          displayNumber: newDisplayNumber,
           name: data.name,
           price: data.price,
           category: data.category,

@@ -20,6 +20,7 @@ const productCreateSchema = z.object({
   isActive: z.boolean().default(true),
   expiryDays: z.number().min(0).optional(),
   supplier: z.string().optional(),
+  displayNumber: z.string().min(1).optional(), // Optional, will be auto-generated if not provided
 });
 
 // Schema for updates (used in [id]/route.ts)
@@ -81,9 +82,17 @@ export async function POST(req: NextRequest) {
     const prefix = parsed.data.category === 'fresh' ? 'FRS' : 'BAK';
     const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
     
+    // Auto-generate displayNumber if not provided
+    let displayNumber = parsed.data.displayNumber;
+    if (!displayNumber) {
+      const categoryPrefix = parsed.data.category === 'fresh' ? 'F' : 'B';
+      displayNumber = `${categoryPrefix}${String(nextNumber).padStart(3, '0')}`;
+    }
+    
     const productData = {
       ...parsed.data,
       id,
+      displayNumber,
       createdBy: user?.sub,
       updatedBy: user?.sub,
       priceHistory: [{
