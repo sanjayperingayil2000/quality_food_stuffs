@@ -116,7 +116,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           if (match) {
             const currentNumber = Number.parseInt(match[2], 10);
             const prefix = match[1];
-            const newNum = (currentNumber + 1).toString().padStart(3, '0');
+            const newNum = (currentNumber + 1).toString().padStart(2, '0');
             await Product.findOneAndUpdate(
               { _id: p._id },
               { displayNumber: `${prefix}${newNum}`, updatedBy: user?.sub }

@@ -127,13 +127,13 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       let nextNumber = 1;
       if (lastId) {
         // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
-        const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+        const match = lastId.match(/PRD-(FRS|BKR)-(\d+)/);
         if (match) {
           nextNumber = Number.parseInt(match[2], 10) + 1;
         }
       }
       
-      const prefix = productData.category === 'fresh' ? 'FRS' : 'BAK';
+      const prefix = productData.category === 'fresh' ? 'FRS' : 'BKR';
       const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
       
       // Generate display number (if not provided)
@@ -143,7 +143,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
       } else {
         // Auto-generate display number
         const categoryPrefix = productData.category === 'fresh' ? 'F' : 'B';
-        displayNumber = `${categoryPrefix}${String(nextNumber).padStart(3, '0')}`;
+        displayNumber = `${categoryPrefix}${String(nextNumber).padStart(2, '0')}`;
       }
       
       const newProduct: Product = {

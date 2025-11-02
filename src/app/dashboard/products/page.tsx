@@ -213,13 +213,13 @@ export default function Page(): React.JSX.Element {
     let nextNumber = 1;
     if (lastId) {
       // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
-      const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+      const match = lastId.match(/PRD-(FRS|BKR)-(\d+)/);
       if (match) {
         nextNumber = Number.parseInt(match[2], 10) + 1;
       }
     }
     
-    const prefix = category === 'fresh' ? 'FRS' : 'BAK';
+    const prefix = category === 'fresh' ? 'FRS' : 'BKR';
     return `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
   };
 
@@ -231,13 +231,13 @@ export default function Page(): React.JSX.Element {
     
     let nextNumber = 1;
     if (lastId) {
-      const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+      const match = lastId.match(/PRD-(FRS|BKR)-(\d+)/);
       if (match) {
         nextNumber = Number.parseInt(match[2], 10) + 1;
       }
     }
     
-    return `${categoryPrefix}${String(nextNumber).padStart(3, '0')}`;
+    return `${categoryPrefix}${String(nextNumber).padStart(2, '0')}`;
   };
 
   React.useEffect(() => {

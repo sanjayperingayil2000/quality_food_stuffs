@@ -73,20 +73,20 @@ export async function POST(req: NextRequest) {
     if (categoryProducts.length > 0) {
       // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
       const lastId = categoryProducts[0].id;
-      const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+      const match = lastId.match(/PRD-(FRS|BKR)-(\d+)/);
       if (match) {
         nextNumber = Number.parseInt(match[2], 10) + 1;
       }
     }
     
-    const prefix = parsed.data.category === 'fresh' ? 'FRS' : 'BAK';
+    const prefix = parsed.data.category === 'fresh' ? 'FRS' : 'BKR';
     const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
     
     // Auto-generate displayNumber if not provided
     let displayNumber = parsed.data.displayNumber;
     if (!displayNumber) {
       const categoryPrefix = parsed.data.category === 'fresh' ? 'F' : 'B';
-      displayNumber = `${categoryPrefix}${String(nextNumber).padStart(3, '0')}`;
+      displayNumber = `${categoryPrefix}${String(nextNumber).padStart(2, '0')}`;
     }
     
     const productData = {
