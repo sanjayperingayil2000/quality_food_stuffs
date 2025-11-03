@@ -6,6 +6,7 @@ export interface TripProduct {
   category: 'bakery' | 'fresh';
   quantity: number;
   unitPrice: number;
+  displayNumber?: string; // Display number for the product (F001, B001, etc.)
 }
 
 export interface TransferredProduct extends TripProduct {
@@ -67,7 +68,8 @@ const DailyTripSchema = new Schema<IDailyTripDocument>(
       productName: { type: String, required: true },
       category: { type: String, enum: ['bakery', 'fresh'], required: true },
       quantity: { type: Number, required: true, min: 0 },
-      unitPrice: { type: Number, required: true, min: 0 }
+      unitPrice: { type: Number, required: true, min: 0 },
+      displayNumber: { type: String }
     }],
     transfer: {
       isProductTransferred: { type: Boolean, default: false },
@@ -77,6 +79,7 @@ const DailyTripSchema = new Schema<IDailyTripDocument>(
         category: { type: String, enum: ['bakery', 'fresh'], required: true },
         quantity: { type: Number, required: true, min: 0 },
         unitPrice: { type: Number, required: true, min: 0 },
+        displayNumber: { type: String },
         receivingDriverId: { type: String, required: true },
         receivingDriverName: { type: String, required: true },
         transferredFromDriverId: { type: String, required: true },
@@ -88,7 +91,8 @@ const DailyTripSchema = new Schema<IDailyTripDocument>(
       productName: { type: String, required: true },
       category: { type: String, enum: ['bakery', 'fresh'], required: true },
       quantity: { type: Number, required: true, min: 0 },
-      unitPrice: { type: Number, required: true, min: 0 }
+      unitPrice: { type: Number, required: true, min: 0 },
+      displayNumber: { type: String }
     }],
     // Financial fields
     previousBalance: { type: Number, required: true, min: 0 },
