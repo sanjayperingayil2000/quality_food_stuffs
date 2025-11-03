@@ -2,7 +2,8 @@ import { Product } from "../product-context";
 
  export const bakeryProducts: Product[] = [
   {
-    id: 'PRD-BAK-001',
+    id: 'PRD-BKR-001',
+    displayNumber: 'B01',
     name: '8078 WHITE BREAD',
     category: 'bakery',
     price: 4.35,
@@ -23,7 +24,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-002',
+    id: 'PRD-BKR-002',
+    displayNumber: 'B02',
     name: '8013 BROWN BREAD',
     category: 'bakery',
     price: 4.5,
@@ -44,7 +46,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-003',
+    id: 'PRD-BKR-003',
+    displayNumber: 'B03',
     name: '8037 MILK BREAD',
     category: 'bakery',
     price: 6.3,
@@ -65,7 +68,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-004',
+    id: 'PRD-BKR-004',
+    displayNumber: 'B04',
     name: '8071 BURGEN BUN',
     category: 'bakery',
     price: 3.43,
@@ -86,7 +90,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-005',
+    id: 'PRD-BKR-005',
+    displayNumber: 'B05',
     name: '8094 BREAD MILK SMALL',
     category: 'bakery',
     price: 2.99,
@@ -107,7 +112,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-006',
+    id: 'PRD-BKR-006',
+    displayNumber: 'B06',
     name: '8092 BREAD BROWN SMALL',
     category: 'bakery',
     price: 2.57,
@@ -128,7 +134,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-007',
+    id: 'PRD-BKR-007',
+    displayNumber: 'B07',
     name: '8627 CHEESE PUFF 70 GM',
     category: 'bakery',
     price: 1.73,
@@ -149,7 +156,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-008',
+    id: 'PRD-BKR-008',
+    displayNumber: 'B08',
     name: '8867 7 DAYS 5+1',
     category: 'bakery',
     price: 8.65,
@@ -170,7 +178,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-009',
+    id: 'PRD-BKR-009',
+    displayNumber: 'B09',
     name: '8707 SWISS ROLL 330 GM',
     category: 'bakery',
     price: 7.8,
@@ -191,7 +200,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-010',
+    id: 'PRD-BKR-010',
+    displayNumber: 'B10',
     name: '8709 HAZZLENUT',
     category: 'bakery',
     price: 2.7,
@@ -212,7 +222,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-011',
+    id: 'PRD-BKR-011',
+    displayNumber: 'B11',
     name: '8686 BUTTER JUMBO 85 GM',
     category: 'bakery',
     price: 2.6,
@@ -233,7 +244,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-012',
+    id: 'PRD-BKR-012',
+    displayNumber: 'B12',
     name: 'JUMBO BISCUT CREAM BUTTER',
     category: 'bakery',
     price: 2.6,
@@ -254,7 +266,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-013',
+    id: 'PRD-BKR-013',
+    displayNumber: 'B13',
     name: 'JUMBO DBL STR & VAN',
     category: 'bakery',
     price: 2.6,
@@ -275,7 +288,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-014',
+    id: 'PRD-BKR-014',
+    displayNumber: 'B14',
     name: '8420 CUP CAKE DOUBLE',
     category: 'bakery',
     price: 1.73,
@@ -296,7 +310,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-015',
+    id: 'PRD-BKR-015',
+    displayNumber: 'B15',
     name: '8793 PUFF MIX',
     category: 'bakery',
     price: 1.73,
@@ -317,7 +332,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-016',
+    id: 'PRD-BKR-016',
+    displayNumber: 'B16',
     name: 'SANDWICH ROLL',
     category: 'bakery',
     price: 2.7,
@@ -338,7 +354,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-017',
+    id: 'PRD-BKR-017',
+    displayNumber: 'B17',
     name: '8409 CUP CAKE SINGLE',
     category: 'bakery',
     price: 8.23,
@@ -359,7 +376,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-018',
+    id: 'PRD-BKR-018',
+    displayNumber: 'B18',
     name: '8655 PIZZA PUFF',
     category: 'bakery',
     price: 2.6,
@@ -380,7 +398,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-019',
+    id: 'PRD-BKR-019',
+    displayNumber: 'B19',
     name: '8656 PUFF TRIPPLE CHEESE',
     category: 'bakery',
     price: 2.6,
@@ -401,7 +420,8 @@ import { Product } from "../product-context";
     ]
   },
   {
-    id: 'PRD-BAK-020',
+    id: 'PRD-BKR-020',
+    displayNumber: 'B20',
     name: '8543 TORTILA WRAP PLAIN',
     category: 'bakery',
     price: 8.45,

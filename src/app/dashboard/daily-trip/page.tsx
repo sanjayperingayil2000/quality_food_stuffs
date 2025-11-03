@@ -179,9 +179,13 @@ export default function Page(): React.JSX.Element {
     receivingDriverId: '',
   });
   
-  // Product search state
+  // Product search state for transfer section
   const [productSearch, setProductSearch] = React.useState('');
   const [filteredProducts, setFilteredProducts] = React.useState(products);
+  
+  // Dual search state for product selection
+  const [searchByNumber, setSearchByNumber] = React.useState('');
+  const [searchByName, setSearchByName] = React.useState('');
 
   // Initialize state after component mounts to avoid hydration issues
   React.useEffect(() => {
@@ -221,6 +225,10 @@ export default function Page(): React.JSX.Element {
   const watchedIsProductTransferred = watch('isProductTransferred');
   const watchedTransferredProducts = watch('transferredProducts');
   const watchedDate = watch('date');
+  const watchedPreviousBalance = watch('previousBalance');
+  const watchedCollectionAmount = watch('collectionAmount');
+  const watchedExpiry = watch('expiry');
+  const watchedDiscount = watch('discount');
 
   // Debug logging for drivers
   const currentDriverId = watch('driverId');
@@ -259,6 +267,28 @@ export default function Page(): React.JSX.Element {
     }
   }, [productSearch, products]);
 
+  // Auto-recalculate balance when financial fields change
+  React.useEffect(() => {
+    if (watchedProducts && watchedProducts.length > 0) {
+      const acceptedProducts = editingTrip?.acceptedProducts || acceptedProductsForForm || [];
+      const totals = calculateTotals(
+        watchedProducts,
+        acceptedProducts,
+        watchedTransferredProducts || []
+      );
+      
+      const purchaseAmount = totals.overall.grandTotal;
+      const expiryAfterTax = Math.floor(watchedExpiry * 1.05 * 0.87);
+      const amountToBe = purchaseAmount - expiryAfterTax;
+      const salesDifference = watchedCollectionAmount - amountToBe;
+      const profit = (totals.fresh.netTotal - expiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - watchedDiscount;
+      const calculatedBalance = Math.round(watchedPreviousBalance + profit - salesDifference);
+      
+      setValue('balance', calculatedBalance);
+      setValue('purchaseAmount', purchaseAmount);
+    }
+  }, [watchedProducts, watchedPreviousBalance, watchedCollectionAmount, watchedExpiry, watchedDiscount, watchedTransferredProducts, acceptedProductsForForm, editingTrip, setValue]);
+
   // Get available drivers (excluding those who already have trips for the selected date)
   const getAvailableDrivers = React.useCallback(() => {
     if (!watchedDate) return [];
@@ -280,6 +310,8 @@ export default function Page(): React.JSX.Element {
     setEditingTrip(null);
     setSelectedDriverId('');
     setProductSearch('');
+    setSearchByNumber('');
+    setSearchByName('');
     reset({
       driverId: '',
       date: dayjs().toDate(),
@@ -304,6 +336,8 @@ export default function Page(): React.JSX.Element {
     setEditingTrip(trip);
     setSelectedDriverId(trip.driverId);
     setProductSearch('');
+    setSearchByNumber('');
+    setSearchByName('');
     
     const tripDate = dayjs(trip.date).toDate();
     
@@ -417,6 +451,7 @@ export default function Page(): React.JSX.Element {
           category: product.category,
           quantity,
           unitPrice: product.price,
+          displayNumber: product.displayNumber,
         };
 
         if (existingIndex == -1) {
@@ -448,6 +483,7 @@ export default function Page(): React.JSX.Element {
         category: product.category,
         quantity,
         unitPrice: product.price,
+        displayNumber: product.displayNumber,
         receivingDriverId,
         receivingDriverName: receivingDriver.name,
         transferredFromDriverId: currentDriver.id,
@@ -609,6 +645,66 @@ export default function Page(): React.JSX.Element {
           />
         </Stack>
 
+      {/* Total Products Summary Card */}
+      {filteredTrips.length > 0 && (() => {
+        // Calculate total quantities for all filtered trips
+        const productQuantities: Record<string, number> = {};
+        for (const trip of filteredTrips) {
+          for (const product of trip.products) {
+            productQuantities[product.productId] = (productQuantities[product.productId] || 0) + product.quantity;
+          }
+        }
+        
+        const freshProductsList = products.filter(p => p.category === 'fresh');
+        const bakeryProductsList = products.filter(p => p.category === 'bakery');
+        
+        return (
+          <Card sx={{ p: 2, mb: 2, bgcolor: 'grey.50', border: '3px solid red' }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Total Products Summary
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Box sx={{ p: 2, bgcolor: 'rgba(76, 175, 80, 0.08)', borderRadius: 1, maxHeight: '400px', overflow: 'auto' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
+                    Fresh Products
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {freshProductsList.map(product => {
+                      const quantity = productQuantities[product.id] || 0;
+                      if (quantity === 0) return null;
+                      return (
+                        <Typography key={product.id} variant="body2">
+                          {product.displayNumber || `F${String(product.id).split('-')[2]}`} - {product.name}: {quantity} qty
+                        </Typography>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Box sx={{ p: 2, bgcolor: 'rgba(25, 118, 210, 0.08)', borderRadius: 1, maxHeight: '400px', overflow: 'auto' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'primary.dark' }}>
+                    Bakery Products
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {bakeryProductsList.map(product => {
+                      const quantity = productQuantities[product.id] || 0;
+                      if (quantity === 0) return null;
+                      return (
+                        <Typography key={product.id} variant="body2">
+                          {product.displayNumber || `B${String(product.id).split('-')[2]}`} - {product.name}: {quantity} qty
+                        </Typography>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+              </Grid>
+            </Grid>
+          </Card>
+        );
+      })()}
+
       <Stack spacing={2}>
         {filteredTrips.length === 0 ? (
           <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 2 }}>
@@ -767,7 +863,7 @@ export default function Page(): React.JSX.Element {
                             {freshProducts[index] ? (
                               <Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                  {freshProducts[index].productId}
+                                  {freshProducts[index].displayNumber || freshProducts[index].productId}
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
                                   {freshProducts[index].productName}
@@ -782,7 +878,7 @@ export default function Page(): React.JSX.Element {
                             {bakeryProducts[index] ? (
                               <Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                  {bakeryProducts[index].productId}
+                                  {bakeryProducts[index].displayNumber || bakeryProducts[index].productId}
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
                                   {bakeryProducts[index].productName}
@@ -1423,6 +1519,30 @@ export default function Page(): React.JSX.Element {
               {/* Product Selection */}
               <Typography variant="h6">Select Products</Typography>
               
+              {/* Dual Search Bars */}
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Search by Product Number"
+                    placeholder="e.g., F01, B05"
+                    value={searchByNumber}
+                    onChange={(e) => setSearchByNumber(e.target.value)}
+                    size="small"
+                    fullWidth
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Search by Product Name"
+                    placeholder="Type product name..."
+                    value={searchByName}
+                    onChange={(e) => setSearchByName(e.target.value)}
+                    size="small"
+                    fullWidth
+                  />
+                </Grid>
+              </Grid>
+              
               <Grid container spacing={3}>
                 <Grid
                   size={{
@@ -1435,45 +1555,73 @@ export default function Page(): React.JSX.Element {
                   </Typography>
                   <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
                     <Stack spacing={2}>
-                      {freshProducts.map((product) => (
-                        <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              {product.id}
-                            </Typography>
-                            <Typography variant="body1">
-                              {product.name}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              AED {product.price} per unit
-                            </Typography>
-                          </Box>
-                          <TextField
-                            type="number"
-                            label="Quantity"
-                            size="small"
-                            sx={{ 
-                              width: 120,
-                              '& .MuiInputBase-input': {
-                                cursor: 'text',
-                                pointerEvents: 'auto',
-                              }
-                            }}
-                            inputProps={{ 
-                              min: 0,
-                              style: { textAlign: 'center', fontWeight: 'bold' }
-                            }}
-                            value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              handleProductQuantityChange(product.id, value === '' ? 0 : Number.parseInt(value) || 0);
-                            }}
-                            onFocus={(e) => {
-                              e.target.select();
-                            }}
-                          />
-                        </Box>
-                      ))}
+                      {freshProducts
+                        .filter(product => {
+                          if (!searchByNumber && !searchByName) return true;
+                          const shortId = product.displayNumber || product.id;
+                          const matchesNumber = searchByNumber 
+                            ? shortId.toLowerCase().includes(searchByNumber.toLowerCase())
+                            : true;
+                          const matchesName = searchByName
+                            ? product.name.toLowerCase().includes(searchByName.toLowerCase())
+                            : true;
+                          return matchesNumber && matchesName;
+                        })
+                        .map((product) => {
+                          const shortId = product.displayNumber || product.id;
+                          const isHighlighted = searchByNumber && shortId.toLowerCase().includes(searchByNumber.toLowerCase())
+                            || searchByName && product.name.toLowerCase().includes(searchByName.toLowerCase());
+                          return (
+                            <Box 
+                              key={product.id} 
+                              sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 2,
+                                bgcolor: isHighlighted ? 'grey.100' : 'transparent',
+                                p: isHighlighted ? 1 : 0,
+                                borderRadius: isHighlighted ? 1 : 0,
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" color="text.secondary" fontWeight={isHighlighted ? 600 : 'normal'}>
+                                  {shortId}
+                                </Typography>
+                                <Typography variant="body1" fontWeight={isHighlighted ? 600 : 'normal'}>
+                                  {product.name}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  AED {product.price} per unit
+                                </Typography>
+                              </Box>
+                              <TextField
+                                type="number"
+                                label="Quantity"
+                                size="small"
+                                sx={{ 
+                                  width: 120,
+                                  '& .MuiInputBase-input': {
+                                    cursor: 'text',
+                                    pointerEvents: 'auto',
+                                  }
+                                }}
+                                inputProps={{ 
+                                  min: 0,
+                                  style: { textAlign: 'center', fontWeight: 'bold' }
+                                }}
+                                value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  handleProductQuantityChange(product.id, value === '' ? 0 : Number.parseInt(value) || 0);
+                                }}
+                                onFocus={(e) => {
+                                  e.target.select();
+                                }}
+                              />
+                            </Box>
+                          );
+                        })}
                     </Stack>
                   </Box>
                 </Grid>
@@ -1489,49 +1637,78 @@ export default function Page(): React.JSX.Element {
                   </Typography>
                   <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
                     <Stack spacing={2}>
-                      {bakeryProducts.map((product) => (
-                        <Box key={product.id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              {product.id}
-                            </Typography>
-                            <Typography variant="body1">
-                              {product.name}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              AED {product.price} per unit
-                            </Typography>
-                          </Box>
-                          <TextField
-                            type="number"
-                            label="Quantity"
-                            size="small"
-                            sx={{ 
-                              width: 120,
-                              '& .MuiInputBase-input': {
-                                cursor: 'text',
-                                pointerEvents: 'auto',
-                              }
-                            }}
-                            inputProps={{ 
-                              min: 0,
-                              style: { textAlign: 'center', fontWeight: 'bold' }
-                            }}
-                            value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              handleProductQuantityChange(product.id, value === '' ? 0 : Number.parseInt(value) || 0);
-                            }}
-                            onFocus={(e) => {
-                              e.target.select();
-                            }}
-                          />
-                        </Box>
-                      ))}
+                      {bakeryProducts
+                        .filter(product => {
+                          if (!searchByNumber && !searchByName) return true;
+                          const shortId = product.displayNumber || product.id;
+                          const matchesNumber = searchByNumber 
+                            ? shortId.toLowerCase().includes(searchByNumber.toLowerCase())
+                            : true;
+                          const matchesName = searchByName
+                            ? product.name.toLowerCase().includes(searchByName.toLowerCase())
+                            : true;
+                          return matchesNumber && matchesName;
+                        })
+                        .map((product) => {
+                          const shortId = product.displayNumber || product.id;
+                          const isHighlighted = searchByNumber && shortId.toLowerCase().includes(searchByNumber.toLowerCase())
+                            || searchByName && product.name.toLowerCase().includes(searchByName.toLowerCase());
+                          return (
+                            <Box 
+                              key={product.id} 
+                              sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 2,
+                                bgcolor: isHighlighted ? 'grey.100' : 'transparent',
+                                p: isHighlighted ? 1 : 0,
+                                borderRadius: isHighlighted ? 1 : 0,
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" color="text.secondary" fontWeight={isHighlighted ? 600 : 'normal'}>
+                                  {shortId}
+                                </Typography>
+                                <Typography variant="body1" fontWeight={isHighlighted ? 600 : 'normal'}>
+                                  {product.name}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  AED {product.price} per unit
+                                </Typography>
+                              </Box>
+                              <TextField
+                                type="number"
+                                label="Quantity"
+                                size="small"
+                                sx={{ 
+                                  width: 120,
+                                  '& .MuiInputBase-input': {
+                                    cursor: 'text',
+                                    pointerEvents: 'auto',
+                                  }
+                                }}
+                                inputProps={{ 
+                                  min: 0,
+                                  style: { textAlign: 'center', fontWeight: 'bold' }
+                                }}
+                                value={watchedProducts?.find(p => p.productId === product.id)?.quantity || 0}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  handleProductQuantityChange(product.id, value === '' ? 0 : Number.parseInt(value) || 0);
+                                }}
+                                onFocus={(e) => {
+                                  e.target.select();
+                                }}
+                              />
+                            </Box>
+                          );
+                        })}
                     </Stack>
                   </Box>
                 </Grid>
               </Grid>
+
 
               {/* Accepted Products View (Shown when adding trip for receiving driver) */}
               {acceptedProductsForForm.length > 0 && !editingTrip && (
@@ -1619,8 +1796,9 @@ export default function Page(): React.JSX.Element {
                         type="number"
                         fullWidth
                         error={Boolean(errors.previousBalance)}
-                        helperText={errors.previousBalance?.message || 'Auto-filled from employee balance'}
-                        inputProps={{ min: 0, step: 0.01, readOnly: true }}
+                        helperText={errors.previousBalance?.message || 'Auto-filled from employee balance (editable)'}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
                         value={field.value || ''}
                       />
                     )}
