@@ -22,6 +22,7 @@ export interface TripProduct {
   category: Category;
   quantity: number;
   unitPrice: number;
+  displayNumber?: string; // Display number for the product (F001, B001, etc.)
   transferredFromDriverId?: string;
   transferredFromDriverName?: string;
 }
@@ -209,6 +210,7 @@ const generateDriverProducts = (driverIndex: number, _dayOffset: number): TripPr
       category: 'fresh',
       quantity: Math.floor(Math.random() * 10) + 1, // Random quantity between 1-10
       unitPrice: product.price,
+      displayNumber: product.displayNumber,
     });
   }
   
@@ -222,6 +224,7 @@ const generateDriverProducts = (driverIndex: number, _dayOffset: number): TripPr
       category: 'bakery',
       quantity: Math.floor(Math.random() * 8) + 1, // Random quantity between 1-8
       unitPrice: product.price,
+      displayNumber: product.displayNumber,
     });
   }
   

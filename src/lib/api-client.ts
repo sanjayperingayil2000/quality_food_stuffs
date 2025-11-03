@@ -44,6 +44,7 @@ interface Employee {
 
 interface Product {
   id: string;
+  displayNumber: string;
   name: string;
   category: 'bakery' | 'fresh';
   price: number;
@@ -79,6 +80,7 @@ interface DailyTrip {
     category: 'bakery' | 'fresh';
     quantity: number;
     unitPrice: number;
+    displayNumber?: string;
   }>;
   transfer: {
     isProductTransferred: boolean;
@@ -88,6 +90,7 @@ interface DailyTrip {
       category: 'bakery' | 'fresh';
       quantity: number;
       unitPrice: number;
+      displayNumber?: string;
       receivingDriverId: string;
       receivingDriverName: string;
       transferredFromDriverId: string;
@@ -100,6 +103,7 @@ interface DailyTrip {
     category: 'bakery' | 'fresh';
     quantity: number;
     unitPrice: number;
+    displayNumber?: string;
   }>;
   collectionAmount: number;
   purchaseAmount: number;

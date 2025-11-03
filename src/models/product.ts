@@ -12,6 +12,7 @@ export interface PriceHistoryEntry {
 
 export interface IProduct {
   id: string;
+  displayNumber: string; // Editable display number (F01, B01, etc.)
   name: string;
   category: ProductCategory;
   price: number;
@@ -37,6 +38,7 @@ export interface IProductDocument extends mongoose.Document, Omit<IProduct, 'id'
 const ProductSchema = new Schema<IProductDocument>(
   {
     id: { type: String, required: true, unique: true, index: true },
+    displayNumber: { type: String, required: true, trim: true, index: true },
     name: { type: String, required: true, trim: true },
     category: { 
       type: String, 
@@ -71,6 +73,7 @@ ProductSchema.index({ category: 1, isActive: 1 });
 ProductSchema.index({ supplier: 1 });
 ProductSchema.index({ createdBy: 1 });
 ProductSchema.index({ updatedBy: 1 });
+// displayNumber is already indexed in the field definition above
 
 export const Product: Model<IProductDocument> =
   mongoose.models.Product || mongoose.model<IProductDocument>('Product', ProductSchema);

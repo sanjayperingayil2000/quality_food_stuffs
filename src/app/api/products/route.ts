@@ -20,6 +20,7 @@ const productCreateSchema = z.object({
   isActive: z.boolean().default(true),
   expiryDays: z.number().min(0).optional(),
   supplier: z.string().optional(),
+  displayNumber: z.string().min(1).optional(), // Optional, will be auto-generated if not provided
 });
 
 // Schema for updates (used in [id]/route.ts)
@@ -72,18 +73,26 @@ export async function POST(req: NextRequest) {
     if (categoryProducts.length > 0) {
       // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
       const lastId = categoryProducts[0].id;
-      const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+      const match = lastId.match(/PRD-(FRS|BKR)-(\d+)/);
       if (match) {
         nextNumber = Number.parseInt(match[2], 10) + 1;
       }
     }
     
-    const prefix = parsed.data.category === 'fresh' ? 'FRS' : 'BAK';
+    const prefix = parsed.data.category === 'fresh' ? 'FRS' : 'BKR';
     const id = `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
+    
+    // Auto-generate displayNumber if not provided
+    let displayNumber = parsed.data.displayNumber;
+    if (!displayNumber) {
+      const categoryPrefix = parsed.data.category === 'fresh' ? 'F' : 'B';
+      displayNumber = `${categoryPrefix}${String(nextNumber).padStart(2, '0')}`;
+    }
     
     const productData = {
       ...parsed.data,
       id,
+      displayNumber,
       createdBy: user?.sub,
       updatedBy: user?.sub,
       priceHistory: [{

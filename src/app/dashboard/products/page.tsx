@@ -27,7 +27,7 @@ import { PencilIcon } from '@phosphor-icons/react/dist/ssr/Pencil';
 import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { TableIcon } from '@phosphor-icons/react/dist/ssr/Table';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
-import { ClockClockwiseIcon, CaretUpIcon, CaretDownIcon, ArrowClockwiseIcon } from '@phosphor-icons/react';
+import { ClockClockwiseIcon, CaretUpIcon, CaretDownIcon, ArrowClockwiseIcon, CheckIcon, XIcon } from '@phosphor-icons/react';
 import { Tooltip } from '@mui/material';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -171,6 +171,7 @@ const ProductTableSkeleton: React.FC = () => {
           <TableCell><Skeleton variant="text" /></TableCell>
           <TableCell><Skeleton variant="text" /></TableCell>
           <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
           <TableCell><Skeleton variant="circular" width={32} height={32} /></TableCell>
         </TableRow>
       ))}
@@ -198,6 +199,10 @@ export default function Page(): React.JSX.Element {
   // Loading states for actions
   const [isSaving, setIsSaving] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  
+  // State for inline editing displayNumber
+  const [editingDisplayNumber, setEditingDisplayNumber] = React.useState<string | null>(null);
+  const [displayNumberValue, setDisplayNumberValue] = React.useState('');
 
   // Helper function to generate product ID based on category
   const generateProductId = (category: 'bakery' | 'fresh'): string => {
@@ -208,14 +213,31 @@ export default function Page(): React.JSX.Element {
     let nextNumber = 1;
     if (lastId) {
       // Extract number from existing ID (e.g., PRD-FRS-001 -> 1)
-      const match = lastId.match(/PRD-(FRS|BAK)-(\d+)/);
+      const match = lastId.match(/PRD-(FRS|BKR)-(\d+)/);
       if (match) {
         nextNumber = Number.parseInt(match[2], 10) + 1;
       }
     }
     
-    const prefix = category === 'fresh' ? 'FRS' : 'BAK';
+    const prefix = category === 'fresh' ? 'FRS' : 'BKR';
     return `PRD-${prefix}-${String(nextNumber).padStart(3, '0')}`;
+  };
+
+  // Helper function to generate display number based on category
+  const generateDisplayNumber = (category: 'bakery' | 'fresh'): string => {
+    const categoryPrefix = category === 'fresh' ? 'F' : 'B';
+    const categoryProducts = products.filter(p => p.category === category);
+    const lastId = categoryProducts.length > 0 ? categoryProducts.at(-1)?.id : null;
+    
+    let nextNumber = 1;
+    if (lastId) {
+      const match = lastId.match(/PRD-(FRS|BKR)-(\d+)/);
+      if (match) {
+        nextNumber = Number.parseInt(match[2], 10) + 1;
+      }
+    }
+    
+    return `${categoryPrefix}${String(nextNumber).padStart(2, '0')}`;
   };
 
   React.useEffect(() => {
@@ -355,8 +377,10 @@ export default function Page(): React.JSX.Element {
         showSuccess('Product updated successfully!');
       } else {
         const newProductId = generateProductId(data.category);
+        const newDisplayNumber = generateDisplayNumber(data.category);
         const newProduct: Product = {
           id: newProductId,
+          displayNumber: newDisplayNumber,
           name: data.name,
           price: data.price,
           category: data.category,
@@ -420,6 +444,37 @@ export default function Page(): React.JSX.Element {
     setSortField(null);
     setSortDirection('asc');
   };
+  
+  // Handler for starting displayNumber edit
+  const handleStartEditDisplayNumber = (productId: string, currentValue: string) => {
+    setEditingDisplayNumber(productId);
+    setDisplayNumberValue(currentValue);
+  };
+  
+  // Handler for saving displayNumber edit
+  const handleSaveDisplayNumber = async (productId: string) => {
+    if (displayNumberValue.trim() === '') {
+      showError('Display number cannot be empty');
+      return;
+    }
+    
+    try {
+      await updateProduct(productId, { displayNumber: displayNumberValue.trim() });
+      showSuccess('Display number updated successfully!');
+      setEditingDisplayNumber(null);
+      setDisplayNumberValue('');
+    } catch {
+      showError('Failed to update display number. Please try again.');
+      setEditingDisplayNumber(null);
+      setDisplayNumberValue('');
+    }
+  };
+  
+  // Handler for canceling displayNumber edit
+  const handleCancelEditDisplayNumber = () => {
+    setEditingDisplayNumber(null);
+    setDisplayNumberValue('');
+  };
 
 
 
@@ -476,6 +531,7 @@ export default function Page(): React.JSX.Element {
               </Box>
             </TableCell>
             <TableCell align="center">Category</TableCell>
+            <TableCell align="center">Order</TableCell>
             <TableCell align="center" sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('id')}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                 Product ID
@@ -511,7 +567,7 @@ export default function Page(): React.JSX.Element {
             <ProductTableSkeleton />
           ) : filteredProducts.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+              <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                 <Typography variant="body2" color="text.secondary">
                   No products found
                 </Typography>
@@ -524,6 +580,41 @@ export default function Page(): React.JSX.Element {
                 <TableCell align="center">{`${product.price.toFixed(2)} AED`}</TableCell>
                 <TableCell align="center">
                   <Chip label={product.category === 'bakery' ? 'Bakery' : 'Fresh'} size="small" color={product.category === 'bakery' ? 'primary' : 'success'} />
+                </TableCell>
+                <TableCell align="center">
+                  {editingDisplayNumber === product.id ? (
+                    <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
+                      <TextField
+                        value={displayNumberValue}
+                        onChange={(e) => setDisplayNumberValue(e.target.value)}
+                        size="small"
+                        sx={{ width: 80 }}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveDisplayNumber(product.id);
+                          } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            handleCancelEditDisplayNumber();
+                          }
+                        }}
+                      />
+                      <IconButton size="small" onClick={() => handleSaveDisplayNumber(product.id)} color="primary">
+                        <CheckIcon />
+                      </IconButton>
+                      <IconButton size="small" onClick={handleCancelEditDisplayNumber} color="error">
+                        <XIcon />
+                      </IconButton>
+                    </Stack>
+                  ) : (
+                    <Typography
+                      sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                      onClick={() => handleStartEditDisplayNumber(product.id, product.displayNumber || '')}
+                    >
+                      {product.displayNumber || 'N/A'}
+                    </Typography>
+                  )}
                 </TableCell>
                 <TableCell align="center">{product.id}</TableCell>
                 <TableCell align="center">{dayjs(product.updatedAt).format('MMM D, YYYY h:mm A')}</TableCell>
