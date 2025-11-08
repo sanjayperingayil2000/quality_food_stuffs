@@ -74,6 +74,9 @@ const getChangedFields = (before: Snapshot, after: Snapshot): string[] => {
   const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
   
   for (const key of allKeys) {
+    if (key === 'updatedAt') {
+      continue;
+    }
     // Compare values, handling nested objects
     if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
       changedFields.push(key);

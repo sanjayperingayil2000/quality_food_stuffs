@@ -16,6 +16,7 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
@@ -33,6 +34,7 @@ import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
+import { CopySimple } from '@phosphor-icons/react/dist/ssr/CopySimple';
 import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
 
@@ -54,6 +56,7 @@ interface ApiUser {
   state?: string;
   city?: string;
   profilePhoto?: string | null;
+  mustChangePassword?: boolean;
 }
 
 const createUserSchema = (existingUsers: ApiUser[], editingUser: ApiUser | null) => zod.object({
@@ -68,23 +71,6 @@ const createUserSchema = (existingUsers: ApiUser[], editingUser: ApiUser | null)
   const confirmPassword = data.confirmPassword.trim();
   const isEditing = editingUser !== null;
   const wantsPasswordChange = password.length > 0 || confirmPassword.length > 0;
-
-  if (!isEditing) {
-    if (password.length === 0) {
-      ctx.addIssue({
-        code: zod.ZodIssueCode.custom,
-        path: ['password'],
-        message: 'Password is required',
-      });
-    }
-    if (confirmPassword.length === 0) {
-      ctx.addIssue({
-        code: zod.ZodIssueCode.custom,
-        path: ['confirmPassword'],
-        message: 'Confirm Password is required',
-      });
-    }
-  }
 
   if (wantsPasswordChange) {
     if (password.length < 6) {
@@ -132,6 +118,15 @@ type UserFormData = {
   isActive: boolean;
 };
 
+const defaultFormValues: UserFormData = {
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  role: 'manager',
+  isActive: true,
+};
+
 
 export function UserManagement(): React.JSX.Element {
   const { user: currentUser } = useUser();
@@ -144,6 +139,17 @@ export function UserManagement(): React.JSX.Element {
   const [userToDelete, setUserToDelete] = React.useState<ApiUser | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [generatedPassword, setGeneratedPassword] = React.useState<string | null>(null);
+  const isEditing = Boolean(editingUser);
+
+  const handleCopyGeneratedPassword = React.useCallback(async () => {
+    if (!generatedPassword) return;
+    try {
+      await navigator.clipboard.writeText(generatedPassword);
+    } catch {
+      setError('Unable to copy the password. Please copy it manually.');
+    }
+  }, [generatedPassword]);
 
   const {
     control,
@@ -152,14 +158,7 @@ export function UserManagement(): React.JSX.Element {
     formState: { errors },
   } = useForm<UserFormData>({
     resolver: zodResolver(createUserSchema(users, editingUser)),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: 'manager',
-      isActive: true,
-    },
+    defaultValues: defaultFormValues,
   });
 
   const fetchUsers = React.useCallback(async () => {
@@ -190,27 +189,23 @@ export function UserManagement(): React.JSX.Element {
   }, []);
 
   React.useEffect(() => {
-    // Only fetch when current user is loaded and is super_admin
-    if (currentUser?.roles?.includes('super_admin')) {
+    // Only fetch when current user is loaded, has access, and does not need to change password
+    if (currentUser?.roles?.includes('super_admin') && !currentUser.mustChangePassword) {
       fetchUsers();
     }
   }, [fetchUsers, currentUser]);
 
   const handleOpen = () => {
     setEditingUser(null);
-    reset({
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: 'manager',
-      isActive: true,
-    });
+    setError(null);
+    setGeneratedPassword(null);
+    reset(defaultFormValues);
     setOpen(true);
   };
 
   const handleEdit = (user: ApiUser) => {
     setEditingUser(user);
+    setGeneratedPassword(null);
     reset({
       name: user.name,
       email: user.email,
@@ -227,7 +222,8 @@ export function UserManagement(): React.JSX.Element {
     setEditingUser(null);
     setShowPassword(false);
     setShowConfirmPassword(false);
-    reset();
+    setGeneratedPassword(null);
+    reset(defaultFormValues);
   };
 
   const togglePasswordVisibility = () => {
@@ -258,6 +254,7 @@ export function UserManagement(): React.JSX.Element {
           roles: string[];
           isActive: boolean;
           password?: string;
+          mustChangePassword?: boolean;
         } = {
           name: data.name,
           email: data.email, // Allow email updates
@@ -268,6 +265,7 @@ export function UserManagement(): React.JSX.Element {
         // Only include password if it's provided
         if (trimmedPassword !== '') {
           updateData.password = trimmedPassword;
+          updateData.mustChangePassword = true;
         }
 
         const result = await apiClient.updateUser(editingUser.id, updateData);
@@ -276,23 +274,24 @@ export function UserManagement(): React.JSX.Element {
           return;
         }
       } else {
-        // Create new user - password is required for new users
-        if (trimmedPassword === '') {
-          setError('Password is required for new users');
-          return;
-        }
-        
-        const result = await apiClient.createUser({
+        const payload: { name: string; email: string; roles: string[]; isActive: boolean; password?: string } = {
           name: data.name,
           email: data.email,
-          password: trimmedPassword,
           roles: [data.role], // Convert single role to array for API
           isActive: data.isActive,
-        });
+        };
+
+        if (trimmedPassword !== '') {
+          payload.password = trimmedPassword;
+        }
+        
+        const result = await apiClient.createUser(payload);
         if (result.error) {
           setError(result.error);
           return;
         }
+        const defaultPassword = result.data?.defaultPassword ?? null;
+        setGeneratedPassword(defaultPassword);
       }
 
       await fetchUsers();
@@ -360,6 +359,14 @@ export function UserManagement(): React.JSX.Element {
     return <></>;
   }
 
+  if (currentUser.mustChangePassword) {
+    return (
+      <Alert severity="info">
+        Please update your password before managing user accounts.
+      </Alert>
+    );
+  }
+
   return (
     <Card>
       <CardHeader
@@ -371,6 +378,23 @@ export function UserManagement(): React.JSX.Element {
         }
       />
       <CardContent>
+        {generatedPassword && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', sm: 'center' }}>
+              <Typography>
+                A default password was generated for the new user:{' '}
+                <strong>{generatedPassword}</strong>
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<CopySimple width={16} height={16} />}
+                onClick={handleCopyGeneratedPassword}
+              >
+                Copy
+              </Button>
+            </Stack>
+          </Alert>
+        )}
         {error && <Alert color="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {isLoading ? (
@@ -434,7 +458,7 @@ export function UserManagement(): React.JSX.Element {
         <DialogTitle>
           {editingUser ? 'Edit User' : 'Add New User'}
         </DialogTitle>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
           <DialogContent>
             <Stack spacing={2}>
               <Controller
@@ -446,7 +470,8 @@ export function UserManagement(): React.JSX.Element {
                     label="Full Name"
                     error={Boolean(errors.name)}
                     helperText={errors.name?.message}
-                    fullWidth
+                  fullWidth
+                  autoComplete="off"
                   />
                 )}
               />
@@ -462,61 +487,78 @@ export function UserManagement(): React.JSX.Element {
                     error={Boolean(errors.email)}
                     helperText={errors.email?.message}
                     fullWidth
+                    autoComplete={isEditing ? 'email' : 'off'}
                   />
                 )}
               />
 
-              <Controller
-                control={control}
-                name="password"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label={editingUser ? 'New Password' : 'Password'}
-                    type={showPassword ? 'text' : 'password'}
-                    error={Boolean(errors.password)}
-                    helperText={errors.password?.message}
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <IconButton
-                          onClick={togglePasswordVisibility}
-                          edge="end"
-                          size="small"
-                        >
-                          {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
-                        </IconButton>
-                      ),
-                    }}
-                  />
-                )}
-              />
+              {!isEditing && (
+                <Alert severity="info">
+                  A secure password will be generated automatically and shown after the user is created.
+                </Alert>
+              )}
 
-              <Controller
-                control={control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label={editingUser ? 'Confirm New Password' : 'Confirm Password'}
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    error={Boolean(errors.confirmPassword)}
-                    helperText={errors.confirmPassword?.message}
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <IconButton
-                          onClick={toggleConfirmPasswordVisibility}
-                          edge="end"
-                          size="small"
-                        >
-                          {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
-                        </IconButton>
-                      ),
-                    }}
+              {isEditing && (
+                <>
+                  <Controller
+                    control={control}
+                    name="password"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="New Password"
+                        type={showPassword ? 'text' : 'password'}
+                        error={Boolean(errors.password)}
+                        helperText={errors.password?.message}
+                        fullWidth
+                        autoComplete="new-password"
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={togglePasswordVisibility}
+                                edge="end"
+                                size="small"
+                              >
+                                {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
                   />
-                )}
-              />
+
+                  <Controller
+                    control={control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Confirm New Password"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        error={Boolean(errors.confirmPassword)}
+                        helperText={errors.confirmPassword?.message}
+                        fullWidth
+                        autoComplete="new-password"
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={toggleConfirmPasswordVisibility}
+                                edge="end"
+                                size="small"
+                              >
+                                {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                </>
+              )}
 
               <Controller
                 control={control}

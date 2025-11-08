@@ -54,7 +54,7 @@ export function SignInForm(): React.JSX.Element {
     async (values: Values): Promise<void> => {
       setIsPending(true);
 
-      const { error } = await authClient.signInWithPassword(values);
+      const { error, mustChangePassword } = await authClient.signInWithPassword(values);
 
       if (error) {
         setError('root', { type: 'server', message: error });
@@ -66,7 +66,11 @@ export function SignInForm(): React.JSX.Element {
       await checkSession?.();
 
       // Navigate to dashboard after successful login
-      router.push('/dashboard');
+      if (mustChangePassword) {
+        router.push(paths.dashboard.changePassword);
+      } else {
+        router.push(paths.dashboard.overview);
+      }
     },
     [checkSession, router, setError]
   );

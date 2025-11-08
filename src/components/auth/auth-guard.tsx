@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Alert from '@mui/material/Alert';
 
 import { paths } from '@/paths';
@@ -14,6 +14,7 @@ export interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps): React.JSX.Element | null {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, error, isLoading } = useUser();
   const [isChecking, setIsChecking] = React.useState<boolean>(true);
 
@@ -33,6 +34,11 @@ export function AuthGuard({ children }: AuthGuardProps): React.JSX.Element | nul
       return;
     }
 
+    if (user.mustChangePassword && !pathname?.startsWith(paths.dashboard.changePassword)) {
+      router.replace(paths.dashboard.changePassword);
+      return;
+    }
+
     setIsChecking(false);
   };
 
@@ -40,8 +46,7 @@ export function AuthGuard({ children }: AuthGuardProps): React.JSX.Element | nul
     checkPermissions().catch(() => {
       // noop
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Expected
-  }, [user, error, isLoading]);
+  }, [user, error, isLoading, pathname]);
 
   if (isChecking) {
     return null;

@@ -12,6 +12,7 @@ interface User {
   state?: string;
   city?: string;
   profilePhoto?: string | null;
+  mustChangePassword?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -333,8 +334,8 @@ class ApiClient {
     return this.request<{ users: User[] }>('/users');
   }
 
-  async createUser(userData: { name: string; email: string; password: string; roles?: string[]; isActive?: boolean }) {
-    return this.request<{ user: User }>('/users', {
+  async createUser(userData: { name: string; email: string; password?: string; roles?: string[]; isActive?: boolean }) {
+    return this.request<{ user: User; defaultPassword?: string }>('/users', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -344,7 +345,7 @@ class ApiClient {
     return this.request<{ user: User }>(`/users/${id}`);
   }
 
-  async updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; password?: string }>) {
+  async updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; password?: string; mustChangePassword?: boolean }>) {
     return this.request<{ user: User }>(`/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
@@ -355,6 +356,13 @@ class ApiClient {
     return this.request<{ user: User }>('/me', {
       method: 'PATCH',
       body: JSON.stringify(updates),
+    });
+  }
+
+  async updateMyPassword(newPassword: string) {
+    return this.request<{ success: boolean }>('/me/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ newPassword }),
     });
   }
 

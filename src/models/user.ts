@@ -13,6 +13,7 @@ export interface IUser {
   state?: string;
   city?: string;
   profilePhoto?: string;
+  mustChangePassword?: boolean;
   resetPasswordOtp?: string;
   resetPasswordOtpExpiry?: Date;
   createdAt: Date;
@@ -33,6 +34,7 @@ const UserSchema = new Schema<IUserDocument>(
     state: { type: String, trim: true },
     city: { type: String, trim: true },
     profilePhoto: { type: String },
+    mustChangePassword: { type: Boolean, default: false },
     resetPasswordOtp: { type: String },
     resetPasswordOtpExpiry: { type: Date },
   },

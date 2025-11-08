@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const signupSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(8).optional(),
   roles: z.array(z.enum(['super_admin', 'manager'])).optional(),
 });
 
@@ -44,6 +44,7 @@ export const userUpdateSchema = z.object({
   city: z.string().optional(),
   profilePhoto: z.string().nullable().optional(),
   password: z.string().optional(),
+  mustChangePassword: z.boolean().optional(),
 });
 
 export const settingCreateSchema = z.object({

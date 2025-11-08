@@ -10,6 +10,7 @@ export interface User {
   state?: string;
   city?: string;
   profilePhoto?: string | null;
+  mustChangePassword?: boolean;
 
   [key: string]: unknown;
 }

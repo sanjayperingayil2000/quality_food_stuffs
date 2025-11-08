@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 import { config } from '@/config';
 import { AccountDetailsForm } from '@/components/dashboard/account/account-details-form';
 import { AccountInfo } from '@/components/dashboard/account/account-info';
+import { AccountPasswordCard } from '@/components/dashboard/account/account-password-card';
 
 export const metadata = { title: `Account | Dashboard | ${config.site.name}` } satisfies Metadata;
 
@@ -35,7 +36,10 @@ export default function Page(): React.JSX.Element {
           }}
           sx={{ width: '100%', maxWidth: '100%' }}
         >
-          <AccountDetailsForm />
+          <Stack spacing={3}>
+            <AccountDetailsForm />
+            <AccountPasswordCard />
+          </Stack>
         </Grid>
       </Grid>
     </Stack>
