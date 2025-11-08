@@ -11,7 +11,7 @@ interface User {
   phone?: string;
   state?: string;
   city?: string;
-  profilePhoto?: string;
+  profilePhoto?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -344,14 +344,14 @@ class ApiClient {
     return this.request<{ user: User }>(`/users/${id}`);
   }
 
-  async updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string; password?: string }>) {
+  async updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; password?: string }>) {
     return this.request<{ user: User }>(`/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
   }
 
-  async updateProfile(updates: Partial<{ phone?: string; state?: string; city?: string; profilePhoto?: string }>) {
+  async updateProfile(updates: Partial<{ phone?: string; state?: string; city?: string; profilePhoto?: string | null }>) {
     return this.request<{ user: User }>('/me', {
       method: 'PATCH',
       body: JSON.stringify(updates),

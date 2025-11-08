@@ -18,6 +18,10 @@ interface UserResponse {
     name: string;
     email: string;
     roles: string[];
+    phone?: string;
+    state?: string;
+    city?: string;
+    profilePhoto?: string | null;
   };
 }
 
@@ -93,6 +97,10 @@ class AuthClient {
               name: (result.data as UserResponse).user.name,
               email: (result.data as UserResponse).user.email,
               roles: (result.data as UserResponse).user.roles,
+              phone: (result.data as UserResponse).user.phone,
+              state: (result.data as UserResponse).user.state,
+              city: (result.data as UserResponse).user.city,
+              profilePhoto: (result.data as UserResponse).user.profilePhoto ?? null,
             } as User
           };
         }
@@ -119,6 +127,10 @@ class AuthClient {
           name: (result.data as UserResponse).user.name,
           email: (result.data as UserResponse).user.email,
           roles: (result.data as UserResponse).user.roles,
+          phone: (result.data as UserResponse).user.phone,
+          state: (result.data as UserResponse).user.state,
+          city: (result.data as UserResponse).user.city,
+          profilePhoto: (result.data as UserResponse).user.profilePhoto ?? null,
         } as User
       };
     } catch {

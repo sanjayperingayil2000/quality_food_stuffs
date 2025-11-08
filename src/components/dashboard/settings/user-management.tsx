@@ -42,43 +42,85 @@ import { useUser } from '@/hooks/use-user';
 // Define the User type that matches the API response
 interface ApiUser {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   roles: string[];
   isActive: boolean;
-  settingsAccess: boolean;
+  settingsAccess?: boolean;
   createdAt: string;
   updatedAt: string;
+  phone?: string;
+  state?: string;
+  city?: string;
+  profilePhoto?: string | null;
 }
 
 const createUserSchema = (existingUsers: ApiUser[], editingUser: ApiUser | null) => zod.object({
   name: zod.string().min(1, 'Name is required'),
   email: zod.string().min(1, 'Email is required').email('Invalid email format'),
-  password: zod.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: zod.string().min(1, 'Confirm Password is required'),
+  password: zod.string(),
+  confirmPassword: zod.string(),
   role: zod.enum(['super_admin', 'manager'], { required_error: 'Role is required' }),
   isActive: zod.boolean(),
-}).refine((data) => {
-  // Password and confirmPassword must match
-  if (data.password !== data.confirmPassword) {
-    return false;
+}).superRefine((data, ctx) => {
+  const password = data.password.trim();
+  const confirmPassword = data.confirmPassword.trim();
+  const isEditing = editingUser !== null;
+  const wantsPasswordChange = password.length > 0 || confirmPassword.length > 0;
+
+  if (!isEditing) {
+    if (password.length === 0) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['password'],
+        message: 'Password is required',
+      });
+    }
+    if (confirmPassword.length === 0) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['confirmPassword'],
+        message: 'Confirm Password is required',
+      });
+    }
   }
-  return true;
-}, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-}).refine((data) => {
-  // Check if trying to create/update to super_admin when one already exists
+
+  if (wantsPasswordChange) {
+    if (password.length < 6) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['password'],
+        message: 'Password must be at least 6 characters',
+      });
+    }
+    if (confirmPassword.length === 0) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['confirmPassword'],
+        message: 'Confirm Password is required',
+      });
+    } else if (password !== confirmPassword) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['confirmPassword'],
+        message: "Passwords don't match",
+      });
+    }
+  }
+
   if (data.role === 'super_admin') {
-    const existingSuperAdmins = existingUsers.filter(user => 
+    const existingSuperAdmins = existingUsers.filter(user =>
       user.roles.includes('super_admin') && user.isActive && user.id !== editingUser?.id
     );
-    return existingSuperAdmins.length === 0;
+    if (existingSuperAdmins.length > 0) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['role'],
+        message: 'Only one super admin is allowed',
+      });
+    }
   }
-  return true;
-}, {
-  message: "Only one super admin is allowed",
-  path: ["role"],
 });
 
 type UserFormData = {
@@ -129,8 +171,17 @@ export function UserManagement(): React.JSX.Element {
         setError(result.error);
         return;
       }
-      console.log('Fetched users:', result.data?.users);
-      setUsers(result.data?.users || []);
+      const normalizedUsers = (result.data?.users || [])
+        .map((user: Partial<ApiUser> & { _id?: string }) => {
+          const normalizedId = (user.id ?? user._id ?? '').toString();
+          return {
+            ...user,
+            id: normalizedId,
+            roles: user.roles ?? [],
+          } as ApiUser;
+        })
+        .filter((user): user is ApiUser => Boolean(user.id));
+      setUsers(normalizedUsers);
     } catch {
       setError('Failed to fetch users');
     } finally {
@@ -197,6 +248,7 @@ export function UserManagement(): React.JSX.Element {
   const onSubmit = async (data: UserFormData) => {
     try {
       setError(null);
+      const trimmedPassword = data.password.trim();
 
       if (editingUser) {
         // Update existing user
@@ -214,8 +266,8 @@ export function UserManagement(): React.JSX.Element {
         };
 
         // Only include password if it's provided
-        if (data.password && data.password.trim() !== '') {
-          updateData.password = data.password;
+        if (trimmedPassword !== '') {
+          updateData.password = trimmedPassword;
         }
 
         const result = await apiClient.updateUser(editingUser.id, updateData);
@@ -225,7 +277,7 @@ export function UserManagement(): React.JSX.Element {
         }
       } else {
         // Create new user - password is required for new users
-        if (!data.password || data.password.trim() === '') {
+        if (trimmedPassword === '') {
           setError('Password is required for new users');
           return;
         }
@@ -233,7 +285,7 @@ export function UserManagement(): React.JSX.Element {
         const result = await apiClient.createUser({
           name: data.name,
           email: data.email,
-          password: data.password,
+          password: trimmedPassword,
           roles: [data.role], // Convert single role to array for API
           isActive: data.isActive,
         });
@@ -287,6 +339,10 @@ export function UserManagement(): React.JSX.Element {
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
     try {
+      if (!userId) {
+        setError('Unable to update user status: missing user identifier.');
+        return;
+      }
       setError(null);
       const result = await apiClient.updateUser(userId, { isActive });
       if (result.error) {
@@ -416,8 +472,8 @@ export function UserManagement(): React.JSX.Element {
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Password"
-                    type={showPassword ? "text" : "password"}
+                    label={editingUser ? 'New Password' : 'Password'}
+                    type={showPassword ? 'text' : 'password'}
                     error={Boolean(errors.password)}
                     helperText={errors.password?.message}
                     fullWidth
@@ -442,8 +498,8 @@ export function UserManagement(): React.JSX.Element {
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    label="Confirm Password"
-                    type={showConfirmPassword ? "text" : "password"}
+                    label={editingUser ? 'Confirm New Password' : 'Confirm Password'}
+                    type={showConfirmPassword ? 'text' : 'password'}
                     error={Boolean(errors.confirmPassword)}
                     helperText={errors.confirmPassword?.message}
                     fullWidth

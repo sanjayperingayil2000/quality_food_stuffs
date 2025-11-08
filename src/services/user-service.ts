@@ -23,7 +23,7 @@ export async function getUserById(id: string) {
   return User.findById(id).lean();
 }
 
-export async function updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string; password?: string }>) {
+export async function updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; password?: string }>) {
   await connectToDatabase();
   if (!Types.ObjectId.isValid(id)) return null;
   
@@ -34,7 +34,7 @@ export async function updateUser(id: string, updates: Partial<{ name: string; em
   }
   
   // Prepare update data
-  const updateData: Partial<{ name: string; email: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string; passwordHash: string }> = {};
+  const updateData: Partial<{ name: string; email: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; passwordHash: string }> = {};
   
   // Copy all fields except password
   if (updates.name !== undefined) updateData.name = updates.name;
@@ -44,7 +44,9 @@ export async function updateUser(id: string, updates: Partial<{ name: string; em
   if (updates.phone !== undefined) updateData.phone = updates.phone;
   if (updates.state !== undefined) updateData.state = updates.state;
   if (updates.city !== undefined) updateData.city = updates.city;
-  if (updates.profilePhoto !== undefined) updateData.profilePhoto = updates.profilePhoto;
+  if (Object.prototype.hasOwnProperty.call(updates, 'profilePhoto')) {
+    updateData.profilePhoto = updates.profilePhoto ?? null;
+  }
   
   // If password is provided, hash it
   if (updates.password) {

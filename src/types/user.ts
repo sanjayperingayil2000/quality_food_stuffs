@@ -9,7 +9,7 @@ export interface User {
   phone?: string;
   state?: string;
   city?: string;
-  profilePhoto?: string;
+  profilePhoto?: string | null;
 
   [key: string]: unknown;
 }
