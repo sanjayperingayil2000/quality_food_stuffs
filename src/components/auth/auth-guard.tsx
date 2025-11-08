@@ -18,7 +18,7 @@ export function AuthGuard({ children }: AuthGuardProps): React.JSX.Element | nul
   const { user, error, isLoading } = useUser();
   const [isChecking, setIsChecking] = React.useState<boolean>(true);
 
-  const checkPermissions = async (): Promise<void> => {
+  const checkPermissions = React.useCallback(async () => {
     if (isLoading) {
       return;
     }
@@ -40,13 +40,13 @@ export function AuthGuard({ children }: AuthGuardProps): React.JSX.Element | nul
     }
 
     setIsChecking(false);
-  };
+  }, [error, isLoading, pathname, router, user]);
 
   React.useEffect(() => {
     checkPermissions().catch(() => {
       // noop
     });
-  }, [user, error, isLoading, pathname]);
+  }, [checkPermissions]);
 
   if (isChecking) {
     return null;

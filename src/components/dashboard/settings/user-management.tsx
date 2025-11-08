@@ -69,7 +69,6 @@ const createUserSchema = (existingUsers: ApiUser[], editingUser: ApiUser | null)
 }).superRefine((data, ctx) => {
   const password = data.password.trim();
   const confirmPassword = data.confirmPassword.trim();
-  const isEditing = editingUser !== null;
   const wantsPasswordChange = password.length > 0 || confirmPassword.length > 0;
 
   if (wantsPasswordChange) {
