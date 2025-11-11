@@ -9,7 +9,7 @@ const profileUpdateSchema = z.object({
   phone: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
-  profilePhoto: z.string().optional(),
+  profilePhoto: z.string().nullable().optional(),
 });
 
 export async function OPTIONS() {

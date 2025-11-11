@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = signupSchema.safeParse(body);
     if (!parsed.success) return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
-    const user = await createUser(parsed.data);
-    return withCors(NextResponse.json({ user }, { status: 201 }));
+    const { user, defaultPassword } = await createUser(parsed.data);
+    return withCors(NextResponse.json({ user, defaultPassword }, { status: 201 }));
   } catch (error) {
     return withCors(jsonError(error, 500));
   }

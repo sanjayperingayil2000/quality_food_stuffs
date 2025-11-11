@@ -585,8 +585,31 @@ export default function Page(): React.JSX.Element {
     }
   };
 
-  const bakeryProducts = products.filter(p => p.category === 'bakery');
-  const freshProducts = products.filter(p => p.category === 'fresh');
+  const bakeryProducts = products.filter(p => p.category === 'bakery').sort((a, b) => {
+    // Sort by displayNumber in ascending order
+    const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+    const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+    if (aNum && bNum) {
+      return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+    }
+    if (a.displayNumber && b.displayNumber) {
+      return a.displayNumber.localeCompare(b.displayNumber);
+    }
+    return 0;
+  });
+  
+  const freshProducts = products.filter(p => p.category === 'fresh').sort((a, b) => {
+    // Sort by displayNumber in ascending order
+    const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+    const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+    if (aNum && bNum) {
+      return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+    }
+    if (a.displayNumber && b.displayNumber) {
+      return a.displayNumber.localeCompare(b.displayNumber);
+    }
+    return 0;
+  });
 
   // Products are loaded from context
 
@@ -655,8 +678,28 @@ export default function Page(): React.JSX.Element {
           }
         }
         
-        const freshProductsList = products.filter(p => p.category === 'fresh');
-        const bakeryProductsList = products.filter(p => p.category === 'bakery');
+        const freshProductsList = products.filter(p => p.category === 'fresh').sort((a, b) => {
+          const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+          const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+          if (aNum && bNum) {
+            return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+          }
+          if (a.displayNumber && b.displayNumber) {
+            return a.displayNumber.localeCompare(b.displayNumber);
+          }
+          return 0;
+        });
+        const bakeryProductsList = products.filter(p => p.category === 'bakery').sort((a, b) => {
+          const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+          const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+          if (aNum && bNum) {
+            return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+          }
+          if (a.displayNumber && b.displayNumber) {
+            return a.displayNumber.localeCompare(b.displayNumber);
+          }
+          return 0;
+        });
         
         return (
           <Card sx={{ p: 2, mb: 2, bgcolor: 'grey.50', border: '3px solid red' }}>
@@ -853,8 +896,28 @@ export default function Page(): React.JSX.Element {
                   </TableHead>
                   <TableBody>
                     {(() => {
-                      const freshProducts = trip.products.filter(p => p.category === 'fresh');
-                      const bakeryProducts = trip.products.filter(p => p.category === 'bakery');
+                      const freshProducts = trip.products.filter(p => p.category === 'fresh').sort((a, b) => {
+                        const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+                        const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+                        if (aNum && bNum) {
+                          return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+                        }
+                        if (a.displayNumber && b.displayNumber) {
+                          return a.displayNumber.localeCompare(b.displayNumber);
+                        }
+                        return 0;
+                      });
+                      const bakeryProducts = trip.products.filter(p => p.category === 'bakery').sort((a, b) => {
+                        const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+                        const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+                        if (aNum && bNum) {
+                          return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+                        }
+                        if (a.displayNumber && b.displayNumber) {
+                          return a.displayNumber.localeCompare(b.displayNumber);
+                        }
+                        return 0;
+                      });
                       const maxRows = Math.max(freshProducts.length, bakeryProducts.length);
                       
                       return Array.from({ length: maxRows }, (_, index) => (

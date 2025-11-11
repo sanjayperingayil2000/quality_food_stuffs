@@ -18,18 +18,27 @@ interface UserResponse {
     name: string;
     email: string;
     roles: string[];
+    phone?: string;
+    state?: string;
+    city?: string;
+    profilePhoto?: string | null;
+    mustChangePassword?: boolean;
   };
 }
 
 class AuthClient {
-  async signInWithPassword(params: SignInWithPasswordParams): Promise<{ error?: string }> {
+  async signInWithPassword(params: SignInWithPasswordParams): Promise<{ error?: string; mustChangePassword?: boolean }> {
     const result = await apiClient.login(params);
     
     if (result.error) {
       return { error: result.error };
     }
 
-    return {};
+    const mustChangePassword = Boolean(
+      (result.data as { user?: { mustChangePassword?: boolean } } | undefined)?.user?.mustChangePassword
+    );
+
+    return { mustChangePassword };
   }
 
   async resetPassword(params: ResetPasswordParams): Promise<{ error?: string }> {
@@ -93,6 +102,11 @@ class AuthClient {
               name: (result.data as UserResponse).user.name,
               email: (result.data as UserResponse).user.email,
               roles: (result.data as UserResponse).user.roles,
+              phone: (result.data as UserResponse).user.phone,
+              state: (result.data as UserResponse).user.state,
+              city: (result.data as UserResponse).user.city,
+              profilePhoto: (result.data as UserResponse).user.profilePhoto ?? null,
+              mustChangePassword: (result.data as UserResponse).user.mustChangePassword ?? false,
             } as User
           };
         }
@@ -119,6 +133,11 @@ class AuthClient {
           name: (result.data as UserResponse).user.name,
           email: (result.data as UserResponse).user.email,
           roles: (result.data as UserResponse).user.roles,
+          phone: (result.data as UserResponse).user.phone,
+          state: (result.data as UserResponse).user.state,
+          city: (result.data as UserResponse).user.city,
+          profilePhoto: (result.data as UserResponse).user.profilePhoto ?? null,
+          mustChangePassword: (result.data as UserResponse).user.mustChangePassword ?? false,
         } as User
       };
     } catch {

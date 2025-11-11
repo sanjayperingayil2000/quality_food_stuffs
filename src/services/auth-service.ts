@@ -34,13 +34,16 @@ export async function login({ email, password }: { email: string; password: stri
   if (!ok) throw new Error('Incorrect password. Please try again.');
   if (!user.isActive) throw new Error('Account is inactive. Please contact administrator.');
 
+  const userObj = user.toObject();
+  delete (userObj as { passwordHash?: unknown }).passwordHash;
+
   const accessToken = signAccessToken({ sub: (user as { _id: Types.ObjectId })._id.toString(), roles: (user as { roles: string[] }).roles });
   const refreshTokenPlain = crypto.randomBytes(48).toString('hex');
   const tokenHash = hashToken(refreshTokenPlain);
   const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
   await RefreshToken.create({ userId: new Types.ObjectId((user as { _id: Types.ObjectId })._id), tokenHash, createdAt: new Date(), expiresAt, revoked: false });
 
-  return { user, accessToken, refreshToken: refreshTokenPlain };
+  return { user: userObj, accessToken, refreshToken: refreshTokenPlain };
 }
 
 export async function refreshToken({ refreshToken }: { refreshToken: string }) {

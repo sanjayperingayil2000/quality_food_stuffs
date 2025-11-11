@@ -89,7 +89,18 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
             updatedBy: entry.updatedBy || 'Unknown'
           }))
         }));
-        setProducts(transformedProducts.sort((a, b) => a.id.localeCompare(b.id)));
+        setProducts(transformedProducts.sort((a, b) => {
+          // Sort by displayNumber in ascending order
+          const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+          const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+          if (aNum && bNum) {
+            return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+          }
+          if (a.displayNumber && b.displayNumber) {
+            return a.displayNumber.localeCompare(b.displayNumber);
+          }
+          return a.id.localeCompare(b.id);
+        }));
       }
     } catch (error_) {
       setError(error_ instanceof Error ? error_.message : 'Failed to fetch products');
@@ -104,13 +115,33 @@ export function ProductProvider({ children }: { children: React.ReactNode }): Re
 
   const bakeryProducts = React.useMemo(() => 
     products.filter(prod => prod.category === 'bakery' && prod.isActive)
-            .sort((a, b) => a.id.localeCompare(b.id)), 
+            .sort((a, b) => {
+              const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+              const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+              if (aNum && bNum) {
+                return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+              }
+              if (a.displayNumber && b.displayNumber) {
+                return a.displayNumber.localeCompare(b.displayNumber);
+              }
+              return a.id.localeCompare(b.id);
+            }), 
     [products]
   );
 
   const freshProducts = React.useMemo(() => 
     products.filter(prod => prod.category === 'fresh' && prod.isActive)
-            .sort((a, b) => a.id.localeCompare(b.id)), 
+            .sort((a, b) => {
+              const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+              const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+              if (aNum && bNum) {
+                return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+              }
+              if (a.displayNumber && b.displayNumber) {
+                return a.displayNumber.localeCompare(b.displayNumber);
+              }
+              return a.id.localeCompare(b.id);
+            }), 
     [products]
   );
 

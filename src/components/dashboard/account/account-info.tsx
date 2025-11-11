@@ -19,6 +19,7 @@ export function AccountInfo(): React.JSX.Element {
   const { user, checkSession } = useUser();
   const { showSuccess, showError } = useNotifications();
   const [uploading, setUploading] = React.useState(false);
+  const [removing, setRemoving] = React.useState(false);
   const router = useRouter();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,6 +69,23 @@ export function AccountInfo(): React.JSX.Element {
       console.error('Error uploading file:', error);
       showError('Failed to upload profile photo');
       setUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!user?.profilePhoto) return;
+    setRemoving(true);
+    try {
+      await apiClient.updateProfile({
+        profilePhoto: null,
+      });
+      await checkSession?.();
+      showSuccess('Profile photo removed successfully!');
+    } catch (error) {
+      console.error('Error removing profile photo:', error);
+      showError('Failed to remove profile photo');
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -121,7 +139,7 @@ export function AccountInfo(): React.JSX.Element {
             fullWidth 
             variant="text"
             component="label"
-            disabled={uploading}
+            disabled={uploading || removing}
           >
             {uploading ? 'Uploading...' : 'Upload picture'}
             <input
@@ -129,9 +147,20 @@ export function AccountInfo(): React.JSX.Element {
               hidden
               accept="image/*"
               onChange={handleFileUpload}
-              disabled={uploading}
+              disabled={uploading || removing}
             />
           </Button>
+          {user?.profilePhoto && (
+            <Button
+              fullWidth
+              variant="text"
+              color="warning"
+              onClick={handleRemovePhoto}
+              disabled={uploading || removing}
+            >
+              {removing ? 'Removing...' : 'Remove picture'}
+            </Button>
+          )}
           <Button 
             fullWidth 
             variant="outlined"
