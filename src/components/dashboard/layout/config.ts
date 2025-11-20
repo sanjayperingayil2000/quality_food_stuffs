@@ -8,7 +8,7 @@ export const navItems = [
   { key: 'additionalExpenses', title: 'Additional Expenses', href: paths.dashboard.additionalExpenses, icon: 'receipt' },
   { key: 'dailyTrip', title: 'Daily Trip', href: paths.dashboard.dailyTrip, icon: 'calendar' },
   { key: 'activity', title: 'Activity', href: paths.dashboard.activity, icon: 'clipboardIcon', roles: ['super_admin'] },
-  { key: 'settings', title: 'Settings', href: paths.dashboard.settings, icon: 'gear-six', roles: ['super_admin'] },
+  { key: 'settings', title: 'Settings', href: paths.dashboard.settings, icon: 'gear-six', roles: ['super_admin', 'manager'] },
   { key: 'account', title: 'Account', href: paths.dashboard.account, icon: 'user' },
   // { key: 'error', title: 'Error', href: paths.errors.notFound, icon: 'x-square' },
 ] satisfies NavItemConfig[];

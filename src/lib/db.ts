@@ -18,9 +18,10 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
   mongoose.set('strictQuery', true);
 
-  await mongoose.connect(mongoUrl, {
-    dbName: 'qualityfoodstuffs',
-  });
+  const urlWithoutQuery = mongoUrl.split('?')[0];
+  const urlParts = urlWithoutQuery.split('/');
+  const hasDatabaseInUrl = urlParts.length > 3 && urlParts[urlParts.length - 1] !== '';
+  await mongoose.connect(mongoUrl, hasDatabaseInUrl ? {} : { dbName: 'qualityfoodstuffs' });
 
   isConnected = 2;
   if(isConnected === 2) {
