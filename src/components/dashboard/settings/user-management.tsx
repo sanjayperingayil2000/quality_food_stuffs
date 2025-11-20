@@ -259,11 +259,9 @@ export function UserManagement(): React.JSX.Element {
       const trimmedPassword = data.password.trim();
 
       // If manager is creating/editing, ensure they can only create/edit drivers
-      if (isManager && !isSuperAdmin) {
-        if (data.role !== 'driver') {
-          setError('Managers can only create or edit drivers');
-          return;
-        }
+      if (isManager && !isSuperAdmin && data.role !== 'driver') {
+        setError('Managers can only create or edit drivers');
+        return;
       }
 
       if (editingUser) {
