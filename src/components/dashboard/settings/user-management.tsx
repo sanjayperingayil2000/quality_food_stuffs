@@ -455,12 +455,22 @@ export function UserManagement(): React.JSX.Element {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton onClick={() => handleEdit(user)}>
+                    <IconButton 
+                      onClick={() => handleEdit(user)}
+                      disabled={
+                        // Managers can only edit drivers, not other managers
+                        isManager && !isSuperAdmin && user.roles.includes('manager')
+                      }
+                    >
                       <PencilIcon />
                     </IconButton>
                     <IconButton
                       onClick={() => handleDelete(user.id)}
-                      disabled={user.id === currentUser?.id} // Can't delete self
+                      disabled={
+                        user.id === currentUser?.id || // Can't delete self
+                        // Managers can only delete drivers, not other managers
+                        (isManager && !isSuperAdmin && user.roles.includes('manager'))
+                      }
                     >
                       <TrashIcon />
                     </IconButton>
@@ -587,7 +597,9 @@ export function UserManagement(): React.JSX.Element {
                     <Select
                       {...field}
                       label="Role"
-                      disabled={isManager && !isEditing}
+                      disabled={
+                        (isManager && !isSuperAdmin) // Managers can only create/edit drivers, role field is disabled
+                      }
                     >
                       {isSuperAdmin && (
                         <MenuItem value="manager">Manager</MenuItem>
@@ -603,8 +615,8 @@ export function UserManagement(): React.JSX.Element {
                       <MenuItem value="driver">Driver</MenuItem>
                     </Select>
                     {errors.role && <FormHelperText>{errors.role.message}</FormHelperText>}
-                    {isManager && !isEditing && (
-                      <FormHelperText>Managers can only create drivers</FormHelperText>
+                    {isManager && !isSuperAdmin && (
+                      <FormHelperText>Managers can only create and edit drivers</FormHelperText>
                     )}
                   </FormControl>
                 )}
