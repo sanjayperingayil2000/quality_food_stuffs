@@ -367,8 +367,17 @@ export default function Page(): React.JSX.Element {
                       </TableCell>
                       <TableCell>{activity.actor || 'System'}</TableCell>
                       <TableCell>
-                        {new Date(activity.timestamp).toLocaleDateString()}{' '}
-                        {new Date(activity.timestamp).toLocaleTimeString()}
+                        {new Date(activity.timestamp).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}{' '}
+                        {new Date(activity.timestamp).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: true 
+                        })}
                       </TableCell>
                     </TableRow>
                   );

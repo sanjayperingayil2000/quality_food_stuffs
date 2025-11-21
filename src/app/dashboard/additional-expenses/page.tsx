@@ -41,6 +41,7 @@ import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
 import { useAdditionalExpenses, AdditionalExpense, ExpenseCategory } from '@/contexts/additional-expense-context';
 import { useEmployees } from '@/contexts/employee-context';
+import { useUser } from '@/hooks/use-user';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -110,6 +111,10 @@ const getExpenseTypeColor = (type: ExpenseType): ChipProps['color'] => {
 export default function Page(): React.JSX.Element {
   const { expenses, addExpense, updateExpense, deleteExpense } = useAdditionalExpenses();
   const { employees } = useEmployees();
+  const { user } = useUser();
+  
+  // Check if user is a driver
+  const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -471,9 +476,11 @@ export default function Page(): React.JSX.Element {
           >
             Excel
           </Button>
-          <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>
-            Add Expense
-          </Button>
+          {!isDriver && (
+            <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>
+              Add Expense
+            </Button>
+          )}
         </Stack>
       </Stack>
 
@@ -573,12 +580,16 @@ export default function Page(): React.JSX.Element {
                 <TableCell>{dayjs(expense.updatedAt).tz('Asia/Dubai').format('MMM D, YYYY h:mm A')} GST</TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1.5}>
-                    <IconButton onClick={() => handleEdit(expense)} size="small">
-                      <PencilIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleDelete(expense.id)} size="small" color="error">
-                      <TrashIcon />
-                    </IconButton>
+                    {!isDriver && (
+                      <>
+                        <IconButton onClick={() => handleEdit(expense)} size="small">
+                          <PencilIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDelete(expense.id)} size="small" color="error">
+                          <TrashIcon />
+                        </IconButton>
+                      </>
+                    )}
                   </Stack>
                 </TableCell>
               </TableRow>

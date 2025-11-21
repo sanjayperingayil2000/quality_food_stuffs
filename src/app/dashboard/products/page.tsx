@@ -181,6 +181,10 @@ const ProductTableSkeleton: React.FC = () => {
 
 export default function Page(): React.JSX.Element {
   const { products, addProduct, updateProduct, deleteProduct, isLoading: isLoadingProducts } = useProducts();
+  const { user } = useUser();
+  
+  // Check if user is a driver
+  const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
   const { showSuccess, showError } = useNotifications();
   const [open, setOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -486,7 +490,9 @@ export default function Page(): React.JSX.Element {
           {/* <Button color="inherit" startIcon={<FilePdfIcon fontSize="var(--icon-fontSize-md)" />} onClick={handleExportPdf}>PDF</Button> */}
           <ExportPdfButton products={filteredProducts} />
           <Button color="inherit" startIcon={<TableIcon fontSize="var(--icon-fontSize-md)" />} onClick={handleExportExcel}>Excel</Button>
-          <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>Add</Button>
+          {!isDriver && (
+            <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>Add</Button>
+          )}
         </Stack>
       </Stack>
 
@@ -621,12 +627,16 @@ export default function Page(): React.JSX.Element {
                 <TableCell align="center">{dayjs(product.createdAt).format('MMM D, YYYY')}</TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1.5} justifyContent="center">
-                    <Tooltip title="Edit Product">
-                      <IconButton onClick={() => handleEdit(product)} size="small"><PencilIcon /></IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete Product">
-                      <IconButton onClick={() => handleDeleteClick(product)} size="small" color="error"><TrashIcon /></IconButton>
-                    </Tooltip>
+                    {!isDriver && (
+                      <>
+                        <Tooltip title="Edit Product">
+                          <IconButton onClick={() => handleEdit(product)} size="small"><PencilIcon /></IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Product">
+                          <IconButton onClick={() => handleDeleteClick(product)} size="small" color="error"><TrashIcon /></IconButton>
+                        </Tooltip>
+                      </>
+                    )}
                     <Tooltip title="View Price History">
                       <IconButton
                         size="small"

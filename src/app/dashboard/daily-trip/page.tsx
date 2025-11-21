@@ -42,6 +42,7 @@ import { useProducts } from '@/contexts/product-context';
 import { useEmployees } from '@/contexts/employee-context';
 import { useDailyTrips, ProductTransfer } from '@/contexts/daily-trip-context';
 import { useNotifications } from '@/contexts/notification-context';
+import { useUser } from '@/hooks/use-user';
 import type { DailyTrip, TripProduct } from '@/contexts/daily-trip-context';
 
 // Configure dayjs plugins
@@ -95,49 +96,49 @@ type TripFormData = zod.infer<typeof tripSchema>;
 const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[] = [], transferredProducts: TripProduct[] = []) => {
   // Combine regular products and accepted products
   const allProducts = [...products, ...acceptedProducts];
-  
+
   // Calculate totals for regular products (including accepted)
   const freshProducts = allProducts.filter(p => p.category === 'fresh');
   const bakeryProducts = allProducts.filter(p => p.category === 'bakery');
-  
+
   // Calculate accepted products totals by category
   const acceptedFreshProducts = acceptedProducts.filter(p => p.category === 'fresh');
   const acceptedBakeryProducts = acceptedProducts.filter(p => p.category === 'bakery');
 
   const freshTotal = freshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const bakeryTotal = bakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
-  
+
   const acceptedFreshTotal = acceptedFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const acceptedBakeryTotal = acceptedBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
 
   // Calculate transferred products totals (to subtract from sender)
   const transferredFreshProducts = transferredProducts.filter(p => p.category === 'fresh');
   const transferredBakeryProducts = transferredProducts.filter(p => p.category === 'bakery');
-  
+
   const transferredFreshTotal = transferredFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const transferredBakeryTotal = transferredBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
 
   // Calculate net totals after subtracting transferred products
-  const freshNetTotal = (freshTotal - transferredFreshTotal) * (1 - 0.115); // 11.5% reduction
-  const bakeryNetTotal = (bakeryTotal - transferredBakeryTotal) * (1 - 0.16); // 16% reduction
+  const freshNetTotal = Math.floor((freshTotal - transferredFreshTotal) * (1 - 0.115)); // 11.5% reduction
+  const bakeryNetTotal = Math.floor((bakeryTotal - transferredBakeryTotal) * (1 - 0.16)); // 16% reduction
 
-  const freshGrandTotal = freshNetTotal * 1.05; // 5% addition
-  const bakeryGrandTotal = bakeryNetTotal * 1.05; // 5% addition
+  const freshGrandTotal = Math.floor(freshNetTotal * 1.05); // 5% addition
+  const bakeryGrandTotal = Math.floor(bakeryNetTotal * 1.05); // 5% addition
 
   return {
-    fresh: { 
-      total: freshTotal, 
+    fresh: {
+      total: freshTotal,
       accepted: acceptedFreshTotal,
       transferred: transferredFreshTotal,
-      netTotal: freshNetTotal, 
-      grandTotal: freshGrandTotal 
+      netTotal: freshNetTotal,
+      grandTotal: freshGrandTotal
     },
-    bakery: { 
-      total: bakeryTotal, 
+    bakery: {
+      total: bakeryTotal,
       accepted: acceptedBakeryTotal,
       transferred: transferredBakeryTotal,
-      netTotal: bakeryNetTotal, 
-      grandTotal: bakeryGrandTotal 
+      netTotal: bakeryNetTotal,
+      grandTotal: bakeryGrandTotal
     },
     overall: {
       total: freshTotal + bakeryTotal - transferredFreshTotal - transferredBakeryTotal,
@@ -156,9 +157,13 @@ function _generateTripId(): string {
 
 export default function Page(): React.JSX.Element {
   const { products } = useProducts();
-  const { drivers } = useEmployees();
+  const { drivers, updateDriverBalance } = useEmployees();
   const { trips, addTrip, updateTrip, deleteTrip, canAddTripForDriver } = useDailyTrips();
   const { showSuccess, showError } = useNotifications();
+  const { user } = useUser();
+  
+  // Check if user is a driver
+  const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
   const [open, setOpen] = React.useState(false);
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -171,18 +176,18 @@ export default function Page(): React.JSX.Element {
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
   const [acceptedProductsForForm, setAcceptedProductsForForm] = React.useState<TripProduct[]>([]);
-  
+
   // Transfer product form state
   const [transferForm, setTransferForm] = React.useState({
     productId: '',
     quantity: 1,
     receivingDriverId: '',
   });
-  
+
   // Product search state for transfer section
   const [productSearch, setProductSearch] = React.useState('');
   const [filteredProducts, setFilteredProducts] = React.useState(products);
-  
+
   // Dual search state for product selection
   const [searchByNumber, setSearchByNumber] = React.useState('');
   const [searchByName, setSearchByName] = React.useState('');
@@ -259,7 +264,7 @@ export default function Page(): React.JSX.Element {
     if (productSearch.trim() === '') {
       setFilteredProducts(products);
     } else {
-      const filtered = products.filter(product => 
+      const filtered = products.filter(product =>
         product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
         product.id.toLowerCase().includes(productSearch.toLowerCase())
       ).sort((a, b) => a.id.localeCompare(b.id));
@@ -276,14 +281,14 @@ export default function Page(): React.JSX.Element {
         acceptedProducts,
         watchedTransferredProducts || []
       );
-      
+
       const purchaseAmount = totals.overall.grandTotal;
       const expiryAfterTax = Math.floor(watchedExpiry * 1.05 * 0.87);
-      const amountToBe = purchaseAmount - expiryAfterTax;
-      const salesDifference = watchedCollectionAmount - amountToBe;
-      const profit = (totals.fresh.netTotal - expiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - watchedDiscount;
-      const calculatedBalance = Math.round(watchedPreviousBalance + profit - salesDifference);
-      
+      const amountToBe = Math.floor(purchaseAmount - expiryAfterTax);
+      const salesDifference = Math.floor(watchedCollectionAmount - amountToBe);
+      const profit = Math.floor((totals.fresh.netTotal - expiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - watchedDiscount);
+      const calculatedBalance = Math.floor(watchedPreviousBalance + profit - salesDifference);
+
       setValue('balance', calculatedBalance);
       setValue('purchaseAmount', purchaseAmount);
     }
@@ -292,12 +297,12 @@ export default function Page(): React.JSX.Element {
   // Get available drivers (excluding those who already have trips for the selected date)
   const getAvailableDrivers = React.useCallback(() => {
     if (!watchedDate) return [];
-    
+
     const selectedDate = dayjs(watchedDate).format('YYYY-MM-DD');
     return drivers.filter(driver => {
       // Filter out drivers who already have a trip for this date
-      const hasTripForDate = trips.some(trip => 
-        trip.driverId === driver.id && 
+      const hasTripForDate = trips.some(trip =>
+        trip.driverId === driver.id &&
         dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
       );
       return !hasTripForDate;
@@ -338,9 +343,9 @@ export default function Page(): React.JSX.Element {
     setProductSearch('');
     setSearchByNumber('');
     setSearchByName('');
-    
+
     const tripDate = dayjs(trip.date).toDate();
-    
+
     // Ensure all numeric fields have valid values
     const safeBalance = typeof trip.balance === 'number' ? trip.balance : 0;
     const safeCollectionAmount = typeof trip.collectionAmount === 'number' ? trip.collectionAmount : 0;
@@ -349,7 +354,7 @@ export default function Page(): React.JSX.Element {
     const safeDiscount = typeof trip.discount === 'number' ? trip.discount : 0;
     const safePetrol = typeof trip.petrol === 'number' ? trip.petrol : 0;
     const safeExpiryAfterTax = typeof trip.expiryAfterTax === 'number' ? trip.expiryAfterTax : 0;
-    
+
     reset({
       driverId: trip.driverId,
       date: tripDate,
@@ -379,7 +384,7 @@ export default function Page(): React.JSX.Element {
   const handleDelete = (tripId: string) => {
     // console.log('Frontend handleDelete called with trip ID:', tripId);
     // console.log('Trip ID type:', typeof tripId);
-    
+
     const trip = trips.find(t => t.id === tripId);
     if (trip) {
       setTripToDelete(trip);
@@ -416,8 +421,8 @@ export default function Page(): React.JSX.Element {
       filtered = filtered.filter(trip => {
         const tripDate = dayjs(trip.date).utc();
         // Check if trip date is on or after fromDate and on or before toDate (inclusive)
-        return (tripDate.isAfter(fromDate) || tripDate.isSame(fromDate)) && 
-               (tripDate.isBefore(toDate) || tripDate.isSame(toDate));
+        return (tripDate.isAfter(fromDate) || tripDate.isSame(fromDate)) &&
+          (tripDate.isBefore(toDate) || tripDate.isSame(toDate));
       });
     }
 
@@ -425,7 +430,7 @@ export default function Page(): React.JSX.Element {
     filtered = filtered.sort((a, b) => {
       const dateComparison = dayjs(b.date).valueOf() - dayjs(a.date).valueOf();
       if (dateComparison !== 0) return dateComparison;
-      
+
       // If dates are the same, sort by createdAt (newest first)
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
@@ -474,7 +479,7 @@ export default function Page(): React.JSX.Element {
     const product = products.find(p => p.id === productId);
     const receivingDriver = drivers.find(d => d.id === receivingDriverId);
     const currentDriver = drivers.find(d => d.id === watch('driverId'));
-    
+
     if (product && receivingDriver && currentDriver) {
       const currentTransferredProducts = watchedTransferredProducts || [];
       const newTransferredProduct = {
@@ -489,7 +494,7 @@ export default function Page(): React.JSX.Element {
         transferredFromDriverId: currentDriver.id,
         transferredFromDriverName: currentDriver.name,
       };
-      
+
       setValue('transferredProducts', [...currentTransferredProducts, newTransferredProduct]);
     }
   };
@@ -531,10 +536,10 @@ export default function Page(): React.JSX.Element {
 
     // Calculate totals for financial metrics
     // Include accepted products in the calculation
-    const acceptedProductsToInclude = editingTrip 
+    const acceptedProductsToInclude = editingTrip
       ? (editingTrip.acceptedProducts || [])
       : acceptedProductsForForm;
-    
+
     const totals = calculateTotals(
       filteredProducts,
       acceptedProductsToInclude,
@@ -569,6 +574,22 @@ export default function Page(): React.JSX.Element {
 
     setIsSaving(true);
     try {
+      // Check if previous balance was edited (different from current employee balance)
+      const driver = drivers.find(d => d.id === data.driverId);
+      const currentEmployeeBalance = driver?.balance || 0;
+      const editedPreviousBalance = data.previousBalance;
+      
+      // If previous balance was edited and it's different from current balance, update employee balance
+      if (!editingTrip && editedPreviousBalance !== currentEmployeeBalance) {
+        const reason = `Previous balance updated when creating trip on ${dayjs(data.date).format('YYYY-MM-DD')}`;
+        await updateDriverBalance(
+          data.driverId,
+          editedPreviousBalance,
+          reason,
+          user?.email || user?.name || 'System'
+        );
+      }
+      
       if (editingTrip) {
         await updateTrip(editingTrip.id, tripData);
         showSuccess('Daily trip updated successfully!');
@@ -597,7 +618,7 @@ export default function Page(): React.JSX.Element {
     }
     return 0;
   });
-  
+
   const freshProducts = products.filter(p => p.category === 'fresh').sort((a, b) => {
     // Sort by displayNumber in ascending order
     const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
@@ -621,52 +642,54 @@ export default function Page(): React.JSX.Element {
   }
 
   return (
-      <Stack spacing={3} sx={{ px: { xs: 2, md: 4 } }}>
-        <Stack direction="row" spacing={3}>
-          <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
-            <Typography variant="h4">Daily Trip</Typography>
-          </Stack>
+    <Stack spacing={3} sx={{ px: { xs: 2, md: 4 } }}>
+      <Stack direction="row" spacing={3}>
+        <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
+          <Typography variant="h4">Daily Trip</Typography>
+        </Stack>
+        {!isDriver && (
           <div>
             <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>
               Add Trip
             </Button>
           </div>
-        </Stack>
+        )}
+      </Stack>
 
-        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>All Drivers</InputLabel>
-            <Select
-              value={driverFilter}
-              label="All Drivers"
-              displayEmpty
-              onChange={(e) => setDriverFilter(e.target.value)}
-            >
-              <MenuItem value="">All Drivers</MenuItem>
-              {drivers.map((driver) => (
-                <MenuItem key={driver.id} value={driver.id}>
-                  {driver.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            label="From Date"
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            size="small"
-          />
-          <TextField
-            label="To Date"
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            size="small"
-          />
-        </Stack>
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>All Drivers</InputLabel>
+          <Select
+            value={driverFilter}
+            label="All Drivers"
+            displayEmpty
+            onChange={(e) => setDriverFilter(e.target.value)}
+          >
+            <MenuItem value="">All Drivers</MenuItem>
+            {drivers.map((driver) => (
+              <MenuItem key={driver.id} value={driver.id}>
+                {driver.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          label="From Date"
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          size="small"
+        />
+        <TextField
+          label="To Date"
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          size="small"
+        />
+      </Stack>
 
       {/* Total Products Summary Card */}
       {filteredTrips.length > 0 && (() => {
@@ -677,7 +700,7 @@ export default function Page(): React.JSX.Element {
             productQuantities[product.productId] = (productQuantities[product.productId] || 0) + product.quantity;
           }
         }
-        
+
         const freshProductsList = products.filter(p => p.category === 'fresh').sort((a, b) => {
           const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
           const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
@@ -700,7 +723,7 @@ export default function Page(): React.JSX.Element {
           }
           return 0;
         });
-        
+
         return (
           <Card sx={{ p: 2, mb: 2, bgcolor: 'grey.50', border: '3px solid red' }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
@@ -712,14 +735,26 @@ export default function Page(): React.JSX.Element {
                   <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
                     Fresh Products
                   </Typography>
-                  <Stack spacing={0.5}>
+                  <Stack spacing={1}>
                     {freshProductsList.map(product => {
                       const quantity = productQuantities[product.id] || 0;
                       if (quantity === 0) return null;
                       return (
-                        <Typography key={product.id} variant="body2">
-                          {product.displayNumber || `F${String(product.id).split('-')[2]}`} - {product.name}: {quantity} qty
-                        </Typography>
+                        <Box key={product.id} sx={{
+                          p: 1,
+                          bgcolor: 'white',
+                          border: '1px solid',
+                          borderColor: 'success.200',
+                          borderRadius: 1,
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {product.displayNumber || `F${String(product.id).split('-')[2]}`} - {product.name}
+                          </Typography>
+                          <Typography variant="body2" color="success.main" sx={{ fontWeight: 'bold' }}>
+                            {quantity} qty
+                          </Typography>
+                        </Box>
                       );
                     })}
                   </Stack>
@@ -730,14 +765,26 @@ export default function Page(): React.JSX.Element {
                   <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'primary.dark' }}>
                     Bakery Products
                   </Typography>
-                  <Stack spacing={0.5}>
+                  <Stack spacing={1}>
                     {bakeryProductsList.map(product => {
                       const quantity = productQuantities[product.id] || 0;
                       if (quantity === 0) return null;
                       return (
-                        <Typography key={product.id} variant="body2">
-                          {product.displayNumber || `B${String(product.id).split('-')[2]}`} - {product.name}: {quantity} qty
-                        </Typography>
+                        <Box key={product.id} sx={{
+                          p: 1,
+                          bgcolor: 'white',
+                          border: '1px solid',
+                          borderColor: 'primary.200',
+                          borderRadius: 1,
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {product.displayNumber || `B${String(product.id).split('-')[2]}`} - {product.name}
+                          </Typography>
+                          <Typography variant="body2" color="primary.main" sx={{ fontWeight: 'bold' }}>
+                            {quantity} qty
+                          </Typography>
+                        </Box>
                       );
                     })}
                   </Stack>
@@ -760,316 +807,320 @@ export default function Page(): React.JSX.Element {
           </Paper>
         ) : (
           filteredTrips.map((trip, index) => (
-          <Card key={trip.id} sx={{ 
-            p: 2, 
-            bgcolor: index % 2 === 0 ? 'blue.50' : 'white',
-            border: '1px solid',
-            borderColor: 'blue.100'
-          }}>
-            <Box sx={{ 
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
+            <Card key={trip.id} sx={{
               p: 2,
-              mb: 2,
-              borderRadius: 1
+              bgcolor: index % 2 === 0 ? 'blue.50' : 'white',
+              border: '1px solid',
+              borderColor: 'blue.100'
             }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {trip.driverName} - {dayjs(trip.date).format('MMM D, YYYY')}
-                </Typography>
-                <Stack direction="row" spacing={1}>
-                  <IconButton onClick={() => handleEdit(trip)} size="small" sx={{ color: 'white' }}>
-                    <PencilIcon />
-                  </IconButton>
-                  <IconButton onClick={() => handleDelete(trip.id)} size="small" sx={{ color: 'white' }}>
-                    <TrashIcon />
-                  </IconButton>
-                </Stack>
-              </Stack>
-            </Box>
-            <Stack spacing={2}>
-              {trip.transfer.isProductTransferred && trip.transfer.transferredProducts.length > 0 && (
-                <>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                    Products Transferred
+              <Box sx={{
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                p: 2,
+                mb: 2,
+                borderRadius: 1
+              }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {trip.driverName} - {dayjs(trip.date).format('MMM D, YYYY')}
                   </Typography>
-                  
-                  <Stack spacing={1}>
-                    {trip.transfer.transferredProducts.map((transferredProduct, index) => (
-                      <Box key={index} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}>
-                        <Typography variant="body2">
-                          {transferredProduct.productName} (Qty: {transferredProduct.quantity}) - Transfer to: {transferredProduct.receivingDriverName}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          AED {transferredProduct.unitPrice.toFixed(2)} × {transferredProduct.quantity} = AED {(transferredProduct.unitPrice * transferredProduct.quantity).toFixed(2)}
-                        </Typography>
-                      </Box>
-                    ))}
+                  <Stack direction="row" spacing={1}>
+                    {!isDriver && (
+                      <>
+                        <IconButton onClick={() => handleEdit(trip)} size="small" sx={{ color: 'white' }}>
+                          <PencilIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDelete(trip.id)} size="small" sx={{ color: 'white' }}>
+                          <TrashIcon />
+                        </IconButton>
+                      </>
+                    )}
                   </Stack>
-                </>
-              )}
-
-              {trip.acceptedProducts && trip.acceptedProducts.length > 0 && (() => {
-                // Deduplicate accepted products based on productId, quantity, and transferredFromDriverId
-                const uniqueAcceptedProducts = [
-                  ...new Map(
-                    trip.acceptedProducts.map(p => [
-                      `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}`,
-                      p
-                    ])
-                  ).values()
-                ];
-                
-                return uniqueAcceptedProducts.length > 0 ? (
+                </Stack>
+              </Box>
+              <Stack spacing={2}>
+                {trip.transfer.isProductTransferred && trip.transfer.transferredProducts.length > 0 && (
                   <>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Products Accepted from Other Drivers
+                      Products Transferred
                     </Typography>
-                    
+
                     <Stack spacing={1}>
-                      {uniqueAcceptedProducts.map((acceptedProduct, index) => (
+                      {trip.transfer.transferredProducts.map((transferredProduct, index) => (
                         <Box key={index} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}>
                           <Typography variant="body2">
-                            {acceptedProduct.productName} (Qty: {acceptedProduct.quantity})
-                            {acceptedProduct.transferredFromDriverName && (
-                              <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
-                                {' '}- From: {acceptedProduct.transferredFromDriverName}
-                              </span>
-                            )}
+                            {transferredProduct.productName} (Qty: {transferredProduct.quantity}) - Transfer to: {transferredProduct.receivingDriverName}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            AED {acceptedProduct.unitPrice.toFixed(2)} × {acceptedProduct.quantity} = AED {(acceptedProduct.unitPrice * acceptedProduct.quantity).toFixed(2)}
+                            AED {transferredProduct.unitPrice.toFixed(2)} × {transferredProduct.quantity} = AED {(transferredProduct.unitPrice * transferredProduct.quantity).toFixed(2)}
                           </Typography>
                         </Box>
                       ))}
                     </Stack>
                   </>
-                ) : null;
-              })()}
+                )}
 
-              <Box sx={{ 
-                border: '1px solid', 
-                borderColor: 'divider', 
-                borderRadius: 1,
-                maxHeight: '400px',
-                overflow: 'auto'
-              }}>
-                <Table stickyHeader>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell 
-                        sx={{ 
-                          backgroundColor: 'rgba(76, 175, 80, 0.1) !important', 
-                          color: '#2e7d32 !important', 
-                          fontWeight: 'bold',
-                          textAlign: 'center',
-                          borderRight: '1px solid #e0e0e0',
-                          position: 'sticky',
-                          top: 0,
-                          zIndex: 1,
-                          '&.MuiTableCell-root': {
+                {trip.acceptedProducts && trip.acceptedProducts.length > 0 && (() => {
+                  // Deduplicate accepted products based on productId, quantity, and transferredFromDriverId
+                  const uniqueAcceptedProducts = [
+                    ...new Map(
+                      trip.acceptedProducts.map(p => [
+                        `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}`,
+                        p
+                      ])
+                    ).values()
+                  ];
+
+                  return uniqueAcceptedProducts.length > 0 ? (
+                    <>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        Products Accepted from Other Drivers
+                      </Typography>
+
+                      <Stack spacing={1}>
+                        {uniqueAcceptedProducts.map((acceptedProduct, index) => (
+                          <Box key={index} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'grey.100' }}>
+                            <Typography variant="body2">
+                              {acceptedProduct.productName} (Qty: {acceptedProduct.quantity})
+                              {acceptedProduct.transferredFromDriverName && (
+                                <span style={{ color: '#1976d2', fontWeight: 'bold' }}>
+                                  {' '}- From: {acceptedProduct.transferredFromDriverName}
+                                </span>
+                              )}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              AED {acceptedProduct.unitPrice.toFixed(2)} × {acceptedProduct.quantity} = AED {(acceptedProduct.unitPrice * acceptedProduct.quantity).toFixed(2)}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </>
+                  ) : null;
+                })()}
+
+                <Box sx={{
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  maxHeight: '400px',
+                  overflow: 'auto'
+                }}>
+                  <Table stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell
+                          sx={{
                             backgroundColor: 'rgba(76, 175, 80, 0.1) !important',
-                            color: '#2e7d32 !important'
-                          }
-                        }}
-                      >
-                        Fresh Items
-                      </TableCell>
-                      <TableCell 
-                        sx={{ 
-                          backgroundColor: 'rgba(33, 150, 243, 0.1) !important', 
-                          color: '#1565c0 !important', 
-                          fontWeight: 'bold',
-                          textAlign: 'center',
-                          position: 'sticky',
-                          top: 0,
-                          zIndex: 1,
-                          '&.MuiTableCell-root': {
+                            color: '#2e7d32 !important',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            borderRight: '1px solid #e0e0e0',
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 1,
+                            '&.MuiTableCell-root': {
+                              backgroundColor: 'rgba(76, 175, 80, 0.1) !important',
+                              color: '#2e7d32 !important'
+                            }
+                          }}
+                        >
+                          Fresh Items
+                        </TableCell>
+                        <TableCell
+                          sx={{
                             backgroundColor: 'rgba(33, 150, 243, 0.1) !important',
-                            color: '#1565c0 !important'
+                            color: '#1565c0 !important',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 1,
+                            '&.MuiTableCell-root': {
+                              backgroundColor: 'rgba(33, 150, 243, 0.1) !important',
+                              color: '#1565c0 !important'
+                            }
+                          }}
+                        >
+                          Bakery Items
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(() => {
+                        const freshProducts = trip.products.filter(p => p.category === 'fresh').sort((a, b) => {
+                          const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+                          const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+                          if (aNum && bNum) {
+                            return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
                           }
-                        }}
-                      >
-                        Bakery Items
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {(() => {
-                      const freshProducts = trip.products.filter(p => p.category === 'fresh').sort((a, b) => {
-                        const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
-                        const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
-                        if (aNum && bNum) {
-                          return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
-                        }
-                        if (a.displayNumber && b.displayNumber) {
-                          return a.displayNumber.localeCompare(b.displayNumber);
-                        }
-                        return 0;
-                      });
-                      const bakeryProducts = trip.products.filter(p => p.category === 'bakery').sort((a, b) => {
-                        const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
-                        const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
-                        if (aNum && bNum) {
-                          return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
-                        }
-                        if (a.displayNumber && b.displayNumber) {
-                          return a.displayNumber.localeCompare(b.displayNumber);
-                        }
-                        return 0;
-                      });
-                      const maxRows = Math.max(freshProducts.length, bakeryProducts.length);
-                      
-                      return Array.from({ length: maxRows }, (_, index) => (
-                        <TableRow key={`product-row-${index}`}>
-                          <TableCell sx={{ borderRight: '1px solid #e0e0e0', width: '50%' }}>
-                            {freshProducts[index] ? (
-                              <Box>
-                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                  {freshProducts[index].displayNumber || freshProducts[index].productId}
-                                </Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                  {freshProducts[index].productName}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 500, color: '#2e7d32' }}>
-                                  Qty: {freshProducts[index].quantity}
-                                </Typography>
-                              </Box>
-                            ) : null}
-                          </TableCell>
-                          <TableCell sx={{ width: '50%' }}>
-                            {bakeryProducts[index] ? (
-                              <Box>
-                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                  {bakeryProducts[index].displayNumber || bakeryProducts[index].productId}
-                                </Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                  {bakeryProducts[index].productName}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 500, color: '#1565c0' }}>
-                                  Qty: {bakeryProducts[index].quantity}
-                                </Typography>
-                              </Box>
-                            ) : null}
-                          </TableCell>
-                        </TableRow>
-                      ));
-                    })()}
-                  </TableBody>
-                </Table>
-              </Box>
+                          if (a.displayNumber && b.displayNumber) {
+                            return a.displayNumber.localeCompare(b.displayNumber);
+                          }
+                          return 0;
+                        });
+                        const bakeryProducts = trip.products.filter(p => p.category === 'bakery').sort((a, b) => {
+                          const aNum = a.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+                          const bNum = b.displayNumber?.match(/^[FB](\d+)$/)?.[1];
+                          if (aNum && bNum) {
+                            return Number.parseInt(aNum, 10) - Number.parseInt(bNum, 10);
+                          }
+                          if (a.displayNumber && b.displayNumber) {
+                            return a.displayNumber.localeCompare(b.displayNumber);
+                          }
+                          return 0;
+                        });
+                        const maxRows = Math.max(freshProducts.length, bakeryProducts.length);
 
-              {/* Merged Calculated Financial Metrics */}
-              <Paper sx={{ p: 2, bgcolor: 'primary.50', border: 2, borderColor: 'primary.main' }}>
-                <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Calculated Financial Metrics</Typography>
-                <Grid container spacing={2}>
-                  {/* First row: 5 columns */}
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Collection Amount</Typography>
-                    <Typography variant="h6" color="success.main">AED {trip.collectionAmount.toFixed(2)}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Purchase Amount</Typography>
-                    <Typography variant="h6" color="primary.main">AED {trip.purchaseAmount.toFixed(2)}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Amount To Be</Typography>
-                    <Typography variant="h6" color="info.dark">AED {(trip.amountToBe ?? 0).toFixed(2)}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
-                    <Typography variant="h6" color="warning.dark">AED {(trip.expiryAfterTax ?? 0).toFixed(2)}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Expiry Amount</Typography>
-                    <Typography variant="h6" color="warning.main">AED {trip.expiry.toFixed(2)}</Typography>
-                  </Grid>
-                  
-                  {/* Second row: 5 columns */}
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
-                    <Typography variant="h6" color={(trip.salesDifference ?? 0) >= 0 ? 'success.dark' : 'error.dark'}>
-                      AED {(trip.salesDifference ?? 0).toFixed(2)}
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Profit</Typography>
-                    <Typography variant="h6" color={(trip.profit ?? 0) >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
-                      AED {(trip.profit ?? 0).toFixed(2)}
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Discount Amount</Typography>
-                    <Typography variant="h6" color="warning.main">AED {trip.discount.toFixed(2)}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Balance</Typography>
-                    <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance ?? 0)}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
-                    <Typography variant="body2" color="text.secondary">Petrol</Typography>
-                    <Typography variant="h6" color="error.main">AED {trip.petrol.toFixed(2)}</Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
+                        return Array.from({ length: maxRows }, (_, index) => (
+                          <TableRow key={`product-row-${index}`}>
+                            <TableCell sx={{ borderRight: '1px solid #e0e0e0', width: '50%' }}>
+                              {freshProducts[index] ? (
+                                <Box>
+                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                    {freshProducts[index].displayNumber || freshProducts[index].productId}
+                                  </Typography>
+                                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    {freshProducts[index].productName}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#2e7d32' }}>
+                                    Qty: {freshProducts[index].quantity}
+                                  </Typography>
+                                </Box>
+                              ) : null}
+                            </TableCell>
+                            <TableCell sx={{ width: '50%' }}>
+                              {bakeryProducts[index] ? (
+                                <Box>
+                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                    {bakeryProducts[index].displayNumber || bakeryProducts[index].productId}
+                                  </Typography>
+                                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    {bakeryProducts[index].productName}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#1565c0' }}>
+                                    Qty: {bakeryProducts[index].quantity}
+                                  </Typography>
+                                </Box>
+                              ) : null}
+                            </TableCell>
+                          </TableRow>
+                        ));
+                      })()}
+                    </TableBody>
+                  </Table>
+                </Box>
 
-              {trip.products.length > 0 && (
-                <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>Product Calculations</Typography>
-                  {(() => {
-                    const totals = calculateTotals(
-                      trip.products, 
-                      trip.acceptedProducts || [], 
-                      trip.transfer?.transferredProducts || []
-                    );
-                    return (
-                      <Grid container spacing={2}>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                          <Typography variant="subtitle2" color="success.main" sx={{ mb: 1 }}>Fresh Items</Typography>
-                          <Typography variant="body2">Total: AED {totals.fresh.total.toFixed(2)}</Typography>
-                          {totals.fresh.accepted > 0 && (
-                            <Typography variant="body2" color="success.main">
-                              Accepted: +AED {totals.fresh.accepted.toFixed(2)}
-                            </Typography>
-                          )}
-                          {totals.fresh.transferred > 0 && (
-                            <Typography variant="body2" color="warning.main">
-                              Transferred: -AED {totals.fresh.transferred.toFixed(2)}
-                            </Typography>
-                          )}
-                          <Typography variant="body2">Net Total: AED {totals.fresh.netTotal.toFixed(2)}</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.fresh.grandTotal.toFixed(2)}</Typography>
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                          <Typography variant="subtitle2" color="primary.main" sx={{ mb: 1 }}>Bakery Items</Typography>
-                          <Typography variant="body2">Total: AED {totals.bakery.total.toFixed(2)}</Typography>
-                          {totals.bakery.accepted > 0 && (
-                            <Typography variant="body2" color="success.main">
-                              Accepted: +AED {totals.bakery.accepted.toFixed(2)}
-                            </Typography>
-                          )}
-                          {totals.bakery.transferred > 0 && (
-                            <Typography variant="body2" color="warning.main">
-                              Transferred: -AED {totals.bakery.transferred.toFixed(2)}
-                            </Typography>
-                          )}
-                          <Typography variant="body2">Net Total: AED {totals.bakery.netTotal.toFixed(2)}</Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.bakery.grandTotal.toFixed(2)}</Typography>
-                        </Grid>
-                      </Grid>
-                    );
-                  })()}
+                {/* Merged Calculated Financial Metrics */}
+                <Paper sx={{ p: 2, bgcolor: 'primary.50', border: 2, borderColor: 'primary.main' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Calculated Financial Metrics</Typography>
+                  <Grid container spacing={2}>
+                    {/* First row: 5 columns */}
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Collection Amount</Typography>
+                      <Typography variant="h6" color="success.main">AED {trip.collectionAmount.toFixed(2)}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Purchase Amount</Typography>
+                      <Typography variant="h6" color="primary.main">AED {trip.purchaseAmount.toFixed(2)}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Amount To Be</Typography>
+                      <Typography variant="h6" color="info.dark">AED {(trip.amountToBe ?? 0).toFixed(2)}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
+                      <Typography variant="h6" color="warning.dark">AED {(trip.expiryAfterTax ?? 0).toFixed(2)}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Expiry Amount</Typography>
+                      <Typography variant="h6" color="warning.main">AED {trip.expiry.toFixed(2)}</Typography>
+                    </Grid>
+
+                    {/* Second row: 5 columns */}
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
+                      <Typography variant="h6" color={(trip.salesDifference ?? 0) >= 0 ? 'success.dark' : 'error.dark'}>
+                        AED {(trip.salesDifference ?? 0).toFixed(2)}
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Profit</Typography>
+                      <Typography variant="h6" color={(trip.profit ?? 0) >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
+                        AED {(trip.profit ?? 0).toFixed(2)}
+                      </Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Discount Amount</Typography>
+                      <Typography variant="h6" color="warning.main">AED {trip.discount.toFixed(2)}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Balance</Typography>
+                      <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance ?? 0)}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Typography variant="body2" color="text.secondary">Petrol</Typography>
+                      <Typography variant="h6" color="error.main">AED {trip.petrol.toFixed(2)}</Typography>
+                    </Grid>
+                  </Grid>
                 </Paper>
-              )}
-            </Stack>
-          </Card>
-        )))}
+
+                {trip.products.length > 0 && (
+                  <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                    <Typography variant="h6" sx={{ mb: 2 }}>Product Calculations</Typography>
+                    {(() => {
+                      const totals = calculateTotals(
+                        trip.products,
+                        trip.acceptedProducts || [],
+                        trip.transfer?.transferredProducts || []
+                      );
+                      return (
+                        <Grid container spacing={2}>
+                          <Grid size={{ xs: 12, md: 6 }}>
+                            <Typography variant="subtitle2" color="success.main" sx={{ mb: 1 }}>Fresh Items</Typography>
+                            <Typography variant="body2">Total: AED {totals.fresh.total.toFixed(2)}</Typography>
+                            {totals.fresh.accepted > 0 && (
+                              <Typography variant="body2" color="success.main">
+                                Accepted: +AED {totals.fresh.accepted.toFixed(2)}
+                              </Typography>
+                            )}
+                            {totals.fresh.transferred > 0 && (
+                              <Typography variant="body2" color="warning.main">
+                                Transferred: -AED {totals.fresh.transferred.toFixed(2)}
+                              </Typography>
+                            )}
+                            <Typography variant="body2">Net Total: AED {totals.fresh.netTotal.toFixed(2)}</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.fresh.grandTotal.toFixed(2)}</Typography>
+                          </Grid>
+                          <Grid size={{ xs: 12, md: 6 }}>
+                            <Typography variant="subtitle2" color="primary.main" sx={{ mb: 1 }}>Bakery Items</Typography>
+                            <Typography variant="body2">Total: AED {totals.bakery.total.toFixed(2)}</Typography>
+                            {totals.bakery.accepted > 0 && (
+                              <Typography variant="body2" color="success.main">
+                                Accepted: +AED {totals.bakery.accepted.toFixed(2)}
+                              </Typography>
+                            )}
+                            {totals.bakery.transferred > 0 && (
+                              <Typography variant="body2" color="warning.main">
+                                Transferred: -AED {totals.bakery.transferred.toFixed(2)}
+                              </Typography>
+                            )}
+                            <Typography variant="body2">Net Total: AED {totals.bakery.netTotal.toFixed(2)}</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>Grand Total: AED {totals.bakery.grandTotal.toFixed(2)}</Typography>
+                          </Grid>
+                        </Grid>
+                      );
+                    })()}
+                  </Paper>
+                )}
+              </Stack>
+            </Card>
+          )))}
       </Stack>
 
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="lg" 
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="lg"
         fullWidth
         BackdropProps={{
           sx: { zIndex: 1600 }
@@ -1100,9 +1151,9 @@ export default function Page(): React.JSX.Element {
           <DialogContent>
             <Stack spacing={3} sx={{ pt: 1 }}>
               <Box sx={{ width: '100%' }}>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
+                <Typography
+                  variant="body2"
+                  sx={{
                     color: errors.driverId ? 'error.main' : 'text.secondary',
                     mb: 1,
                     fontSize: '0.75rem',
@@ -1112,9 +1163,9 @@ export default function Page(): React.JSX.Element {
                 >
                   Driver * (Select from list below)
                 </Typography>
-                
+
                 {/* Test driver selection - clickable cards */}
-                <Box sx={{ 
+                <Box sx={{
                   border: `1px solid AED {errors.driverId ? '#d32f2f' : '#c4c4c4'}`,
                   borderRadius: 1,
                   p: 1,
@@ -1125,9 +1176,9 @@ export default function Page(): React.JSX.Element {
                   alignItems: 'center'
                 }}>
                   {selectedDriverId ? (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: 1,
                       bgcolor: 'primary.main',
                       color: 'white',
@@ -1145,9 +1196,9 @@ export default function Page(): React.JSX.Element {
                           setSelectedDriverId('');
                           setValue('driverId', '');
                         }}
-                        sx={{ 
-                          minWidth: 'auto', 
-                          p: 0.5, 
+                        sx={{
+                          minWidth: 'auto',
+                          p: 0.5,
                           color: 'white',
                           '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
                         }}
@@ -1161,7 +1212,7 @@ export default function Page(): React.JSX.Element {
                     </Typography>
                   )}
                 </Box>
-                
+
                 {/* Driver selection cards */}
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
@@ -1170,15 +1221,15 @@ export default function Page(): React.JSX.Element {
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {getAvailableDrivers().length > 0 ? (
                       getAvailableDrivers().map((driver) => (
-                        <Box 
-                          key={driver.id} 
-                          sx={{ 
-                            p: 2, 
-                            cursor: 'pointer', 
+                        <Box
+                          key={driver.id}
+                          sx={{
+                            p: 2,
+                            cursor: 'pointer',
                             border: selectedDriverId === driver.id ? '2px solid #1976d2' : '1px solid #e0e0e0',
                             borderRadius: 1,
                             bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'white',
-                            '&:hover': { 
+                            '&:hover': {
                               bgcolor: selectedDriverId === driver.id ? 'rgba(25, 118, 210, 0.1)' : 'rgba(0,0,0,0.04)',
                               borderColor: selectedDriverId === driver.id ? '#1976d2' : '#bdbdbd'
                             },
@@ -1188,16 +1239,16 @@ export default function Page(): React.JSX.Element {
                           onClick={() => {
                             setSelectedDriverId(driver.id);
                             setValue('driverId', driver.id);
-                            
+
                             // Check for accepted products (transfers TO this driver) for the selected date
                             const selectedDate = watchedDate ? dayjs(watchedDate).format('YYYY-MM-DD') : '';
-                            
+
                             // First, get the trip for this driver on this date (if it exists)
-                            const driverTripForDate = trips.find(trip => 
-                              trip.driverId === driver.id && 
+                            const driverTripForDate = trips.find(trip =>
+                              trip.driverId === driver.id &&
                               dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
                             );
-                            
+
                             // Use accepted products from the driver's trip (if exists), otherwise check pending transfers
                             if (driverTripForDate && driverTripForDate.acceptedProducts && driverTripForDate.acceptedProducts.length > 0) {
                               // Deduplicate accepted products
@@ -1213,10 +1264,10 @@ export default function Page(): React.JSX.Element {
                                   // Find trips where products were transferred TO this driver
                                   return trip.transfer?.transferredProducts?.some(
                                     tp => tp.receivingDriverId === driver.id &&
-                                    dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
+                                      dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
                                   );
                                 })
-                                .flatMap(trip => 
+                                .flatMap(trip =>
                                   trip.transfer?.transferredProducts
                                     ?.filter(tp => tp.receivingDriverId === driver.id)
                                     .map(tp => ({
@@ -1229,7 +1280,7 @@ export default function Page(): React.JSX.Element {
                                       transferredFromDriverName: trip.driverName,
                                     })) || []
                                 );
-                              
+
                               // Deduplicate
                               const uniqueProducts = [...new Map(
                                 acceptedProductsForThisDriver.map(p => [p.productId + p.quantity + p.transferredFromDriverId, p])
@@ -1252,10 +1303,10 @@ export default function Page(): React.JSX.Element {
                         </Box>
                       ))
                     ) : (
-                      <Box sx={{ 
-                        p: 2, 
-                        border: '1px dashed #ccc', 
-                        borderRadius: 1, 
+                      <Box sx={{
+                        p: 2,
+                        border: '1px dashed #ccc',
+                        borderRadius: 1,
                         bgcolor: 'grey.50',
                         minWidth: '200px'
                       }}>
@@ -1269,46 +1320,46 @@ export default function Page(): React.JSX.Element {
                     )}
                   </Box>
                 </Box>
-                
+
                 {errors.driverId && (
                   <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
                     {errors.driverId.message}
                   </Typography>
                 )}
               </Box>
-              
 
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                  <Controller
-                    control={control}
-                    name="date"
-                    render={({ field }) => (
-                      <DatePicker
-                        {...field}
-                        label="Date"
-                        format="MMM D, YYYY"
-                        value={field.value ? dayjs(field.value) : null}
-                        onChange={(newValue) => {
-                          // console.log('Date picker changed to:', newValue?.format('YYYY-MM-DD'));
-                          field.onChange(newValue?.toDate());
-                        }}
-                        maxDate={dayjs()} // Prevent future dates
-                          slotProps={{
-                            textField: {
-                              fullWidth: true,
-                              error: Boolean(errors.date),
-                              helperText: errors.date?.message || 'Click to select a date (past dates only)',
-                            },
-                            popper: {
-                              sx: {
-                                zIndex: 2000,
-                              },
-                            },
-                          }}
-                      />
-                    )}
-                  />
-                </LocalizationProvider>
+
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <Controller
+                  control={control}
+                  name="date"
+                  render={({ field }) => (
+                    <DatePicker
+                      {...field}
+                      label="Date"
+                      format="MMM D, YYYY"
+                      value={field.value ? dayjs(field.value) : null}
+                      onChange={(newValue) => {
+                        // console.log('Date picker changed to:', newValue?.format('YYYY-MM-DD'));
+                        field.onChange(newValue?.toDate());
+                      }}
+                      maxDate={dayjs()} // Prevent future dates
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          error: Boolean(errors.date),
+                          helperText: errors.date?.message || 'Click to select a date (past dates only)',
+                        },
+                        popper: {
+                          sx: {
+                            zIndex: 2000,
+                          },
+                        },
+                      }}
+                    />
+                  )}
+                />
+              </LocalizationProvider>
 
               {/* Product Transfer Checkbox */}
               <Controller
@@ -1339,19 +1390,19 @@ export default function Page(): React.JSX.Element {
                   </Typography>
 
                   {/* Transfer Product Form */}
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 2, 
-                    alignItems: 'flex-end', 
-                    mb: 2, 
+                  <Box sx={{
+                    display: 'flex',
+                    gap: 2,
+                    alignItems: 'flex-end',
+                    mb: 2,
                     flexWrap: 'wrap',
                     '@media (min-width: 1024px)': {
                       flexWrap: 'nowrap',
                       alignItems: 'flex-end'
                     }
                   }}>
-                    <FormControl sx={{ 
-                      flex: 1, 
+                    <FormControl sx={{
+                      flex: 1,
                       minWidth: '200px',
                       position: 'relative',
                       '@media (min-width: 1024px)': {
@@ -1366,15 +1417,15 @@ export default function Page(): React.JSX.Element {
                         size="small"
                       />
                       {productSearch && filteredProducts.length > 0 && !transferForm.productId && (
-                        <Paper sx={{ 
-                          mt: 0.5, 
-                          maxHeight: 200, 
-                          overflow: 'auto', 
-                          position: 'absolute', 
+                        <Paper sx={{
+                          mt: 0.5,
+                          maxHeight: 200,
+                          overflow: 'auto',
+                          position: 'absolute',
                           top: '100%',
                           left: 0,
                           right: 0,
-                          zIndex: 2000, 
+                          zIndex: 2000,
                           boxShadow: 3,
                           border: '1px solid',
                           borderColor: 'divider'
@@ -1407,12 +1458,12 @@ export default function Page(): React.JSX.Element {
                         </Paper>
                       )}
                     </FormControl>
-                    
+
                     <TextField
                       label="Transfer Quantity"
                       type="number"
                       size="small"
-                      sx={{ 
+                      sx={{
                         width: 140,
                         '@media (min-width: 1024px)': {
                           width: 160,
@@ -1423,7 +1474,7 @@ export default function Page(): React.JSX.Element {
                           pointerEvents: 'auto',
                         }
                       }}
-                      inputProps={{ 
+                      inputProps={{
                         min: 1,
                         style: { textAlign: 'center', fontWeight: 'bold' }
                       }}
@@ -1436,16 +1487,16 @@ export default function Page(): React.JSX.Element {
                         e.target.select();
                       }}
                     />
-                    
-                    <Box sx={{ 
+
+                    <Box sx={{
                       flex: 1,
                       '@media (min-width: 1024px)': {
                         flex: '1.5 1 0'
                       }
                     }}>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
+                      <Typography
+                        variant="body2"
+                        sx={{
                           color: 'text.secondary',
                           fontSize: '0.75rem',
                           fontWeight: 500,
@@ -1457,8 +1508,8 @@ export default function Page(): React.JSX.Element {
                         Transfer To Driver *
                       </Typography>
                       <FormControl fullWidth size="small" sx={{ minHeight: 56 }}>
-                        <InputLabel 
-                          sx={{ 
+                        <InputLabel
+                          sx={{
                             fontSize: '0.875rem',
                             '&.MuiInputLabel-shrink': {
                               transform: 'translate(14px, -9px) scale(0.75)',
@@ -1506,13 +1557,13 @@ export default function Page(): React.JSX.Element {
                             if (!drivers || drivers.length === 0) {
                               return <MenuItem disabled>No drivers available</MenuItem>;
                             }
-                            
-                            const availableDrivers = currentDriverId 
+
+                            const availableDrivers = currentDriverId
                               ? drivers.filter(d => d.id !== currentDriverId)
                               : drivers;
-                            
+
                             // console.log('Rendering', availableDrivers.length, 'MenuItems for drivers');
-                            
+
                             return availableDrivers.map((driver) => {
                               return (
                                 <MenuItem key={driver.id} value={driver.id}>
@@ -1531,7 +1582,7 @@ export default function Page(): React.JSX.Element {
                         </Select>
                       </FormControl>
                     </Box>
-                    
+
                     <Button
                       variant="contained"
                       onClick={handleAddTransferredProduct}
@@ -1581,19 +1632,9 @@ export default function Page(): React.JSX.Element {
 
               {/* Product Selection */}
               <Typography variant="h6">Select Products</Typography>
-              
+
               {/* Dual Search Bars */}
               <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <TextField
-                    label="Search by Product Number"
-                    placeholder="e.g., F01, B05"
-                    value={searchByNumber}
-                    onChange={(e) => setSearchByNumber(e.target.value)}
-                    size="small"
-                    fullWidth
-                  />
-                </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     label="Search by Product Name"
@@ -1604,8 +1645,19 @@ export default function Page(): React.JSX.Element {
                     fullWidth
                   />
                 </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    label="Search by Product Number"
+                    placeholder="e.g., F01, B05"
+                    value={searchByNumber}
+                    onChange={(e) => setSearchByNumber(e.target.value)}
+                    size="small"
+                    fullWidth
+                  />
+                </Grid>
               </Grid>
-              
+
+
               <Grid container spacing={3}>
                 <Grid
                   size={{
@@ -1622,7 +1674,7 @@ export default function Page(): React.JSX.Element {
                         .filter(product => {
                           if (!searchByNumber && !searchByName) return true;
                           const shortId = product.displayNumber || product.id;
-                          const matchesNumber = searchByNumber 
+                          const matchesNumber = searchByNumber
                             ? shortId.toLowerCase().includes(searchByNumber.toLowerCase())
                             : true;
                           const matchesName = searchByName
@@ -1635,11 +1687,11 @@ export default function Page(): React.JSX.Element {
                           const isHighlighted = searchByNumber && shortId.toLowerCase().includes(searchByNumber.toLowerCase())
                             || searchByName && product.name.toLowerCase().includes(searchByName.toLowerCase());
                           return (
-                            <Box 
-                              key={product.id} 
-                              sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                            <Box
+                              key={product.id}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
                                 gap: 2,
                                 bgcolor: isHighlighted ? 'grey.100' : 'transparent',
                                 p: isHighlighted ? 1 : 0,
@@ -1662,14 +1714,14 @@ export default function Page(): React.JSX.Element {
                                 type="number"
                                 label="Quantity"
                                 size="small"
-                                sx={{ 
+                                sx={{
                                   width: 120,
                                   '& .MuiInputBase-input': {
                                     cursor: 'text',
                                     pointerEvents: 'auto',
                                   }
                                 }}
-                                inputProps={{ 
+                                inputProps={{
                                   min: 0,
                                   style: { textAlign: 'center', fontWeight: 'bold' }
                                 }}
@@ -1688,7 +1740,7 @@ export default function Page(): React.JSX.Element {
                     </Stack>
                   </Box>
                 </Grid>
-                
+
                 <Grid
                   size={{
                     xs: 12,
@@ -1704,7 +1756,7 @@ export default function Page(): React.JSX.Element {
                         .filter(product => {
                           if (!searchByNumber && !searchByName) return true;
                           const shortId = product.displayNumber || product.id;
-                          const matchesNumber = searchByNumber 
+                          const matchesNumber = searchByNumber
                             ? shortId.toLowerCase().includes(searchByNumber.toLowerCase())
                             : true;
                           const matchesName = searchByName
@@ -1717,11 +1769,11 @@ export default function Page(): React.JSX.Element {
                           const isHighlighted = searchByNumber && shortId.toLowerCase().includes(searchByNumber.toLowerCase())
                             || searchByName && product.name.toLowerCase().includes(searchByName.toLowerCase());
                           return (
-                            <Box 
-                              key={product.id} 
-                              sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
+                            <Box
+                              key={product.id}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
                                 gap: 2,
                                 bgcolor: isHighlighted ? 'grey.100' : 'transparent',
                                 p: isHighlighted ? 1 : 0,
@@ -1744,14 +1796,14 @@ export default function Page(): React.JSX.Element {
                                 type="number"
                                 label="Quantity"
                                 size="small"
-                                sx={{ 
+                                sx={{
                                   width: 120,
                                   '& .MuiInputBase-input': {
                                     cursor: 'text',
                                     pointerEvents: 'auto',
                                   }
                                 }}
-                                inputProps={{ 
+                                inputProps={{
                                   min: 0,
                                   style: { textAlign: 'center', fontWeight: 'bold' }
                                 }}
@@ -1781,26 +1833,26 @@ export default function Page(): React.JSX.Element {
                   </Typography>
                   <Stack spacing={1}>
                     {acceptedProductsForForm.map((acceptedProduct, index) => (
-                        <Box
-                          key={index}
-                          sx={{
-                            p: 1.5,
-                            border: '1px solid',
-                            borderColor: 'success.main',
-                            borderRadius: 1,
-                            bgcolor: 'white'
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {acceptedProduct.productName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Quantity: {acceptedProduct.quantity} × AED {acceptedProduct.unitPrice.toFixed(2)} = AED {(acceptedProduct.unitPrice * acceptedProduct.quantity).toFixed(2)}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: 'success.dark', fontWeight: 'bold', display: 'block', mt: 0.5 }}>
-                            From: {acceptedProduct.transferredFromDriverName}
-                          </Typography>
-                        </Box>
+                      <Box
+                        key={index}
+                        sx={{
+                          p: 1.5,
+                          border: '1px solid',
+                          borderColor: 'success.main',
+                          borderRadius: 1,
+                          bgcolor: 'white'
+                        }}
+                      >
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          {acceptedProduct.productName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Quantity: {acceptedProduct.quantity} × AED {acceptedProduct.unitPrice.toFixed(2)} = AED {(acceptedProduct.unitPrice * acceptedProduct.quantity).toFixed(2)}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'success.dark', fontWeight: 'bold', display: 'block', mt: 0.5 }}>
+                          From: {acceptedProduct.transferredFromDriverName}
+                        </Typography>
+                      </Box>
                     ))}
                   </Stack>
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 2 }}>
@@ -1956,10 +2008,10 @@ export default function Page(): React.JSX.Element {
                   {(() => {
                     // Calculate accepted products for the receiving driver
                     const acceptedProducts: TripProduct[] = editingTrip?.acceptedProducts || acceptedProductsForForm || [];
-                    
+
                     const totals = calculateTotals(
-                      watchedProducts, 
-                      acceptedProducts, 
+                      watchedProducts,
+                      acceptedProducts,
                       watchedTransferredProducts || []
                     );
                     return (
@@ -2005,8 +2057,8 @@ export default function Page(): React.JSX.Element {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} disabled={isSaving}>Cancel</Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               variant="contained"
               disabled={isSaving}
               startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : null}
@@ -2025,10 +2077,10 @@ export default function Page(): React.JSX.Element {
             <CircularProgress color="inherit" />
           </Backdrop>
         </form>
-      </Dialog>
+      </Dialog >
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={handleDeleteCancel}>
+      < Dialog open={deleteDialogOpen} onClose={handleDeleteCancel} >
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>
@@ -2041,7 +2093,7 @@ export default function Page(): React.JSX.Element {
             Delete
           </Button>
         </DialogActions>
-      </Dialog>
-    </Stack>
+      </Dialog >
+    </Stack >
   );
 }

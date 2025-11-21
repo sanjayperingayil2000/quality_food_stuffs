@@ -64,7 +64,7 @@ const createUserSchema = (existingUsers: ApiUser[], editingUser: ApiUser | null)
   email: zod.string().min(1, 'Email is required').email('Invalid email format'),
   password: zod.string(),
   confirmPassword: zod.string(),
-  role: zod.enum(['super_admin', 'manager'], { required_error: 'Role is required' }),
+  role: zod.enum(['super_admin', 'manager', 'driver'], { required_error: 'Role is required' }),
   isActive: zod.boolean(),
 }).superRefine((data, ctx) => {
   const password = data.password.trim();
@@ -113,18 +113,18 @@ type UserFormData = {
   email: string;
   password: string;
   confirmPassword: string;
-  role: 'super_admin' | 'manager';
+  role: 'super_admin' | 'manager' | 'driver';
   isActive: boolean;
 };
 
-const defaultFormValues: UserFormData = {
+const getDefaultFormValues = (currentUserRole?: string): UserFormData => ({
   name: '',
   email: '',
   password: '',
   confirmPassword: '',
-  role: 'manager',
+  role: currentUserRole === 'manager' ? 'driver' : 'manager',
   isActive: true,
-};
+});
 
 
 export function UserManagement(): React.JSX.Element {
@@ -140,6 +140,10 @@ export function UserManagement(): React.JSX.Element {
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
   const [generatedPassword, setGeneratedPassword] = React.useState<string | null>(null);
   const isEditing = Boolean(editingUser);
+  
+  // Define role checks early so they can be used throughout the component
+  const isSuperAdmin = currentUser?.roles?.includes('super_admin');
+  const isManager = currentUser?.roles?.includes('manager');
 
   const handleCopyGeneratedPassword = React.useCallback(async () => {
     if (!generatedPassword) return;
@@ -157,7 +161,7 @@ export function UserManagement(): React.JSX.Element {
     formState: { errors },
   } = useForm<UserFormData>({
     resolver: zodResolver(createUserSchema(users, editingUser)),
-    defaultValues: defaultFormValues,
+    defaultValues: getDefaultFormValues(currentUser?.roles?.[0]),
   });
 
   const fetchUsers = React.useCallback(async () => {
@@ -179,17 +183,26 @@ export function UserManagement(): React.JSX.Element {
           } as ApiUser;
         })
         .filter((user): user is ApiUser => Boolean(user.id));
-      setUsers(normalizedUsers);
+      
+      // If user is a Manager (not SuperAdmin), filter to show only drivers
+      const currentIsManager = currentUser?.roles?.includes('manager');
+      const currentIsSuperAdmin = currentUser?.roles?.includes('super_admin');
+      const isManagerOnly = currentIsManager && !currentIsSuperAdmin;
+      const filteredUsers = isManagerOnly
+        ? normalizedUsers.filter((user) => user.roles.includes('driver'))
+        : normalizedUsers;
+      
+      setUsers(filteredUsers);
     } catch {
       setError('Failed to fetch users');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   React.useEffect(() => {
-    // Only fetch when current user is loaded, has access, and does not need to change password
-    if (currentUser?.roles?.includes('super_admin') && !currentUser.mustChangePassword) {
+    // Only fetch when current user is loaded, has access (super_admin or manager), and does not need to change password
+    if ((currentUser?.roles?.includes('super_admin') || currentUser?.roles?.includes('manager')) && !currentUser.mustChangePassword) {
       fetchUsers();
     }
   }, [fetchUsers, currentUser]);
@@ -198,7 +211,7 @@ export function UserManagement(): React.JSX.Element {
     setEditingUser(null);
     setError(null);
     setGeneratedPassword(null);
-    reset(defaultFormValues);
+    reset(getDefaultFormValues(currentUser?.roles?.[0]));
     setOpen(true);
   };
 
@@ -210,7 +223,7 @@ export function UserManagement(): React.JSX.Element {
       email: user.email,
       password: '', // Don't pre-fill password
       confirmPassword: '', // Don't pre-fill confirm password
-      role: user.roles[0] as 'super_admin' | 'manager', // Take the first role
+      role: user.roles[0] as 'super_admin' | 'manager' | 'driver', // Take the first role
       isActive: user.isActive,
     });
     setOpen(true);
@@ -222,7 +235,7 @@ export function UserManagement(): React.JSX.Element {
     setShowPassword(false);
     setShowConfirmPassword(false);
     setGeneratedPassword(null);
-    reset(defaultFormValues);
+    reset(getDefaultFormValues(currentUser?.roles?.[0]));
   };
 
   const togglePasswordVisibility = () => {
@@ -244,6 +257,12 @@ export function UserManagement(): React.JSX.Element {
     try {
       setError(null);
       const trimmedPassword = data.password.trim();
+
+      // If manager is creating/editing, ensure they can only create/edit drivers
+      if (isManager && !isSuperAdmin && data.role !== 'driver') {
+        setError('Managers can only create or edit drivers');
+        return;
+      }
 
       if (editingUser) {
         // Update existing user
@@ -353,12 +372,12 @@ export function UserManagement(): React.JSX.Element {
     }
   };
 
-  // Only show user management for super admin
-  if (!currentUser?.roles?.includes('super_admin')) {
+  // Only show user management for super admin or manager
+  if (!isSuperAdmin && !isManager) {
     return <></>;
   }
 
-  if (currentUser.mustChangePassword) {
+  if (currentUser?.mustChangePassword) {
     return (
       <Alert severity="info">
         Please update your password before managing user accounts.
@@ -436,12 +455,22 @@ export function UserManagement(): React.JSX.Element {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton onClick={() => handleEdit(user)}>
+                    <IconButton 
+                      onClick={() => handleEdit(user)}
+                      disabled={
+                        // Managers can only edit drivers, not other managers
+                        isManager && !isSuperAdmin && user.roles.includes('manager')
+                      }
+                    >
                       <PencilIcon />
                     </IconButton>
                     <IconButton
                       onClick={() => handleDelete(user.id)}
-                      disabled={user.id === currentUser?.id} // Can't delete self
+                      disabled={
+                        user.id === currentUser?.id || // Can't delete self
+                        // Managers can only delete drivers, not other managers
+                        (isManager && !isSuperAdmin && user.roles.includes('manager'))
+                      }
                     >
                       <TrashIcon />
                     </IconButton>
@@ -568,16 +597,27 @@ export function UserManagement(): React.JSX.Element {
                     <Select
                       {...field}
                       label="Role"
+                      disabled={
+                        (isManager && !isSuperAdmin) // Managers can only create/edit drivers, role field is disabled
+                      }
                     >
-                      <MenuItem value="manager">Manager</MenuItem>
-                      <MenuItem 
-                        value="super_admin" 
-                        disabled={hasExistingSuperAdmin}
-                      >
-                        Super Admin {hasExistingSuperAdmin ? '(Already exists)' : ''}
-                      </MenuItem>
+                      {isSuperAdmin && (
+                        <MenuItem value="manager">Manager</MenuItem>
+                      )}
+                      {isSuperAdmin && (
+                        <MenuItem 
+                          value="super_admin" 
+                          disabled={hasExistingSuperAdmin}
+                        >
+                          Super Admin {hasExistingSuperAdmin ? '(Already exists)' : ''}
+                        </MenuItem>
+                      )}
+                      <MenuItem value="driver">Driver</MenuItem>
                     </Select>
                     {errors.role && <FormHelperText>{errors.role.message}</FormHelperText>}
+                    {isManager && !isSuperAdmin && (
+                      <FormHelperText>Managers can only create and edit drivers</FormHelperText>
+                    )}
                   </FormControl>
                 )}
               />
