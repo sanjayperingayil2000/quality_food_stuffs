@@ -42,6 +42,7 @@ import { useProducts } from '@/contexts/product-context';
 import { useEmployees } from '@/contexts/employee-context';
 import { useDailyTrips, ProductTransfer } from '@/contexts/daily-trip-context';
 import { useNotifications } from '@/contexts/notification-context';
+import { useUser } from '@/hooks/use-user';
 import type { DailyTrip, TripProduct } from '@/contexts/daily-trip-context';
 
 // Configure dayjs plugins
