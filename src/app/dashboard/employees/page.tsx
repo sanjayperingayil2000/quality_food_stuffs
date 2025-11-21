@@ -35,6 +35,9 @@ export default function Page(): React.JSX.Element {
   const { employees, addEmployee, updateEmployee, deleteEmployee, updateDriverBalance, refreshEmployees } = useEmployees();
   const { user } = useUser();
   const { showSuccess, showError } = useNotifications();
+  
+  // Check if user is a driver
+  const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = React.useState(false);
@@ -306,15 +309,17 @@ export default function Page(): React.JSX.Element {
         <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
           <Typography variant="h4">Employees</Typography>
         </Stack>
-        <div>
-          <Button
-            startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />}
-            variant="contained"
-            onClick={handleAddClick}
-          >
-            Add
-          </Button>
-        </div>
+        {!isDriver && (
+          <div>
+            <Button
+              startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />}
+              variant="contained"
+              onClick={handleAddClick}
+            >
+              Add
+            </Button>
+          </div>
+        )}
       </Stack>
 
       <Table>
@@ -356,12 +361,6 @@ export default function Page(): React.JSX.Element {
                 <Stack direction="row" spacing={1.5}>
                   {employee.designation !== 'ceo' && (
                     <>
-                      <Tooltip title="Edit Employee">
-                        <IconButton onClick={() => handleEditClick(employee)} size="small">
-                          <PencilIcon />
-                        </IconButton>
-                      </Tooltip>
-
                       {employee.designation === 'driver' && (
                         <Tooltip title="Balance History">
                           <IconButton onClick={() => handleBalanceHistoryClick(employee)} size="small" color="info">
@@ -370,11 +369,21 @@ export default function Page(): React.JSX.Element {
                         </Tooltip>
                       )}
 
-                      <Tooltip title="Delete Employee">
-                        <IconButton onClick={() => handleDeleteClick(employee)} size="small" color="error">
-                          <TrashIcon />
-                        </IconButton>
-                      </Tooltip>
+                      {!isDriver && (
+                        <>
+                          <Tooltip title="Edit Employee">
+                            <IconButton onClick={() => handleEditClick(employee)} size="small">
+                              <PencilIcon />
+                            </IconButton>
+                          </Tooltip>
+
+                          <Tooltip title="Delete Employee">
+                            <IconButton onClick={() => handleDeleteClick(employee)} size="small" color="error">
+                              <TrashIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
                     </>
                   )}
                 </Stack>

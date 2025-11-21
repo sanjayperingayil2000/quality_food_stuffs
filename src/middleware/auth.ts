@@ -4,9 +4,6 @@ import { verifyAccessToken } from '@/lib/jwt';
 
 export function requireAuth(req: NextRequest) {
   // Allow disabling auth in non-production environments for debugging
-  if (process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true') {
-    return req;
-  }
   const authHeader = req.headers.get('authorization');
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
   

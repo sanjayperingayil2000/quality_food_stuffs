@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withCors, handleCorsPreflight } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
-import { requireAuth } from '@/middleware/auth';
+import { requireAuth, getRequestUser } from '@/middleware/auth';
 import { requireRole } from '@/middleware/role';
 import { userUpdateSchema } from '@/utils/validators';
 import { deleteUser, getUserById, updateUser } from '@/services/user-service';
@@ -27,13 +27,37 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const authed = requireAuth(req);
   if (authed instanceof NextResponse) return withCors(authed);
-  const forbidden = requireRole(authed, ['super_admin']);
+  const forbidden = requireRole(authed, ['super_admin', 'manager']);
   if (forbidden) return withCors(forbidden);
   try {
     const { id } = await params;
+    const currentUser = getRequestUser(authed);
+    const isManager = currentUser?.roles?.includes('manager') && !currentUser?.roles?.includes('super_admin');
+    
+    // If manager, check that the user being updated is a driver
+    if (isManager) {
+      const existingUser = await getUserById(id);
+      if (!existingUser) {
+        return withCors(NextResponse.json({ error: 'Not found' }, { status: 404 }));
+      }
+      const isDriver = existingUser.roles?.includes('driver') && existingUser.roles.length === 1;
+      if (!isDriver) {
+        return withCors(NextResponse.json({ error: 'Managers can only update drivers' }, { status: 403 }));
+      }
+    }
+    
     const body = await req.json();
     const parsed = userUpdateSchema.safeParse(body);
     if (!parsed.success) return withCors(NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }));
+    
+    // If manager is updating, ensure they can only set role to driver
+    if (isManager && parsed.data.roles) {
+      const roles = parsed.data.roles;
+      if (roles.length !== 1 || roles[0] !== 'driver') {
+        return withCors(NextResponse.json({ error: 'Managers can only assign driver role' }, { status: 403 }));
+      }
+    }
+    
     const user = await updateUser(id, parsed.data);
     if (!user) return withCors(NextResponse.json({ error: 'Not found' }, { status: 404 }));
     return withCors(NextResponse.json({ user }, { status: 200 }));

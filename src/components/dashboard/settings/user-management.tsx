@@ -16,6 +16,7 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
@@ -33,6 +34,7 @@ import { PlusIcon } from '@phosphor-icons/react/dist/ssr/Plus';
 import { TrashIcon } from '@phosphor-icons/react/dist/ssr/Trash';
 import { EyeIcon } from '@phosphor-icons/react/dist/ssr/Eye';
 import { EyeSlashIcon } from '@phosphor-icons/react/dist/ssr/EyeSlash';
+import { CopySimple } from '@phosphor-icons/react/dist/ssr/CopySimple';
 import { Controller, useForm } from 'react-hook-form';
 import { z as zod } from 'zod';
 
@@ -42,43 +44,68 @@ import { useUser } from '@/hooks/use-user';
 // Define the User type that matches the API response
 interface ApiUser {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   roles: string[];
   isActive: boolean;
-  settingsAccess: boolean;
+  settingsAccess?: boolean;
   createdAt: string;
   updatedAt: string;
+  phone?: string;
+  state?: string;
+  city?: string;
+  profilePhoto?: string | null;
+  mustChangePassword?: boolean;
 }
 
 const createUserSchema = (existingUsers: ApiUser[], editingUser: ApiUser | null) => zod.object({
   name: zod.string().min(1, 'Name is required'),
   email: zod.string().min(1, 'Email is required').email('Invalid email format'),
-  password: zod.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: zod.string().min(1, 'Confirm Password is required'),
-  role: zod.enum(['super_admin', 'manager'], { required_error: 'Role is required' }),
+  password: zod.string(),
+  confirmPassword: zod.string(),
+  role: zod.enum(['super_admin', 'manager', 'driver'], { required_error: 'Role is required' }),
   isActive: zod.boolean(),
-}).refine((data) => {
-  // Password and confirmPassword must match
-  if (data.password !== data.confirmPassword) {
-    return false;
+}).superRefine((data, ctx) => {
+  const password = data.password.trim();
+  const confirmPassword = data.confirmPassword.trim();
+  const wantsPasswordChange = password.length > 0 || confirmPassword.length > 0;
+
+  if (wantsPasswordChange) {
+    if (password.length < 6) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['password'],
+        message: 'Password must be at least 6 characters',
+      });
+    }
+    if (confirmPassword.length === 0) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['confirmPassword'],
+        message: 'Confirm Password is required',
+      });
+    } else if (password !== confirmPassword) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['confirmPassword'],
+        message: "Passwords don't match",
+      });
+    }
   }
-  return true;
-}, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-}).refine((data) => {
-  // Check if trying to create/update to super_admin when one already exists
+
   if (data.role === 'super_admin') {
-    const existingSuperAdmins = existingUsers.filter(user => 
+    const existingSuperAdmins = existingUsers.filter(user =>
       user.roles.includes('super_admin') && user.isActive && user.id !== editingUser?.id
     );
-    return existingSuperAdmins.length === 0;
+    if (existingSuperAdmins.length > 0) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ['role'],
+        message: 'Only one super admin is allowed',
+      });
+    }
   }
-  return true;
-}, {
-  message: "Only one super admin is allowed",
-  path: ["role"],
 });
 
 type UserFormData = {
@@ -86,9 +113,18 @@ type UserFormData = {
   email: string;
   password: string;
   confirmPassword: string;
-  role: 'super_admin' | 'manager';
+  role: 'super_admin' | 'manager' | 'driver';
   isActive: boolean;
 };
+
+const getDefaultFormValues = (currentUserRole?: string): UserFormData => ({
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  role: currentUserRole === 'manager' ? 'driver' : 'manager',
+  isActive: true,
+});
 
 
 export function UserManagement(): React.JSX.Element {
@@ -102,6 +138,21 @@ export function UserManagement(): React.JSX.Element {
   const [userToDelete, setUserToDelete] = React.useState<ApiUser | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [generatedPassword, setGeneratedPassword] = React.useState<string | null>(null);
+  const isEditing = Boolean(editingUser);
+  
+  // Define role checks early so they can be used throughout the component
+  const isSuperAdmin = currentUser?.roles?.includes('super_admin');
+  const isManager = currentUser?.roles?.includes('manager');
+
+  const handleCopyGeneratedPassword = React.useCallback(async () => {
+    if (!generatedPassword) return;
+    try {
+      await navigator.clipboard.writeText(generatedPassword);
+    } catch {
+      setError('Unable to copy the password. Please copy it manually.');
+    }
+  }, [generatedPassword]);
 
   const {
     control,
@@ -110,14 +161,7 @@ export function UserManagement(): React.JSX.Element {
     formState: { errors },
   } = useForm<UserFormData>({
     resolver: zodResolver(createUserSchema(users, editingUser)),
-    defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: 'manager',
-      isActive: true,
-    },
+    defaultValues: getDefaultFormValues(currentUser?.roles?.[0]),
   });
 
   const fetchUsers = React.useCallback(async () => {
@@ -129,43 +173,57 @@ export function UserManagement(): React.JSX.Element {
         setError(result.error);
         return;
       }
-      console.log('Fetched users:', result.data?.users);
-      setUsers(result.data?.users || []);
+      const normalizedUsers = (result.data?.users || [])
+        .map((user: Partial<ApiUser> & { _id?: string }) => {
+          const normalizedId = (user.id ?? user._id ?? '').toString();
+          return {
+            ...user,
+            id: normalizedId,
+            roles: user.roles ?? [],
+          } as ApiUser;
+        })
+        .filter((user): user is ApiUser => Boolean(user.id));
+      
+      // If user is a Manager (not SuperAdmin), filter to show only drivers
+      const currentIsManager = currentUser?.roles?.includes('manager');
+      const currentIsSuperAdmin = currentUser?.roles?.includes('super_admin');
+      const isManagerOnly = currentIsManager && !currentIsSuperAdmin;
+      const filteredUsers = isManagerOnly
+        ? normalizedUsers.filter((user) => user.roles.includes('driver'))
+        : normalizedUsers;
+      
+      setUsers(filteredUsers);
     } catch {
       setError('Failed to fetch users');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   React.useEffect(() => {
-    // Only fetch when current user is loaded and is super_admin
-    if (currentUser?.roles?.includes('super_admin')) {
+    // Only fetch when current user is loaded, has access (super_admin or manager), and does not need to change password
+    if ((currentUser?.roles?.includes('super_admin') || currentUser?.roles?.includes('manager')) && !currentUser.mustChangePassword) {
       fetchUsers();
     }
   }, [fetchUsers, currentUser]);
 
   const handleOpen = () => {
     setEditingUser(null);
-    reset({
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: 'manager',
-      isActive: true,
-    });
+    setError(null);
+    setGeneratedPassword(null);
+    reset(getDefaultFormValues(currentUser?.roles?.[0]));
     setOpen(true);
   };
 
   const handleEdit = (user: ApiUser) => {
     setEditingUser(user);
+    setGeneratedPassword(null);
     reset({
       name: user.name,
       email: user.email,
       password: '', // Don't pre-fill password
       confirmPassword: '', // Don't pre-fill confirm password
-      role: user.roles[0] as 'super_admin' | 'manager', // Take the first role
+      role: user.roles[0] as 'super_admin' | 'manager' | 'driver', // Take the first role
       isActive: user.isActive,
     });
     setOpen(true);
@@ -176,7 +234,8 @@ export function UserManagement(): React.JSX.Element {
     setEditingUser(null);
     setShowPassword(false);
     setShowConfirmPassword(false);
-    reset();
+    setGeneratedPassword(null);
+    reset(getDefaultFormValues(currentUser?.roles?.[0]));
   };
 
   const togglePasswordVisibility = () => {
@@ -197,6 +256,13 @@ export function UserManagement(): React.JSX.Element {
   const onSubmit = async (data: UserFormData) => {
     try {
       setError(null);
+      const trimmedPassword = data.password.trim();
+
+      // If manager is creating/editing, ensure they can only create/edit drivers
+      if (isManager && !isSuperAdmin && data.role !== 'driver') {
+        setError('Managers can only create or edit drivers');
+        return;
+      }
 
       if (editingUser) {
         // Update existing user
@@ -206,6 +272,7 @@ export function UserManagement(): React.JSX.Element {
           roles: string[];
           isActive: boolean;
           password?: string;
+          mustChangePassword?: boolean;
         } = {
           name: data.name,
           email: data.email, // Allow email updates
@@ -214,8 +281,9 @@ export function UserManagement(): React.JSX.Element {
         };
 
         // Only include password if it's provided
-        if (data.password && data.password.trim() !== '') {
-          updateData.password = data.password;
+        if (trimmedPassword !== '') {
+          updateData.password = trimmedPassword;
+          updateData.mustChangePassword = true;
         }
 
         const result = await apiClient.updateUser(editingUser.id, updateData);
@@ -224,23 +292,24 @@ export function UserManagement(): React.JSX.Element {
           return;
         }
       } else {
-        // Create new user - password is required for new users
-        if (!data.password || data.password.trim() === '') {
-          setError('Password is required for new users');
-          return;
-        }
-        
-        const result = await apiClient.createUser({
+        const payload: { name: string; email: string; roles: string[]; isActive: boolean; password?: string } = {
           name: data.name,
           email: data.email,
-          password: data.password,
           roles: [data.role], // Convert single role to array for API
           isActive: data.isActive,
-        });
+        };
+
+        if (trimmedPassword !== '') {
+          payload.password = trimmedPassword;
+        }
+        
+        const result = await apiClient.createUser(payload);
         if (result.error) {
           setError(result.error);
           return;
         }
+        const defaultPassword = result.data?.defaultPassword ?? null;
+        setGeneratedPassword(defaultPassword);
       }
 
       await fetchUsers();
@@ -287,6 +356,10 @@ export function UserManagement(): React.JSX.Element {
 
   const handleToggleActive = async (userId: string, isActive: boolean) => {
     try {
+      if (!userId) {
+        setError('Unable to update user status: missing user identifier.');
+        return;
+      }
       setError(null);
       const result = await apiClient.updateUser(userId, { isActive });
       if (result.error) {
@@ -299,9 +372,17 @@ export function UserManagement(): React.JSX.Element {
     }
   };
 
-  // Only show user management for super admin
-  if (!currentUser?.roles?.includes('super_admin')) {
+  // Only show user management for super admin or manager
+  if (!isSuperAdmin && !isManager) {
     return <></>;
+  }
+
+  if (currentUser?.mustChangePassword) {
+    return (
+      <Alert severity="info">
+        Please update your password before managing user accounts.
+      </Alert>
+    );
   }
 
   return (
@@ -315,6 +396,23 @@ export function UserManagement(): React.JSX.Element {
         }
       />
       <CardContent>
+        {generatedPassword && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', sm: 'center' }}>
+              <Typography>
+                A default password was generated for the new user:{' '}
+                <strong>{generatedPassword}</strong>
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<CopySimple width={16} height={16} />}
+                onClick={handleCopyGeneratedPassword}
+              >
+                Copy
+              </Button>
+            </Stack>
+          </Alert>
+        )}
         {error && <Alert color="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {isLoading ? (
@@ -357,12 +455,22 @@ export function UserManagement(): React.JSX.Element {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton onClick={() => handleEdit(user)}>
+                    <IconButton 
+                      onClick={() => handleEdit(user)}
+                      disabled={
+                        // Managers can only edit drivers, not other managers
+                        isManager && !isSuperAdmin && user.roles.includes('manager')
+                      }
+                    >
                       <PencilIcon />
                     </IconButton>
                     <IconButton
                       onClick={() => handleDelete(user.id)}
-                      disabled={user.id === currentUser?.id} // Can't delete self
+                      disabled={
+                        user.id === currentUser?.id || // Can't delete self
+                        // Managers can only delete drivers, not other managers
+                        (isManager && !isSuperAdmin && user.roles.includes('manager'))
+                      }
                     >
                       <TrashIcon />
                     </IconButton>
@@ -378,7 +486,7 @@ export function UserManagement(): React.JSX.Element {
         <DialogTitle>
           {editingUser ? 'Edit User' : 'Add New User'}
         </DialogTitle>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
           <DialogContent>
             <Stack spacing={2}>
               <Controller
@@ -390,7 +498,8 @@ export function UserManagement(): React.JSX.Element {
                     label="Full Name"
                     error={Boolean(errors.name)}
                     helperText={errors.name?.message}
-                    fullWidth
+                  fullWidth
+                  autoComplete="off"
                   />
                 )}
               />
@@ -406,61 +515,78 @@ export function UserManagement(): React.JSX.Element {
                     error={Boolean(errors.email)}
                     helperText={errors.email?.message}
                     fullWidth
+                    autoComplete={isEditing ? 'email' : 'off'}
                   />
                 )}
               />
 
-              <Controller
-                control={control}
-                name="password"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Password"
-                    type={showPassword ? "text" : "password"}
-                    error={Boolean(errors.password)}
-                    helperText={errors.password?.message}
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <IconButton
-                          onClick={togglePasswordVisibility}
-                          edge="end"
-                          size="small"
-                        >
-                          {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
-                        </IconButton>
-                      ),
-                    }}
-                  />
-                )}
-              />
+              {!isEditing && (
+                <Alert severity="info">
+                  A secure password will be generated automatically and shown after the user is created.
+                </Alert>
+              )}
 
-              <Controller
-                control={control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Confirm Password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    error={Boolean(errors.confirmPassword)}
-                    helperText={errors.confirmPassword?.message}
-                    fullWidth
-                    InputProps={{
-                      endAdornment: (
-                        <IconButton
-                          onClick={toggleConfirmPasswordVisibility}
-                          edge="end"
-                          size="small"
-                        >
-                          {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
-                        </IconButton>
-                      ),
-                    }}
+              {isEditing && (
+                <>
+                  <Controller
+                    control={control}
+                    name="password"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="New Password"
+                        type={showPassword ? 'text' : 'password'}
+                        error={Boolean(errors.password)}
+                        helperText={errors.password?.message}
+                        fullWidth
+                        autoComplete="new-password"
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={togglePasswordVisibility}
+                                edge="end"
+                                size="small"
+                              >
+                                {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
                   />
-                )}
-              />
+
+                  <Controller
+                    control={control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Confirm New Password"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        error={Boolean(errors.confirmPassword)}
+                        helperText={errors.confirmPassword?.message}
+                        fullWidth
+                        autoComplete="new-password"
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                onClick={toggleConfirmPasswordVisibility}
+                                edge="end"
+                                size="small"
+                              >
+                                {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                              </IconButton>
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+                </>
+              )}
 
               <Controller
                 control={control}
@@ -471,16 +597,27 @@ export function UserManagement(): React.JSX.Element {
                     <Select
                       {...field}
                       label="Role"
+                      disabled={
+                        (isManager && !isSuperAdmin) // Managers can only create/edit drivers, role field is disabled
+                      }
                     >
-                      <MenuItem value="manager">Manager</MenuItem>
-                      <MenuItem 
-                        value="super_admin" 
-                        disabled={hasExistingSuperAdmin}
-                      >
-                        Super Admin {hasExistingSuperAdmin ? '(Already exists)' : ''}
-                      </MenuItem>
+                      {isSuperAdmin && (
+                        <MenuItem value="manager">Manager</MenuItem>
+                      )}
+                      {isSuperAdmin && (
+                        <MenuItem 
+                          value="super_admin" 
+                          disabled={hasExistingSuperAdmin}
+                        >
+                          Super Admin {hasExistingSuperAdmin ? '(Already exists)' : ''}
+                        </MenuItem>
+                      )}
+                      <MenuItem value="driver">Driver</MenuItem>
                     </Select>
                     {errors.role && <FormHelperText>{errors.role.message}</FormHelperText>}
+                    {isManager && !isSuperAdmin && (
+                      <FormHelperText>Managers can only create and edit drivers</FormHelperText>
+                    )}
                   </FormControl>
                 )}
               />

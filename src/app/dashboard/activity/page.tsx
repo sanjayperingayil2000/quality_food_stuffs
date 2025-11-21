@@ -74,6 +74,9 @@ const getChangedFields = (before: Snapshot, after: Snapshot): string[] => {
   const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
   
   for (const key of allKeys) {
+    if (key === 'updatedAt') {
+      continue;
+    }
     // Compare values, handling nested objects
     if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
       changedFields.push(key);
@@ -118,6 +121,16 @@ const formatFieldName = (fieldName: string): string => {
 const getActionDescription = (activity: EnrichedActivity): string => {
   const { action, collectionName, before, after } = activity;
   const actionLower = action.toLowerCase();
+  const isUpdateAction = actionLower === 'update' || actionLower === 'updated';
+
+  if (isUpdateAction) {
+    const changedFields = before && after ? getChangedFields(before, after) : [];
+    const uniqueFields = [...new Set(changedFields)];
+    const formattedFields = uniqueFields.map(field => formatFieldName(field));
+    return formattedFields.length > 0
+      ? `Updated fields: ${formattedFields.join(', ')}`
+      : 'Updated fields: (no changes detected)';
+  }
   
   // Use enriched entity name or fallback to snapshot data
   const entityName = activity.entityName || 'Unknown Entity';
@@ -127,16 +140,6 @@ const getActionDescription = (activity: EnrichedActivity): string => {
       switch (actionLower) {
         case 'created': {
           return `Employee "${entityName}" added on employee page`;
-        }
-        case 'updated': {
-          if (before && after) {
-            const changedFields = getChangedFields(before, after);
-            if (changedFields.length > 0) {
-              const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
-              return `Update on (${fieldNames}) of ${entityName} on employee page`;
-            }
-          }
-          return `Employee "${entityName}" details updated on employee page`;
         }
         case 'deleted': {
           return `Employee "${entityName}" deleted from employee page`;
@@ -152,16 +155,6 @@ const getActionDescription = (activity: EnrichedActivity): string => {
       switch (actionLower) {
         case 'created': {
           return `Product "${productName}" added on product page`;
-        }
-        case 'updated': {
-          if (before && after) {
-            const changedFields = getChangedFields(before, after);
-            if (changedFields.length > 0) {
-              const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
-              return `Update on (${fieldNames}) field for product "${productName}" on product page`;
-            }
-          }
-          return `Product "${productName}" details updated on product page`;
         }
         case 'deleted': {
           return `Product "${productName}" deleted from product page`;
@@ -190,21 +183,6 @@ const getActionDescription = (activity: EnrichedActivity): string => {
         case 'created': {
           return `Daily trip for ${driverName} created on daily trip page`;
         }
-        case 'updated': {
-          if (before && after) {
-            const changedFields = getChangedFields(before, after);
-            const relevantFields = changedFields.filter(f => 
-              ['quantity', 'products', 'collectionAmount', 'purchaseAmount', 
-               'discount', 'petrol', 'expiry', 'transfer', 'acceptedProducts'].includes(f)
-            );
-            
-            if (relevantFields.length > 0) {
-              const fieldNames = relevantFields.map(f => formatFieldName(f)).join(', ');
-              return `Update on (${fieldNames}) field of ${driverName} for day ${tripDate} on daily trip page`;
-            }
-          }
-          return `Daily trip for ${driverName} on ${tripDate} updated on daily trip page`;
-        }
         case 'deleted': {
           return `Daily trip for ${driverName} on ${tripDate} deleted from daily trip page`;
         }
@@ -224,16 +202,6 @@ const getActionDescription = (activity: EnrichedActivity): string => {
           const category = expenseData?.category || 'additional';
           return `${driverName} ${category} expense added on additional expense page`;
         }
-        case 'updated': {
-          if (before && after) {
-            const changedFields = getChangedFields(before, after);
-            if (changedFields.length > 0) {
-              const fieldNames = changedFields.map(f => formatFieldName(f)).join(', ');
-              return `Update on (${fieldNames}) for ${driverName} on additional expense page`;
-            }
-          }
-          return `${driverName} additional expense updated on additional expense page`;
-        }
         case 'deleted': {
           return `${driverName} additional expense deleted from additional expense page`;
         }
@@ -247,9 +215,6 @@ const getActionDescription = (activity: EnrichedActivity): string => {
       switch (actionLower) {
         case 'created': {
           return `${entityName} added on ${collectionName} page`;
-        }
-        case 'updated': {
-          return `${entityName} updated on ${collectionName} page`;
         }
         case 'deleted': {
           return `${entityName} deleted from ${collectionName} page`;
@@ -402,8 +367,17 @@ export default function Page(): React.JSX.Element {
                       </TableCell>
                       <TableCell>{activity.actor || 'System'}</TableCell>
                       <TableCell>
-                        {new Date(activity.timestamp).toLocaleDateString()}{' '}
-                        {new Date(activity.timestamp).toLocaleTimeString()}
+                        {new Date(activity.timestamp).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}{' '}
+                        {new Date(activity.timestamp).toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: true 
+                        })}
                       </TableCell>
                     </TableRow>
                   );

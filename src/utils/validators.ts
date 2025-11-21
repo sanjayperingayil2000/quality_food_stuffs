@@ -3,8 +3,8 @@ import { z } from 'zod';
 export const signupSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(8),
-  roles: z.array(z.enum(['super_admin', 'manager'])).optional(),
+  password: z.string().min(8).optional(),
+  roles: z.array(z.enum(['super_admin', 'manager', 'driver'])).optional(),
 });
 
 export const loginSchema = z.object({
@@ -37,13 +37,14 @@ export const otpVerificationSchema = z.object({
 export const userUpdateSchema = z.object({
   name: z.string().optional(),
   email: z.string().email().optional(),
-  roles: z.array(z.enum(['super_admin', 'manager'])).optional(),
+  roles: z.array(z.enum(['super_admin', 'manager', 'driver'])).optional(),
   isActive: z.boolean().optional(),
   phone: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
-  profilePhoto: z.string().optional(),
+  profilePhoto: z.string().nullable().optional(),
   password: z.string().optional(),
+  mustChangePassword: z.boolean().optional(),
 });
 
 export const settingCreateSchema = z.object({
