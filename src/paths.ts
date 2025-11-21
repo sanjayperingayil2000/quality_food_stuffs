@@ -10,6 +10,7 @@ export const paths = {
     dailyTrip: '/dashboard/daily-trip',
     activity: '/dashboard/activity',
     settings: '/dashboard/settings',
+    changePassword: '/dashboard/change-password',
   },
   errors: { notFound: '/errors/not-found' },
 } as const;

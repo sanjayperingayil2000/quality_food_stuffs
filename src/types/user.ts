@@ -9,7 +9,8 @@ export interface User {
   phone?: string;
   state?: string;
   city?: string;
-  profilePhoto?: string;
+  profilePhoto?: string | null;
+  mustChangePassword?: boolean;
 
   [key: string]: unknown;
 }
