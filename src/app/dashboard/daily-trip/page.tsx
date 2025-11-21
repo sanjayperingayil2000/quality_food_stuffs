@@ -156,9 +156,13 @@ function _generateTripId(): string {
 
 export default function Page(): React.JSX.Element {
   const { products } = useProducts();
-  const { drivers } = useEmployees();
+  const { drivers, updateDriverBalance } = useEmployees();
   const { trips, addTrip, updateTrip, deleteTrip, canAddTripForDriver } = useDailyTrips();
   const { showSuccess, showError } = useNotifications();
+  const { user } = useUser();
+  
+  // Check if user is a driver
+  const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
   const [open, setOpen] = React.useState(false);
   const [editingTrip, setEditingTrip] = React.useState<DailyTrip | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -569,6 +573,22 @@ export default function Page(): React.JSX.Element {
 
     setIsSaving(true);
     try {
+      // Check if previous balance was edited (different from current employee balance)
+      const driver = drivers.find(d => d.id === data.driverId);
+      const currentEmployeeBalance = driver?.balance || 0;
+      const editedPreviousBalance = data.previousBalance;
+      
+      // If previous balance was edited and it's different from current balance, update employee balance
+      if (!editingTrip && editedPreviousBalance !== currentEmployeeBalance) {
+        const reason = `Previous balance updated when creating trip on ${dayjs(data.date).format('YYYY-MM-DD')}`;
+        await updateDriverBalance(
+          data.driverId,
+          editedPreviousBalance,
+          reason,
+          user?.email || user?.name || 'System'
+        );
+      }
+      
       if (editingTrip) {
         await updateTrip(editingTrip.id, tripData);
         showSuccess('Daily trip updated successfully!');
@@ -626,11 +646,13 @@ export default function Page(): React.JSX.Element {
         <Stack spacing={1} sx={{ flex: '1 1 auto' }}>
           <Typography variant="h4">Daily Trip</Typography>
         </Stack>
-        <div>
-          <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>
-            Add Trip
-          </Button>
-        </div>
+        {!isDriver && (
+          <div>
+            <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>
+              Add Trip
+            </Button>
+          </div>
+        )}
       </Stack>
 
       <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
@@ -802,12 +824,16 @@ export default function Page(): React.JSX.Element {
                     {trip.driverName} - {dayjs(trip.date).format('MMM D, YYYY')}
                   </Typography>
                   <Stack direction="row" spacing={1}>
-                    <IconButton onClick={() => handleEdit(trip)} size="small" sx={{ color: 'white' }}>
-                      <PencilIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleDelete(trip.id)} size="small" sx={{ color: 'white' }}>
-                      <TrashIcon />
-                    </IconButton>
+                    {!isDriver && (
+                      <>
+                        <IconButton onClick={() => handleEdit(trip)} size="small" sx={{ color: 'white' }}>
+                          <PencilIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDelete(trip.id)} size="small" sx={{ color: 'white' }}>
+                          <TrashIcon />
+                        </IconButton>
+                      </>
+                    )}
                   </Stack>
                 </Stack>
               </Box>
