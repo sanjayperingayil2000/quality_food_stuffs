@@ -241,7 +241,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
           const newTotalDue = updatedDueHistory.reduce((sum, entry) => sum + (entry.due || 0), 0);
           
           // Update employee with new dueHistory and recalculated total due
-          await Employee.findOneAndUpdate(
+          const updatedEmployee = await Employee.findOneAndUpdate(
             { id: driverId },
             {
               due: newTotalDue,
@@ -258,7 +258,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
             action: 'update',
             actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
             before: employee.toObject(),
-            after: (await Employee.findOne({ id: driverId }))?.toObject(),
+            after: updatedEmployee?.toObject() || null,
             timestamp: new Date(),
           });
         }
