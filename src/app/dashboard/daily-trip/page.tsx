@@ -553,7 +553,7 @@ export default function Page(): React.JSX.Element {
 
     // Calculate due if actualCollectionAmount is provided
     const due = data.actualCollectionAmount !== undefined && data.actualCollectionAmount !== null
-      ? data.actualCollectionAmount - data.collectionAmount
+      ? data.collectionAmount - data.actualCollectionAmount
       : undefined;
 
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -1023,64 +1023,64 @@ export default function Page(): React.JSX.Element {
                 <Paper sx={{ p: 2, bgcolor: 'primary.50', border: 2, borderColor: 'primary.main' }}>
                   <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Calculated Financial Metrics</Typography>
                   <Grid container spacing={2}>
-                    {/* First row: 5 columns */}
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    {/* First row: 6 columns */}
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Collection Amount</Typography>
                       <Typography variant="h6" color="success.main">AED {trip.collectionAmount.toFixed(2)}</Typography>
                     </Grid>
                     {trip.actualCollectionAmount !== undefined && trip.actualCollectionAmount !== null && (
-                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                         <Typography variant="body2" color="text.secondary">Actual Collection Amount</Typography>
                         <Typography variant="h6" color="info.main">AED {trip.actualCollectionAmount.toFixed(2)}</Typography>
                       </Grid>
                     )}
                     {trip.due !== undefined && trip.due !== null && (
-                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                         <Typography variant="body2" color="text.secondary">Due</Typography>
                         <Typography variant="h6" color={trip.due >= 0 ? 'success.dark' : 'error.dark'}>
                           {trip.due >= 0 ? '+' : ''}AED {trip.due.toFixed(2)}
                         </Typography>
                       </Grid>
                     )}
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Purchase Amount</Typography>
                       <Typography variant="h6" color="primary.main">AED {trip.purchaseAmount.toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Amount To Be</Typography>
                       <Typography variant="h6" color="info.dark">AED {(trip.amountToBe ?? 0).toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
                       <Typography variant="h6" color="warning.dark">AED {(trip.expiryAfterTax ?? 0).toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+
+                    {/* Second row: 6 columns */}
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Expiry Amount</Typography>
                       <Typography variant="h6" color="warning.main">AED {trip.expiry.toFixed(2)}</Typography>
                     </Grid>
-
-                    {/* Second row: 5 columns */}
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
                       <Typography variant="h6" color={(trip.salesDifference ?? 0) >= 0 ? 'success.dark' : 'error.dark'}>
                         AED {(trip.salesDifference ?? 0).toFixed(2)}
                       </Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Profit</Typography>
                       <Typography variant="h6" color={(trip.profit ?? 0) >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
                         AED {(trip.profit ?? 0).toFixed(2)}
                       </Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Discount Amount</Typography>
                       <Typography variant="h6" color="warning.main">AED {trip.discount.toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Balance</Typography>
                       <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance ?? 0)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Petrol</Typography>
                       <Typography variant="h6" color="error.main">AED {trip.petrol.toFixed(2)}</Typography>
                     </Grid>
@@ -1973,7 +1973,7 @@ export default function Page(): React.JSX.Element {
                         type="number"
                         fullWidth
                         error={Boolean(errors.actualCollectionAmount)}
-                        helperText={errors.actualCollectionAmount?.message || 'Enter the actual amount collected'}
+                        helperText={errors.actualCollectionAmount?.message || 'Enter the actual collection amount expected'}
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
                         value={field.value ?? ''}
