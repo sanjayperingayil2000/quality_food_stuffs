@@ -209,7 +209,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const deleteResult = await DailyTrip.findOneAndDelete({ id });
     console.log('Delete result:', deleteResult);
 
-    // After deletion, recalculate driver's balance based on latest remaining trip
+    // After deletion, recalculate driver's balance and remove due entry
     try {
       const driverId = trip.driverId;
       const latestRemainingTrip = await DailyTrip.findOne({ driverId }).sort({ date: -1, createdAt: -1 });
@@ -221,13 +221,50 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       const dd = String(tripDate.getDate()).padStart(2, '0');
       const reason = `Daily trip on ${yyyy}-${mm}-${dd} deleted`;
 
+      // Update balance
       await updateEmployeeService(driverId, {
         balance: newBalance,
         updatedBy: user?.sub,
         balanceUpdateReason: reason,
       });
+
+      // Remove due entry for this trip if it exists
+      const employee = await Employee.findOne({ id: driverId });
+      if (employee && employee.dueHistory && employee.dueHistory.length > 0) {
+        const dueEntryToRemove = employee.dueHistory.find(entry => entry.tripId === id);
+        
+        if (dueEntryToRemove) {
+          // Remove the due entry from history
+          const updatedDueHistory = employee.dueHistory.filter(entry => entry.tripId !== id);
+          
+          // Recalculate total due by summing all remaining due entries
+          const newTotalDue = updatedDueHistory.reduce((sum, entry) => sum + (entry.due || 0), 0);
+          
+          // Update employee with new dueHistory and recalculated total due
+          await Employee.findOneAndUpdate(
+            { id: driverId },
+            {
+              due: newTotalDue,
+              dueHistory: updatedDueHistory,
+              updatedBy: user?.sub,
+            },
+            { new: true, runValidators: true }
+          );
+
+          // Log to history
+          await History.create({
+            collectionName: 'employees',
+            documentId: employee._id,
+            action: 'update',
+            actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
+            before: employee.toObject(),
+            after: (await Employee.findOne({ id: driverId }))?.toObject(),
+            timestamp: new Date(),
+          });
+        }
+      }
     } catch (balanceUpdateError) {
-      console.error('Failed to sync driver balance after trip deletion:', balanceUpdateError);
+      console.error('Failed to sync driver balance/due after trip deletion:', balanceUpdateError);
     }
     
     // Log to history
