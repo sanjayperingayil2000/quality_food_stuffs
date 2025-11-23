@@ -23,7 +23,7 @@ export function requireAuth(req: NextRequest) {
   }
 }
 
-export function getRequestUser(req: NextRequest): { sub: string; roles: string[] } | null {
+export function getRequestUser(req: NextRequest): { sub: string; roles: string[]; employeeId?: string } | null {
   const raw = req.headers.get('x-user');
   if (!raw) return null;
   try {

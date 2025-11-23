@@ -177,7 +177,8 @@ export function UserManagement(): React.JSX.Element {
     if (!role || role === 'super_admin') return [];
     return employees.filter(emp => {
       if (role === 'manager') {
-        return emp.designation === 'manager' || emp.designation === 'ceo';
+        // For manager role, show CEO and staff (since there's no manager designation in employees)
+        return emp.designation === 'ceo' || emp.designation === 'staff';
       }
       if (role === 'driver') {
         return emp.designation === 'driver';
@@ -314,11 +315,7 @@ export function UserManagement(): React.JSX.Element {
         }
         
         // Add employeeId if role is manager or driver
-        if (data.role !== 'super_admin') {
-          updateData.employeeId = data.employeeId || undefined;
-        } else {
-          updateData.employeeId = undefined;
-        }
+        updateData.employeeId = data.role === 'super_admin' ? undefined : (data.employeeId || undefined);
 
         const result = await apiClient.updateUser(editingUser.id, updateData);
         if (result.error) {

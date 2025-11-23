@@ -73,18 +73,16 @@ export async function updateUser(id: string, updates: Partial<{ name: string; em
   }
   
   // If employeeId is being updated, check if that employee already has a login
-  if (updates.employeeId !== undefined) {
-    if (updates.employeeId) {
-      const existingEmployeeUser = await User.findOne({ employeeId: updates.employeeId, isActive: true, _id: { $ne: id } });
-      if (existingEmployeeUser) {
-        throw new Error('This employee already has a login account');
-      }
-      
-      // Verify employee exists
-      const employee = await Employee.findOne({ id: updates.employeeId, isActive: true });
-      if (!employee) {
-        throw new Error('Employee not found or inactive');
-      }
+  if (updates.employeeId !== undefined && updates.employeeId) {
+    const existingEmployeeUser = await User.findOne({ employeeId: updates.employeeId, isActive: true, _id: { $ne: id } });
+    if (existingEmployeeUser) {
+      throw new Error('This employee already has a login account');
+    }
+    
+    // Verify employee exists
+    const employee = await Employee.findOne({ id: updates.employeeId, isActive: true });
+    if (!employee) {
+      throw new Error('Employee not found or inactive');
     }
   }
   

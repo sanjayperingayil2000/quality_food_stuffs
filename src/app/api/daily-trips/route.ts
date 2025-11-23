@@ -39,6 +39,8 @@ const dailyTripCreateSchema = z.object({
   acceptedProducts: z.array(tripProductSchema).optional().default([]),
   previousBalance: z.number().min(0),
   collectionAmount: z.number().min(0),
+  actualCollectionAmount: z.number().min(0).optional(),
+  due: z.number().optional(),
   purchaseAmount: z.number().min(0),
   expiry: z.number().min(0),
   discount: z.number().min(0),

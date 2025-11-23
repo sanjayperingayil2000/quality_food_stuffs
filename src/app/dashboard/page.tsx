@@ -10,6 +10,7 @@ import { MainNavWrapper } from '@/components/dashboard/layout/main-nav';
 import { useDailyTrips } from '@/contexts/daily-trip-context';
 import { useEmployees } from '@/contexts/employee-context';
 import { useFilters } from '@/contexts/filter-context';
+import { useUser } from '@/hooks/use-user';
 
 export default function Page(): React.JSX.Element {
   const { trips } = useDailyTrips();
@@ -181,7 +182,7 @@ export default function Page(): React.JSX.Element {
         trend: 'up' as 'up' | 'down'
       }
     };
-  }, [trips, drivers, filters]);
+  }, [trips, drivers, filters, isDriver, user?.employeeId]);
 
   return (
     <> 
