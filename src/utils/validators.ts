@@ -5,6 +5,7 @@ export const signupSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).optional(),
   roles: z.array(z.enum(['super_admin', 'manager', 'driver'])).optional(),
+  employeeId: z.string().optional(), // Link to employee
 });
 
 export const loginSchema = z.object({
@@ -45,6 +46,7 @@ export const userUpdateSchema = z.object({
   profilePhoto: z.string().nullable().optional(),
   password: z.string().optional(),
   mustChangePassword: z.boolean().optional(),
+  employeeId: z.string().optional(), // Link to employee
 });
 
 export const settingCreateSchema = z.object({

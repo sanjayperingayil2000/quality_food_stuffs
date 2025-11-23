@@ -82,6 +82,7 @@ const tripSchema = zod.object({
   })),
   previousBalance: zod.coerce.number(),
   collectionAmount: zod.coerce.number().min(0, 'Collection amount is required').refine(val => val > 0, 'Collection amount is required'),
+  actualCollectionAmount: zod.coerce.number().min(0, 'Actual collection amount must be non-negative').optional(),
   purchaseAmount: zod.coerce.number().min(0, 'Purchase amount must be non-negative').optional(),
   expiry: zod.coerce.number().min(0, 'Expiry amount is required').refine(val => val >= 0, 'Expiry amount is required'),
   expiryAfterTax: zod.coerce.number().min(0, 'Expiry after tax must be non-negative'),
@@ -364,6 +365,7 @@ export default function Page(): React.JSX.Element {
       products: trip.products,
       previousBalance: typeof trip.previousBalance === 'number' ? trip.previousBalance : 0,
       collectionAmount: safeCollectionAmount,
+      actualCollectionAmount: trip.actualCollectionAmount,
       purchaseAmount: safePurchaseAmount,
       expiry: safeExpiry,
       expiryAfterTax: safeExpiryAfterTax,
@@ -549,6 +551,11 @@ export default function Page(): React.JSX.Element {
     // Calculate Purchase Amount dynamically from Grand Totals
     const calculatedPurchaseAmount = totals.overall.grandTotal;
 
+    // Calculate due if actualCollectionAmount is provided
+    const due = data.actualCollectionAmount !== undefined && data.actualCollectionAmount !== null
+      ? data.actualCollectionAmount - data.collectionAmount
+      : undefined;
+
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
       driverName: driver?.name || '',
@@ -558,6 +565,8 @@ export default function Page(): React.JSX.Element {
       acceptedProducts: editingTrip ? editingTrip.acceptedProducts : acceptedProductsForForm,
       previousBalance: data.previousBalance,
       collectionAmount: data.collectionAmount,
+      actualCollectionAmount: data.actualCollectionAmount,
+      due,
       purchaseAmount: calculatedPurchaseAmount, // Use calculated value
       expiry: data.expiry,
       discount: data.discount,
@@ -1019,6 +1028,20 @@ export default function Page(): React.JSX.Element {
                       <Typography variant="body2" color="text.secondary">Collection Amount</Typography>
                       <Typography variant="h6" color="success.main">AED {trip.collectionAmount.toFixed(2)}</Typography>
                     </Grid>
+                    {trip.actualCollectionAmount !== undefined && trip.actualCollectionAmount !== null && (
+                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                        <Typography variant="body2" color="text.secondary">Actual Collection Amount</Typography>
+                        <Typography variant="h6" color="info.main">AED {trip.actualCollectionAmount.toFixed(2)}</Typography>
+                      </Grid>
+                    )}
+                    {trip.due !== undefined && trip.due !== null && (
+                      <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                        <Typography variant="body2" color="text.secondary">Due</Typography>
+                        <Typography variant="h6" color={trip.due >= 0 ? 'success.dark' : 'error.dark'}>
+                          {trip.due >= 0 ? '+' : ''}AED {trip.due.toFixed(2)}
+                        </Typography>
+                      </Grid>
+                    )}
                     <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
                       <Typography variant="body2" color="text.secondary">Purchase Amount</Typography>
                       <Typography variant="h6" color="primary.main">AED {trip.purchaseAmount.toFixed(2)}</Typography>
@@ -1935,6 +1958,25 @@ export default function Page(): React.JSX.Element {
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
                         value={field.value || ''}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Controller
+                    control={control}
+                    name="actualCollectionAmount"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Actual Collection Amount (AED)"
+                        type="number"
+                        fullWidth
+                        error={Boolean(errors.actualCollectionAmount)}
+                        helperText={errors.actualCollectionAmount?.message || 'Enter the actual amount collected'}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                        value={field.value ?? ''}
                       />
                     )}
                   />

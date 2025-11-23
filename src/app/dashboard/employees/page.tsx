@@ -332,6 +332,7 @@ export default function Page(): React.JSX.Element {
             <TableCell>Role</TableCell>
             <TableCell>Location</TableCell>
             <TableCell>Route name</TableCell>
+            <TableCell>Due</TableCell>
             <TableCell>Balance</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
@@ -348,6 +349,17 @@ export default function Page(): React.JSX.Element {
               </TableCell>
               <TableCell>{employee.location || '-'}</TableCell>
               <TableCell>{employee.routeName || '-'}</TableCell>
+              <TableCell>
+                {employee.designation === 'driver' ? (
+                  <Typography variant="body2" color={employee.due && employee.due >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 600 }}>
+                    {employee.due !== undefined && employee.due !== null 
+                      ? `${employee.due >= 0 ? '+' : ''}AED ${employee.due.toFixed(2)}`
+                      : 'AED 0.00'}
+                  </Typography>
+                ) : (
+                  '-'
+                )}
+              </TableCell>
               <TableCell>
                 {employee.designation === 'driver' ? (
                   <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>

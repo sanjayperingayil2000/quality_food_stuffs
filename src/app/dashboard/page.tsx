@@ -15,6 +15,10 @@ export default function Page(): React.JSX.Element {
   const { trips } = useDailyTrips();
   const { drivers } = useEmployees();
   const { filters } = useFilters();
+  const { user } = useUser();
+  
+  // Check if user is a driver
+  const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
 
   // Calculate overview metrics from trips and employee data
   const overviewMetrics = React.useMemo(() => {
@@ -31,8 +35,11 @@ export default function Page(): React.JSX.Element {
              (tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate));
     });
 
-    // Filter trips based on driver selection
-    if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+    // For driver users, trips are already filtered by API, but ensure we only show their trips
+    if (isDriver && user?.employeeId) {
+      filteredTrips = filteredTrips.filter(trip => trip.driverId === user.employeeId);
+    } else if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+      // Filter trips based on driver selection (for non-driver users)
       const selectedDriver = drivers.find(driver => driver.name === filters.driver);
       if (selectedDriver) {
         filteredTrips = filteredTrips.filter(trip => trip.driverId === selectedDriver.id);

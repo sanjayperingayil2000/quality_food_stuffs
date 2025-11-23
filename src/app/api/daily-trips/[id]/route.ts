@@ -5,9 +5,10 @@ import { withCors } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { connectToDatabase } from '@/lib/db';
 import { DailyTrip } from '@/models/daily-trip';
+import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
-import { updateEmployee as updateEmployeeService } from '@/services/employee-service';
+import { updateEmployee as updateEmployeeService, updateDriverDue } from '@/services/employee-service';
 
 const tripProductSchema = z.object({
   productId: z.string().min(1),
@@ -122,8 +123,49 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           balanceUpdateReason: reason,
         });
       }
+      
+      // Update driver due if actualCollectionAmount and due are provided
+      if (updatedTrip?.actualCollectionAmount !== undefined && updatedTrip?.actualCollectionAmount !== null && updatedTrip?.due !== undefined && updatedTrip?.due !== null) {
+        const tripDate = updatedTrip.date instanceof Date ? updatedTrip.date : new Date(updatedTrip.date);
+        // Check if this trip already has a due entry in history
+        const employee = await Employee.findOne({ id: updatedTrip.driverId });
+        const existingDueEntry = employee?.dueHistory?.find(entry => entry.tripId === id);
+        
+        // Only add if it doesn't exist, or update if the due value changed
+        if (!existingDueEntry || existingDueEntry.due !== updatedTrip.due) {
+          // If it exists, we need to recalculate the total due
+          if (existingDueEntry) {
+            // Remove old due and add new due
+            const oldDue = existingDueEntry.due;
+            const currentDueTotal = employee?.due || 0;
+            const newDueTotal = currentDueTotal - oldDue + updatedTrip.due;
+            
+            // Update the dueHistory entry
+            await Employee.findOneAndUpdate(
+              { id: updatedTrip.driverId, 'dueHistory.tripId': id },
+              {
+                $set: {
+                  'dueHistory.$.due': updatedTrip.due,
+                  'dueHistory.$.updatedAt': new Date(),
+                  due: newDueTotal,
+                },
+                updatedBy: user?.sub,
+              }
+            );
+          } else {
+            // Add new due entry
+            await updateDriverDue(
+              updatedTrip.driverId,
+              updatedTrip.due,
+              tripDate,
+              id,
+              user?.sub
+            );
+          }
+        }
+      }
     } catch (balanceUpdateError) {
-      console.error('Failed to sync driver balance after trip update:', balanceUpdateError);
+      console.error('Failed to sync driver balance/due after trip update:', balanceUpdateError);
     }
     
     // Log to history

@@ -32,6 +32,8 @@ export interface IDailyTrip {
   // Financial fields
   previousBalance: number; // Previous balance carried into this trip
   collectionAmount: number;
+  actualCollectionAmount?: number; // Actual collection amount entered by user
+  due?: number; // Due amount = actualCollectionAmount - collectionAmount (can be negative or positive)
   purchaseAmount: number;
   expiry: number; // Expiry amount in AED
   discount: number; // Discount amount in AED
@@ -97,6 +99,8 @@ const DailyTripSchema = new Schema<IDailyTripDocument>(
     // Financial fields
     previousBalance: { type: Number, required: true, min: 0 },
     collectionAmount: { type: Number, required: true, min: 0 },
+    actualCollectionAmount: { type: Number },
+    due: { type: Number }, // Can be negative or positive
     purchaseAmount: { type: Number, required: true, min: 0 },
     expiry: { type: Number, required: true, min: 0 },
     discount: { type: Number, required: true, min: 0 },
