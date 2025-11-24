@@ -185,8 +185,9 @@ export function UserManagement(): React.JSX.Element {
       }
       return false;
     }).filter(emp => {
-      // Filter out employees that already have a login account
-      return !users.some(user => user.employeeId === emp.id && user.isActive && user.id !== editingUser?.id);
+      // Include current employee if editing, or filter out employees that already have a login account
+      const isCurrentEmployee = editingUser && (editingUser as ApiUser & { employeeId?: string }).employeeId === emp.id;
+      return isCurrentEmployee || !users.some(user => user.employeeId === emp.id && user.isActive && user.id !== editingUser?.id);
     });
   }, [role, employees, users, editingUser]);
 
@@ -244,13 +245,14 @@ export function UserManagement(): React.JSX.Element {
   const handleEdit = (user: ApiUser) => {
     setEditingUser(user);
     setGeneratedPassword(null);
+    const userEmployeeId = (user as ApiUser & { employeeId?: string }).employeeId || '';
     reset({
       name: user.name,
       email: user.email,
       password: '', // Don't pre-fill password
       confirmPassword: '', // Don't pre-fill confirm password
       role: user.roles[0] as 'super_admin' | 'manager' | 'driver', // Take the first role
-      employeeId: (user as ApiUser & { employeeId?: string }).employeeId || '',
+      employeeId: userEmployeeId,
       isActive: user.isActive,
     });
     setOpen(true);
@@ -668,38 +670,46 @@ export function UserManagement(): React.JSX.Element {
                 <Controller
                   control={control}
                   name="employeeId"
-                  render={({ field }) => (
-                    <FormControl error={Boolean(errors.employeeId)} fullWidth>
-                      <InputLabel>Select {role === 'manager' ? 'Manager' : 'Driver'}</InputLabel>
-                      <Select
-                        {...field}
-                        label={`Select ${role === 'manager' ? 'Manager' : 'Driver'}`}
-                        disabled={availableEmployees.length === 0}
-                      >
-                        {availableEmployees.length === 0 ? (
-                          <MenuItem value="" disabled>
-                            {role === 'manager' 
-                              ? 'No available managers (all have login accounts)' 
-                              : 'No available drivers (all have login accounts)'}
-                          </MenuItem>
-                        ) : (
-                          availableEmployees.map((emp) => (
-                            <MenuItem key={emp.id} value={emp.id}>
-                              {emp.name} {emp.routeName ? `(${emp.routeName})` : ''}
+                  render={({ field }) => {
+                    const selectedEmployee = employees.find(emp => emp.id === field.value);
+                    return (
+                      <FormControl error={Boolean(errors.employeeId)} fullWidth>
+                        <InputLabel>Select {role === 'manager' ? 'Manager' : 'Driver'}</InputLabel>
+                        <Select
+                          {...field}
+                          label={`Select ${role === 'manager' ? 'Manager' : 'Driver'}`}
+                          disabled={availableEmployees.length === 0}
+                        >
+                          {availableEmployees.length === 0 ? (
+                            <MenuItem value="" disabled>
+                              {role === 'manager' 
+                                ? 'No available managers (all have login accounts)' 
+                                : 'No available drivers (all have login accounts)'}
                             </MenuItem>
-                          ))
+                          ) : (
+                            availableEmployees.map((emp) => (
+                              <MenuItem key={emp.id} value={emp.id}>
+                                {emp.name} {emp.routeName ? `(${emp.routeName})` : ''}
+                              </MenuItem>
+                            ))
+                          )}
+                        </Select>
+                        {errors.employeeId && <FormHelperText>{errors.employeeId.message}</FormHelperText>}
+                        {selectedEmployee && editingUser && (
+                          <FormHelperText>
+                            Current: {selectedEmployee.name} {selectedEmployee.routeName ? `(${selectedEmployee.routeName})` : ''}
+                          </FormHelperText>
                         )}
-                      </Select>
-                      {errors.employeeId && <FormHelperText>{errors.employeeId.message}</FormHelperText>}
-                      {availableEmployees.length === 0 && (
-                        <FormHelperText>
-                          {role === 'manager' 
-                            ? 'All managers already have login accounts' 
-                            : 'All drivers already have login accounts'}
-                        </FormHelperText>
-                      )}
-                    </FormControl>
-                  )}
+                        {availableEmployees.length === 0 && !selectedEmployee && (
+                          <FormHelperText>
+                            {role === 'manager' 
+                              ? 'All managers already have login accounts' 
+                              : 'All drivers already have login accounts'}
+                          </FormHelperText>
+                        )}
+                      </FormControl>
+                    );
+                  }}
                 />
               )}
 

@@ -251,19 +251,32 @@ export default function Page(): React.JSX.Element {
     // console.log('========================');
   }, [drivers, currentDriverId, transferForm.receivingDriverId]);
 
-  // Auto-populate previous balance when driver is selected
+  // Auto-populate previous balance when driver is selected or when driver balance changes
   React.useEffect(() => {
     if (currentDriverId) {
       const driver = drivers.find(d => d.id === currentDriverId);
       if (driver && driver.balance !== undefined) {
-        // Only auto-populate if not editing or if editing but previousBalance is 0/empty
-        const currentPreviousBalance = watchedPreviousBalance;
-        if (!editingTrip || !currentPreviousBalance || currentPreviousBalance === 0) {
-          setValue('previousBalance', driver.balance || 0);
+        // Always update previous balance when driver balance changes (for new trips or when balance is updated from employee page)
+        if (editingTrip) {
+          // For editing, only update if previousBalance is 0/empty or if driver balance changed
+          const currentPreviousBalance = watchedPreviousBalance;
+          if (currentPreviousBalance && currentPreviousBalance !== 0) {
+            return; // Don't update if there's already a value
+          }
         }
+        setValue('previousBalance', driver.balance || 0);
       }
     }
   }, [currentDriverId, drivers, editingTrip, setValue, watchedPreviousBalance]);
+  
+  // Set default driver filter and selected driver for driver users
+  React.useEffect(() => {
+    if (isDriver && user?.employeeId && typeof user.employeeId === 'string' && mounted) {
+      setDriverFilter(user.employeeId);
+      setSelectedDriverId(user.employeeId);
+      setValue('driverId', user.employeeId);
+    }
+  }, [isDriver, user?.employeeId, mounted, setValue]);
 
   // Filter products based on search
   React.useEffect(() => {
@@ -306,6 +319,10 @@ export default function Page(): React.JSX.Element {
 
     const selectedDate = dayjs(watchedDate).format('YYYY-MM-DD');
     return drivers.filter(driver => {
+      // For driver users, only show their own driver
+      if (isDriver && driver.id !== user?.employeeId) {
+        return false;
+      }
       // Filter out drivers who already have a trip for this date
       const hasTripForDate = trips.some(trip =>
         trip.driverId === driver.id &&
@@ -313,7 +330,7 @@ export default function Page(): React.JSX.Element {
       );
       return !hasTripForDate;
     });
-  }, [drivers, watchedDate, trips]);
+  }, [drivers, watchedDate, trips, isDriver, user?.employeeId]);
 
   // Calculation functions
 
@@ -416,8 +433,11 @@ export default function Page(): React.JSX.Element {
   const handleApplyFilter = React.useCallback(() => {
     let filtered = trips;
 
-    // Filter by driver
-    if (driverFilter) {
+    // For driver users, always filter by their employeeId
+    if (isDriver && user?.employeeId) {
+      filtered = filtered.filter(trip => trip.driverId === user.employeeId);
+    } else if (driverFilter) {
+      // For non-driver users, filter by selected driver
       filtered = filtered.filter(trip => trip.driverId === driverFilter);
     }
 
@@ -444,7 +464,7 @@ export default function Page(): React.JSX.Element {
     });
 
     setFilteredTrips(filtered);
-  }, [trips, driverFilter, dateFrom, dateTo]);
+  }, [trips, driverFilter, dateFrom, dateTo, isDriver, user?.employeeId]);
 
   // Apply filter when dependencies change
   React.useEffect(() => {
@@ -677,13 +697,16 @@ export default function Page(): React.JSX.Element {
             label="All Drivers"
             displayEmpty
             onChange={(e) => setDriverFilter(e.target.value)}
+            disabled={isDriver}
           >
-            <MenuItem value="">All Drivers</MenuItem>
-            {drivers.map((driver) => (
-              <MenuItem key={driver.id} value={driver.id}>
-                {driver.name}
-              </MenuItem>
-            ))}
+            {!isDriver && <MenuItem value="">All Drivers</MenuItem>}
+            {drivers
+              .filter(driver => !isDriver || driver.id === user?.employeeId)
+              .map((driver) => (
+                <MenuItem key={driver.id} value={driver.id}>
+                  {driver.name}
+                </MenuItem>
+              ))}
           </Select>
         </FormControl>
         <TextField
@@ -1241,13 +1264,14 @@ export default function Page(): React.JSX.Element {
                 </Box>
 
                 {/* Driver selection cards */}
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
-                    Available Drivers:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {getAvailableDrivers().length > 0 ? (
-                      getAvailableDrivers().map((driver) => (
+                {!isDriver ? (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
+                      Available Drivers:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {getAvailableDrivers().length > 0 ? (
+                        getAvailableDrivers().map((driver) => (
                         <Box
                           key={driver.id}
                           sx={{
@@ -1347,6 +1371,18 @@ export default function Page(): React.JSX.Element {
                     )}
                   </Box>
                 </Box>
+                ) : (
+                  isDriver && user?.employeeId && typeof user.employeeId === 'string' ? (
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                        {drivers.find(d => d.id === user.employeeId)?.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {drivers.find(d => d.id === user.employeeId)?.routeName} - {drivers.find(d => d.id === user.employeeId)?.location}
+                      </Typography>
+                    </Box>
+                  ) : null
+                )}
 
                 {errors.driverId && (
                   <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>

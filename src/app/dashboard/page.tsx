@@ -387,20 +387,22 @@ export default function Page(): React.JSX.Element {
             value={`${overviewMetrics.profit.value.toFixed(0)}`} 
           />
         </Grid>
-        <Grid
-          size={{
-            lg: 12,
-            md: 12,
-            sm: 12,
-            xs: 12,
-          }}
-        >
-          <Sales
-            trips={trips}
-            drivers={drivers}
-            sx={{ height: '100%' }}
-          />
-        </Grid>
+        {!isDriver && (
+          <Grid
+            size={{
+              lg: 12,
+              md: 12,
+              sm: 12,
+              xs: 12,
+            }}
+          >
+            <Sales
+              trips={trips}
+              drivers={drivers}
+              sx={{ height: '100%' }}
+            />
+          </Grid>
+        )}
         {/* <Grid
         size={{
           lg: 4,
