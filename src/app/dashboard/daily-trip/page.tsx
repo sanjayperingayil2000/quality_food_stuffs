@@ -80,9 +80,9 @@ const tripSchema = zod.object({
     transferredFromDriverId: zod.string(),
     transferredFromDriverName: zod.string(),
   })),
-  previousBalance: zod.coerce.number(),
+  previousBalance: zod.coerce.number().min(0, 'Previous balance is required').refine(val => val >= 0, 'Previous balance is required'),
   collectionAmount: zod.coerce.number().min(0, 'Collection amount is required').refine(val => val > 0, 'Collection amount is required'),
-  actualCollectionAmount: zod.coerce.number().min(0, 'Actual collection amount must be non-negative').optional(),
+  actualCollectionAmount: zod.coerce.number().min(0, 'Actual collection amount is required').refine(val => val >= 0, 'Actual collection amount is required'),
   purchaseAmount: zod.coerce.number().min(0, 'Purchase amount must be non-negative').optional(),
   expiry: zod.coerce.number().min(0, 'Expiry amount is required').refine(val => val >= 0, 'Expiry amount is required'),
   expiryAfterTax: zod.coerce.number().min(0, 'Expiry after tax must be non-negative'),
@@ -217,6 +217,7 @@ export default function Page(): React.JSX.Element {
       transferredProducts: [],
       previousBalance: 0,
       collectionAmount: 0,
+      actualCollectionAmount: 0,
       purchaseAmount: 0,
       expiry: 0,
       expiryAfterTax: 0,
@@ -250,15 +251,19 @@ export default function Page(): React.JSX.Element {
     // console.log('========================');
   }, [drivers, currentDriverId, transferForm.receivingDriverId]);
 
-  // Auto-populate previous balance when driver is selected (only for new trips, not editing)
+  // Auto-populate previous balance when driver is selected
   React.useEffect(() => {
-    if (currentDriverId && !editingTrip) {
+    if (currentDriverId) {
       const driver = drivers.find(d => d.id === currentDriverId);
       if (driver && driver.balance !== undefined) {
-        setValue('previousBalance', driver.balance);
+        // Only auto-populate if not editing or if editing but previousBalance is 0/empty
+        const currentPreviousBalance = watchedPreviousBalance;
+        if (!editingTrip || !currentPreviousBalance || currentPreviousBalance === 0) {
+          setValue('previousBalance', driver.balance || 0);
+        }
       }
     }
-  }, [currentDriverId, drivers, editingTrip, setValue]);
+  }, [currentDriverId, drivers, editingTrip, setValue, watchedPreviousBalance]);
 
   // Filter products based on search
   React.useEffect(() => {
@@ -327,6 +332,7 @@ export default function Page(): React.JSX.Element {
       transferredProducts: [],
       previousBalance: 0,
       collectionAmount: 0,
+      actualCollectionAmount: 0,
       purchaseAmount: 0,
       expiry: 0,
       expiryAfterTax: 0,
@@ -365,7 +371,7 @@ export default function Page(): React.JSX.Element {
       products: trip.products,
       previousBalance: typeof trip.previousBalance === 'number' ? trip.previousBalance : 0,
       collectionAmount: safeCollectionAmount,
-      actualCollectionAmount: trip.actualCollectionAmount,
+      actualCollectionAmount: typeof trip.actualCollectionAmount === 'number' ? trip.actualCollectionAmount : 0,
       purchaseAmount: safePurchaseAmount,
       expiry: safeExpiry,
       expiryAfterTax: safeExpiryAfterTax,
@@ -551,10 +557,8 @@ export default function Page(): React.JSX.Element {
     // Calculate Purchase Amount dynamically from Grand Totals
     const calculatedPurchaseAmount = totals.overall.grandTotal;
 
-    // Calculate due if actualCollectionAmount is provided
-    const due = data.actualCollectionAmount !== undefined && data.actualCollectionAmount !== null
-      ? data.collectionAmount - data.actualCollectionAmount
-      : undefined;
+    // Calculate due (actualCollectionAmount is now required)
+    const due = data.collectionAmount - data.actualCollectionAmount;
 
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
@@ -1930,9 +1934,10 @@ export default function Page(): React.JSX.Element {
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Previous Balance (AED)"
+                        label="Previous Balance (AED) *"
                         type="number"
                         fullWidth
+                        required
                         error={Boolean(errors.previousBalance)}
                         helperText={errors.previousBalance?.message || 'Auto-filled from employee balance (editable)'}
                         inputProps={{ min: 0, step: 0.01 }}
@@ -1969,13 +1974,14 @@ export default function Page(): React.JSX.Element {
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Actual Collection Amount (AED)"
+                        label="Actual Collection Amount (AED) *"
                         type="number"
                         fullWidth
+                        required
                         error={Boolean(errors.actualCollectionAmount)}
                         helperText={errors.actualCollectionAmount?.message || 'Enter the actual collection amount expected'}
                         inputProps={{ min: 0, step: 0.01 }}
-                        onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
                         value={field.value ?? ''}
                       />
                     )}
