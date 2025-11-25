@@ -40,6 +40,7 @@ import { z as zod } from 'zod';
 
 import { apiClient } from '@/lib/api-client';
 import { useUser } from '@/hooks/use-user';
+import { useEmployees } from '@/contexts/employee-context';
 
 // Define the User type that matches the API response
 interface ApiUser {
@@ -57,6 +58,7 @@ interface ApiUser {
   city?: string;
   profilePhoto?: string | null;
   mustChangePassword?: boolean;
+  employeeId?: string;
 }
 
 const createUserSchema = (existingUsers: ApiUser[], editingUser: ApiUser | null) => zod.object({
@@ -114,6 +116,7 @@ type UserFormData = {
   password: string;
   confirmPassword: string;
   role: 'super_admin' | 'manager' | 'driver';
+  employeeId?: string;
   isActive: boolean;
 };
 
@@ -123,12 +126,14 @@ const getDefaultFormValues = (currentUserRole?: string): UserFormData => ({
   password: '',
   confirmPassword: '',
   role: currentUserRole === 'manager' ? 'driver' : 'manager',
+  employeeId: '',
   isActive: true,
 });
 
 
 export function UserManagement(): React.JSX.Element {
   const { user: currentUser } = useUser();
+  const { employees } = useEmployees();
   const [users, setUsers] = React.useState<ApiUser[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -144,7 +149,7 @@ export function UserManagement(): React.JSX.Element {
   // Define role checks early so they can be used throughout the component
   const isSuperAdmin = currentUser?.roles?.includes('super_admin');
   const isManager = currentUser?.roles?.includes('manager');
-
+  
   const handleCopyGeneratedPassword = React.useCallback(async () => {
     if (!generatedPassword) return;
     try {
@@ -158,11 +163,33 @@ export function UserManagement(): React.JSX.Element {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<UserFormData>({
     resolver: zodResolver(createUserSchema(users, editingUser)),
     defaultValues: getDefaultFormValues(currentUser?.roles?.[0]),
   });
+  
+  const role = watch('role');
+  
+  // Filter employees based on role - managers for manager role, drivers for driver role
+  const availableEmployees = React.useMemo(() => {
+    if (!role || role === 'super_admin') return [];
+    return employees.filter(emp => {
+      if (role === 'manager') {
+        // For manager role, show CEO and staff (since there's no manager designation in employees)
+        return emp.designation === 'ceo' || emp.designation === 'staff';
+      }
+      if (role === 'driver') {
+        return emp.designation === 'driver';
+      }
+      return false;
+    }).filter(emp => {
+      // Include current employee if editing, or filter out employees that already have a login account
+      const isCurrentEmployee = editingUser && (editingUser as ApiUser & { employeeId?: string }).employeeId === emp.id;
+      return isCurrentEmployee || !users.some(user => user.employeeId === emp.id && user.isActive && user.id !== editingUser?.id);
+    });
+  }, [role, employees, users, editingUser]);
 
   const fetchUsers = React.useCallback(async () => {
     try {
@@ -218,12 +245,14 @@ export function UserManagement(): React.JSX.Element {
   const handleEdit = (user: ApiUser) => {
     setEditingUser(user);
     setGeneratedPassword(null);
+    const userEmployeeId = (user as ApiUser & { employeeId?: string }).employeeId || '';
     reset({
       name: user.name,
       email: user.email,
       password: '', // Don't pre-fill password
       confirmPassword: '', // Don't pre-fill confirm password
       role: user.roles[0] as 'super_admin' | 'manager' | 'driver', // Take the first role
+      employeeId: userEmployeeId,
       isActive: user.isActive,
     });
     setOpen(true);
@@ -273,6 +302,7 @@ export function UserManagement(): React.JSX.Element {
           isActive: boolean;
           password?: string;
           mustChangePassword?: boolean;
+          employeeId?: string;
         } = {
           name: data.name,
           email: data.email, // Allow email updates
@@ -285,6 +315,9 @@ export function UserManagement(): React.JSX.Element {
           updateData.password = trimmedPassword;
           updateData.mustChangePassword = true;
         }
+        
+        // Add employeeId if role is manager or driver
+        updateData.employeeId = data.role === 'super_admin' ? undefined : (data.employeeId || undefined);
 
         const result = await apiClient.updateUser(editingUser.id, updateData);
         if (result.error) {
@@ -292,7 +325,7 @@ export function UserManagement(): React.JSX.Element {
           return;
         }
       } else {
-        const payload: { name: string; email: string; roles: string[]; isActive: boolean; password?: string } = {
+        const payload: { name: string; email: string; roles: string[]; isActive: boolean; password?: string; employeeId?: string } = {
           name: data.name,
           email: data.email,
           roles: [data.role], // Convert single role to array for API
@@ -301,6 +334,11 @@ export function UserManagement(): React.JSX.Element {
 
         if (trimmedPassword !== '') {
           payload.password = trimmedPassword;
+        }
+        
+        // Add employeeId if role is manager or driver
+        if (data.role !== 'super_admin' && data.employeeId) {
+          payload.employeeId = data.employeeId;
         }
         
         const result = await apiClient.createUser(payload);
@@ -600,6 +638,11 @@ export function UserManagement(): React.JSX.Element {
                       disabled={
                         (isManager && !isSuperAdmin) // Managers can only create/edit drivers, role field is disabled
                       }
+                      onChange={(e) => {
+                        field.onChange(e);
+                        // Reset employeeId when role changes
+                        reset({ ...watch(), employeeId: '', role: e.target.value as 'super_admin' | 'manager' | 'driver' });
+                      }}
                     >
                       {isSuperAdmin && (
                         <MenuItem value="manager">Manager</MenuItem>
@@ -621,6 +664,54 @@ export function UserManagement(): React.JSX.Element {
                   </FormControl>
                 )}
               />
+
+              {/* Employee dropdown - only show for manager and driver roles */}
+              {role && role !== 'super_admin' && (
+                <Controller
+                  control={control}
+                  name="employeeId"
+                  render={({ field }) => {
+                    const selectedEmployee = employees.find(emp => emp.id === field.value);
+                    return (
+                      <FormControl error={Boolean(errors.employeeId)} fullWidth>
+                        <InputLabel>Select {role === 'manager' ? 'Manager' : 'Driver'}</InputLabel>
+                        <Select
+                          {...field}
+                          label={`Select ${role === 'manager' ? 'Manager' : 'Driver'}`}
+                          disabled={availableEmployees.length === 0}
+                        >
+                          {availableEmployees.length === 0 ? (
+                            <MenuItem value="" disabled>
+                              {role === 'manager' 
+                                ? 'No available managers (all have login accounts)' 
+                                : 'No available drivers (all have login accounts)'}
+                            </MenuItem>
+                          ) : (
+                            availableEmployees.map((emp) => (
+                              <MenuItem key={emp.id} value={emp.id}>
+                                {emp.name} {emp.routeName ? `(${emp.routeName})` : ''}
+                              </MenuItem>
+                            ))
+                          )}
+                        </Select>
+                        {errors.employeeId && <FormHelperText>{errors.employeeId.message}</FormHelperText>}
+                        {selectedEmployee && editingUser && (
+                          <FormHelperText>
+                            Current: {selectedEmployee.name} {selectedEmployee.routeName ? `(${selectedEmployee.routeName})` : ''}
+                          </FormHelperText>
+                        )}
+                        {availableEmployees.length === 0 && !selectedEmployee && (
+                          <FormHelperText>
+                            {role === 'manager' 
+                              ? 'All managers already have login accounts' 
+                              : 'All drivers already have login accounts'}
+                          </FormHelperText>
+                        )}
+                      </FormControl>
+                    );
+                  }}
+                />
+              )}
 
               <Controller
                 control={control}

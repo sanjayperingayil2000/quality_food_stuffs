@@ -37,7 +37,11 @@ export async function login({ email, password }: { email: string; password: stri
   const userObj = user.toObject();
   delete (userObj as { passwordHash?: unknown }).passwordHash;
 
-  const accessToken = signAccessToken({ sub: (user as { _id: Types.ObjectId })._id.toString(), roles: (user as { roles: string[] }).roles });
+  const accessToken = signAccessToken({ 
+    sub: (user as { _id: Types.ObjectId })._id.toString(), 
+    roles: (user as { roles: string[] }).roles,
+    employeeId: (user as { employeeId?: string }).employeeId
+  });
   const refreshTokenPlain = crypto.randomBytes(48).toString('hex');
   const tokenHash = hashToken(refreshTokenPlain);
   const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
@@ -59,7 +63,11 @@ export async function refreshToken({ refreshToken }: { refreshToken: string }) {
   const user = await User.findById(existing.userId);
   if (!user) throw new Error('User not found');
 
-  const accessToken = signAccessToken({ sub: (user as { _id: Types.ObjectId })._id.toString(), roles: (user as { roles: string[] }).roles });
+  const accessToken = signAccessToken({ 
+    sub: (user as { _id: Types.ObjectId })._id.toString(), 
+    roles: (user as { roles: string[] }).roles,
+    employeeId: (user as { employeeId?: string }).employeeId
+  });
   const refreshTokenPlain = crypto.randomBytes(48).toString('hex');
   const newHash = hashToken(refreshTokenPlain);
   const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);

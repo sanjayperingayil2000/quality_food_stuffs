@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { connectToDatabase } from '@/lib/db';
 import { User } from '@/models/user';
 import { RefreshToken } from '@/models/refresh-token';
+import { Employee } from '@/models/employee';
 
 function generateDefaultPassword(): string {
   return 'Asqwer@';
@@ -13,10 +14,24 @@ export async function listUsers() {
   return User.find().select('-passwordHash').lean();
 }
 
-export async function createUser({ name, email, password, roles }: { name: string; email: string; password?: string; roles?: string[] }) {
+export async function createUser({ name, email, password, roles, employeeId }: { name: string; email: string; password?: string; roles?: string[]; employeeId?: string }) {
   await connectToDatabase();
   const existing = await User.findOne({ email });
   if (existing) throw new Error('Email already in use');
+
+  // If employeeId is provided, check if that employee already has a login
+  if (employeeId) {
+    const existingEmployeeUser = await User.findOne({ employeeId, isActive: true });
+    if (existingEmployeeUser) {
+      throw new Error('This employee already has a login account');
+    }
+    
+    // Verify employee exists
+    const employee = await Employee.findOne({ id: employeeId, isActive: true });
+    if (!employee) {
+      throw new Error('Employee not found or inactive');
+    }
+  }
 
   const trimmedPassword = password?.trim() ?? '';
   const finalPassword = trimmedPassword.length > 0 ? trimmedPassword : generateDefaultPassword();
@@ -29,6 +44,7 @@ export async function createUser({ name, email, password, roles }: { name: strin
     passwordHash,
     roles: roles && roles.length > 0 ? roles : ['manager'],
     mustChangePassword,
+    employeeId,
   });
 
   const userObj = user.toObject();
@@ -46,7 +62,7 @@ export async function getUserById(id: string) {
   return User.findById(id).select('-passwordHash').lean();
 }
 
-export async function updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; password?: string; mustChangePassword?: boolean }>) {
+export async function updateUser(id: string, updates: Partial<{ name: string; email?: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; password?: string; mustChangePassword?: boolean; employeeId?: string }>) {
   await connectToDatabase();
   if (!Types.ObjectId.isValid(id)) return null;
   
@@ -56,8 +72,22 @@ export async function updateUser(id: string, updates: Partial<{ name: string; em
     if (existing) throw new Error('Email already in use');
   }
   
+  // If employeeId is being updated, check if that employee already has a login
+  if (updates.employeeId !== undefined && updates.employeeId) {
+    const existingEmployeeUser = await User.findOne({ employeeId: updates.employeeId, isActive: true, _id: { $ne: id } });
+    if (existingEmployeeUser) {
+      throw new Error('This employee already has a login account');
+    }
+    
+    // Verify employee exists
+    const employee = await Employee.findOne({ id: updates.employeeId, isActive: true });
+    if (!employee) {
+      throw new Error('Employee not found or inactive');
+    }
+  }
+  
   // Prepare update data
-  const updateData: Partial<{ name: string; email: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; passwordHash: string; mustChangePassword: boolean }> = {};
+  const updateData: Partial<{ name: string; email: string; roles: string[]; isActive: boolean; phone?: string; state?: string; city?: string; profilePhoto?: string | null; passwordHash: string; mustChangePassword: boolean; employeeId?: string }> = {};
   
   // Copy all fields except password
   if (updates.name !== undefined) updateData.name = updates.name;
@@ -72,6 +102,9 @@ export async function updateUser(id: string, updates: Partial<{ name: string; em
   }
   if (updates.mustChangePassword !== undefined) {
     updateData.mustChangePassword = updates.mustChangePassword;
+  }
+  if (updates.employeeId !== undefined) {
+    updateData.employeeId = updates.employeeId || undefined;
   }
   
   // If password is provided, hash it

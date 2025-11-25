@@ -44,6 +44,7 @@ export default function Page(): React.JSX.Element {
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [balanceHistoryDialogOpen, setBalanceHistoryDialogOpen] = React.useState(false);
+  const [dueHistoryDialogOpen, setDueHistoryDialogOpen] = React.useState(false);
   const [selectedEmployee, setSelectedEmployee] = React.useState<Employee | null>(null);
 
   // Form states
@@ -107,6 +108,11 @@ export default function Page(): React.JSX.Element {
   const handleBalanceHistoryClick = (employee: Employee) => {
     setSelectedEmployee(employee);
     setBalanceHistoryDialogOpen(true);
+  };
+
+  const handleDueHistoryClick = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setDueHistoryDialogOpen(true);
   };
 
   const handleFormChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -288,6 +294,7 @@ export default function Page(): React.JSX.Element {
     setEditDialogOpen(false);
     setDeleteDialogOpen(false);
     setBalanceHistoryDialogOpen(false);
+    setDueHistoryDialogOpen(false);
     setSelectedEmployee(null);
     setFormErrors({});
     setIsAdding(false);
@@ -332,6 +339,7 @@ export default function Page(): React.JSX.Element {
             <TableCell>Role</TableCell>
             <TableCell>Location</TableCell>
             <TableCell>Route name</TableCell>
+            <TableCell>Due</TableCell>
             <TableCell>Balance</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
@@ -348,6 +356,24 @@ export default function Page(): React.JSX.Element {
               </TableCell>
               <TableCell>{employee.location || '-'}</TableCell>
               <TableCell>{employee.routeName || '-'}</TableCell>
+              <TableCell>
+                {employee.designation === 'driver' ? (
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="body2" color={employee.due && employee.due >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 600 }}>
+                      {employee.due !== undefined && employee.due !== null 
+                        ? `${employee.due >= 0 ? '+' : ''}AED ${employee.due.toFixed(2)}`
+                        : 'AED 0.00'}
+                    </Typography>
+                    <Tooltip title="Due History">
+                      <IconButton onClick={() => handleDueHistoryClick(employee)} size="small" color="info" sx={{ p: 0.5 }}>
+                        📋
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                ) : (
+                  '-'
+                )}
+              </TableCell>
               <TableCell>
                 {employee.designation === 'driver' ? (
                   <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>
@@ -783,6 +809,75 @@ export default function Page(): React.JSX.Element {
                       <TableCell colSpan={5} align="center">
                         <Typography variant="body2" color="text.secondary">
                           No balance history available
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialogs}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Due History Dialog */}
+      <Dialog open={dueHistoryDialogOpen} onClose={handleCloseDialogs} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Due History - {selectedEmployee?.name}
+        </DialogTitle>
+        <DialogContent>
+          {selectedEmployee && (
+            <Stack spacing={2}>
+              <Typography variant="h6" color="primary.main">
+                Current Total Due: AED {selectedEmployee.due !== undefined && selectedEmployee.due !== null 
+                  ? `${selectedEmployee.due >= 0 ? '+' : ''}${selectedEmployee.due.toFixed(2)}`
+                  : '0.00'}
+              </Typography>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Trip Date</TableCell>
+                    <TableCell>Due Amount</TableCell>
+                    <TableCell>Calculated At</TableCell>
+                    <TableCell>Trip ID</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {selectedEmployee.dueHistory && selectedEmployee.dueHistory.length > 0 ? (
+                    selectedEmployee.dueHistory
+                      .sort((a, b) => new Date(b.tripDate).getTime() - new Date(a.tripDate).getTime())
+                      .map((entry, index) => (
+                        <TableRow key={`${entry.version}-${index}`}>
+                          <TableCell>
+                            {new Date(entry.tripDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Typography 
+                              variant="body2" 
+                              color={entry.due >= 0 ? 'success.main' : 'error.main'}
+                              sx={{ fontWeight: 600 }}
+                            >
+                              {entry.due >= 0 ? '+' : ''}AED {entry.due.toFixed(2)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(entry.updatedAt).toLocaleDateString()} {new Date(entry.updatedAt).toLocaleTimeString()}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {entry.tripId || '-'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center">
+                        <Typography variant="body2" color="text.secondary">
+                          No due history available
                         </Typography>
                       </TableCell>
                     </TableRow>

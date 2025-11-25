@@ -294,3 +294,51 @@ export async function updateDriverBalance(driverId: string, newBalance: number, 
   
   return updatedEmployee?.toObject();
 }
+
+export async function updateDriverDue(driverId: string, due: number, tripDate: Date, tripId: string, updatedBy?: string) {
+  await connectToDatabase();
+  
+  const employee = await Employee.findOne({ id: driverId, designation: 'driver' });
+  if (!employee) {
+    throw new Error('Driver not found');
+  }
+  
+  const beforeData = employee.toObject();
+  const currentVersion = employee.dueHistory?.length || 0;
+  
+  // Calculate new total due by summing all dues from history plus the new due
+  const existingDueTotal = employee.due || 0;
+  const newDueTotal = existingDueTotal + due;
+  
+  const updatedEmployee = await Employee.findOneAndUpdate(
+    { id: driverId },
+    {
+      due: newDueTotal,
+      dueHistory: [
+        ...(employee.dueHistory || []),
+        {
+          version: currentVersion + 1,
+          due,
+          tripDate,
+          updatedAt: new Date(),
+          tripId,
+        }
+      ],
+      updatedBy,
+    },
+    { new: true, runValidators: true }
+  );
+  
+  // Log to history
+  await History.create({
+    collectionName: 'employees',
+    documentId: employee._id,
+    action: 'update',
+    actor: updatedBy && Types.ObjectId.isValid(updatedBy) ? new Types.ObjectId(updatedBy) : undefined,
+    before: beforeData,
+    after: updatedEmployee?.toObject(),
+    timestamp: new Date(),
+  });
+  
+  return updatedEmployee?.toObject();
+}
