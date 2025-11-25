@@ -34,6 +34,9 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
   const { user } = useUser();
 
   const userPopover = usePopover<HTMLDivElement>();
+  
+  // Check if user is a driver
+  const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
 
   const handleSelectionChange = (event: SelectChangeEvent) => {
     const value = event.target.value as 'company' | 'driver';
@@ -85,44 +88,46 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
               <ListIcon />
             </IconButton>
 
-            {/* First dropdown */}
-            <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto', height: '100%' }}>
-              <FormControl fullWidth sx={{ height: '100%' }}>
-                <InputLabel 
-                  id="main-select-label"
-                  sx={{ 
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    color: 'text.primary',
-                    '&.Mui-focused': {
-                      color: 'primary.main'
-                    }
-                  }}
-                >
-                  Select
-                </InputLabel>
-                <Select
-                  labelId="main-select-label"
-                  id="main-select"
-                  value={filters.selection}
-                  label="Select"
-                  onChange={handleSelectionChange}
-                  sx={{
-                    borderRadius: '50px',
-                    backgroundColor: 'white',
-                    '& .MuiOutlinedInput-notchedOutline': {
+            {/* First dropdown - hide for drivers */}
+            {!isDriver && (
+              <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto', height: '100%' }}>
+                <FormControl fullWidth sx={{ height: '100%' }}>
+                  <InputLabel 
+                    id="main-select-label"
+                    sx={{ 
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: 'text.primary',
+                      '&.Mui-focused': {
+                        color: 'primary.main'
+                      }
+                    }}
+                  >
+                    Select
+                  </InputLabel>
+                  <Select
+                    labelId="main-select-label"
+                    id="main-select"
+                    value={filters.selection}
+                    label="Select"
+                    onChange={handleSelectionChange}
+                    sx={{
                       borderRadius: '50px',
-                    },
-                  }}
-                >
-                  <MenuItem value="company">Company</MenuItem>
-                  <MenuItem value="driver">Driver</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
+                      backgroundColor: 'white',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderRadius: '50px',
+                      },
+                    }}
+                  >
+                    <MenuItem value="company">Company</MenuItem>
+                    <MenuItem value="driver">Driver</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
 
-            {/* Second dropdown (only when Driver selected) */}
-            {filters.selection === 'driver' && (
+            {/* Second dropdown (only when Driver selected) - hide for drivers */}
+            {!isDriver && filters.selection === 'driver' && (
               <Box sx={{ minWidth: 180, maxWidth: 200, flex: '0 0 auto', height: '100%' }}>
                 <FormControl fullWidth sx={{ height: '100%' }}>
                   <InputLabel 

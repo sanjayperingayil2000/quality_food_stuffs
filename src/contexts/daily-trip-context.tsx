@@ -50,6 +50,8 @@ export interface DailyTrip {
   // Financial fields
   previousBalance?: number; // Previous balance carried into this trip (derived when needed)
   collectionAmount: number;
+  actualCollectionAmount?: number; // Actual collection amount entered by user
+  due?: number; // Due amount = actualCollectionAmount - collectionAmount (can be negative or positive)
   purchaseAmount: number;
   expiry: number; // Expiry amount in AED
   discount: number; // Discount amount in AED

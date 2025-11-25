@@ -5,7 +5,7 @@ import { withCors } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { connectToDatabase } from '@/lib/db';
 import { DailyTrip } from '@/models/daily-trip';
-import { updateEmployee as updateEmployeeService } from '@/services/employee-service';
+import { updateEmployee as updateEmployeeService, updateDriverDue } from '@/services/employee-service';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
 
@@ -39,6 +39,8 @@ const dailyTripCreateSchema = z.object({
   acceptedProducts: z.array(tripProductSchema).optional().default([]),
   previousBalance: z.number().min(0),
   collectionAmount: z.number().min(0),
+  actualCollectionAmount: z.number().min(0).optional(),
+  due: z.number().optional(),
   purchaseAmount: z.number().min(0),
   expiry: z.number().min(0),
   discount: z.number().min(0),
@@ -66,6 +68,9 @@ export async function GET(req: NextRequest) {
   
   try {
     await connectToDatabase();
+    const user = getRequestUser(authed);
+    const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
+    
     const url = new URL(req.url);
     const driverId = url.searchParams.get('driverId');
     const date = url.searchParams.get('date');
@@ -73,7 +78,14 @@ export async function GET(req: NextRequest) {
     const endDate = url.searchParams.get('endDate');
     
     const queryFilter: Record<string, unknown> = {};
-    if (driverId) queryFilter.driverId = driverId;
+    
+    // If user is a driver, filter by their employeeId
+    if (isDriver && user?.employeeId) {
+      queryFilter.driverId = user.employeeId;
+    } else if (driverId) {
+      queryFilter.driverId = driverId;
+    }
+    
     if (date) queryFilter.date = new Date(date);
     if (startDate && endDate) {
       queryFilter.date = {
@@ -132,9 +144,20 @@ export async function POST(req: NextRequest) {
         updatedBy: user?.sub,
         balanceUpdateReason: reason,
       });
+      
+      // Update driver due if actualCollectionAmount and due are provided
+      if (parsed.data.actualCollectionAmount !== undefined && parsed.data.actualCollectionAmount !== null && parsed.data.due !== undefined && parsed.data.due !== null) {
+        await updateDriverDue(
+          parsed.data.driverId,
+          parsed.data.due,
+          tripDate,
+          id,
+          user?.sub
+        );
+      }
     } catch (balanceUpdateError) {
       // Do not fail trip creation on balance sync error; it will be handled separately
-      console.error('Failed to sync driver balance after trip creation:', balanceUpdateError);
+      console.error('Failed to sync driver balance/due after trip creation:', balanceUpdateError);
     }
     
     // Log to history

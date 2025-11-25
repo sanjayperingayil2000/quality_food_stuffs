@@ -40,6 +40,9 @@ export async function GET(req: NextRequest) {
   
   try {
     await connectToDatabase();
+    const user = getRequestUser(authed);
+    const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
+    
     const url = new URL(req.url);
     const category = url.searchParams.get('category');
     const status = url.searchParams.get('status');
@@ -51,7 +54,14 @@ export async function GET(req: NextRequest) {
     const queryFilter: Record<string, unknown> = {};
     if (category) queryFilter.category = category;
     if (status) queryFilter.status = status;
-    if (driverId) queryFilter.driverId = driverId;
+    
+    // If user is a driver, filter by their employeeId
+    if (isDriver && user?.employeeId) {
+      queryFilter.driverId = user.employeeId;
+    } else if (driverId) {
+      queryFilter.driverId = driverId;
+    }
+    
     if (designation) queryFilter.designation = designation;
     if (startDate && endDate) {
       queryFilter.date = {

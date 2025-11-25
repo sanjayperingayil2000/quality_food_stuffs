@@ -5,9 +5,10 @@ import { withCors } from '@/middleware/cors';
 import { jsonError } from '@/middleware/error-handler';
 import { connectToDatabase } from '@/lib/db';
 import { DailyTrip } from '@/models/daily-trip';
+import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
-import { updateEmployee as updateEmployeeService } from '@/services/employee-service';
+import { updateEmployee as updateEmployeeService, updateDriverDue } from '@/services/employee-service';
 
 const tripProductSchema = z.object({
   productId: z.string().min(1),
@@ -38,6 +39,8 @@ const dailyTripUpdateSchema = z.object({
   acceptedProducts: z.array(tripProductSchema).optional(),
   previousBalance: z.number().min(0).optional(),
   collectionAmount: z.number().min(0).optional(),
+  actualCollectionAmount: z.number().min(0).optional(),
+  due: z.number().optional(),
   purchaseAmount: z.number().min(0).optional(),
   expiry: z.number().min(0).optional(),
   discount: z.number().min(0).optional(),
@@ -122,8 +125,49 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           balanceUpdateReason: reason,
         });
       }
+      
+      // Update driver due if actualCollectionAmount and due are provided
+      if (updatedTrip?.actualCollectionAmount !== undefined && updatedTrip?.actualCollectionAmount !== null && updatedTrip?.due !== undefined && updatedTrip?.due !== null) {
+        const tripDate = updatedTrip.date instanceof Date ? updatedTrip.date : new Date(updatedTrip.date);
+        // Check if this trip already has a due entry in history
+        const employee = await Employee.findOne({ id: updatedTrip.driverId });
+        const existingDueEntry = employee?.dueHistory?.find(entry => entry.tripId === id);
+        
+        // Only add if it doesn't exist, or update if the due value changed
+        if (!existingDueEntry || existingDueEntry.due !== updatedTrip.due) {
+          // If it exists, we need to recalculate the total due
+          if (existingDueEntry) {
+            // Remove old due and add new due
+            const oldDue = existingDueEntry.due;
+            const currentDueTotal = employee?.due || 0;
+            const newDueTotal = currentDueTotal - oldDue + updatedTrip.due;
+            
+            // Update the dueHistory entry
+            await Employee.findOneAndUpdate(
+              { id: updatedTrip.driverId, 'dueHistory.tripId': id },
+              {
+                $set: {
+                  'dueHistory.$.due': updatedTrip.due,
+                  'dueHistory.$.updatedAt': new Date(),
+                  due: newDueTotal,
+                },
+                updatedBy: user?.sub,
+              }
+            );
+          } else {
+            // Add new due entry
+            await updateDriverDue(
+              updatedTrip.driverId,
+              updatedTrip.due,
+              tripDate,
+              id,
+              user?.sub
+            );
+          }
+        }
+      }
     } catch (balanceUpdateError) {
-      console.error('Failed to sync driver balance after trip update:', balanceUpdateError);
+      console.error('Failed to sync driver balance/due after trip update:', balanceUpdateError);
     }
     
     // Log to history
@@ -165,7 +209,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const deleteResult = await DailyTrip.findOneAndDelete({ id });
     console.log('Delete result:', deleteResult);
 
-    // After deletion, recalculate driver's balance based on latest remaining trip
+    // After deletion, recalculate driver's balance and remove due entry
     try {
       const driverId = trip.driverId;
       const latestRemainingTrip = await DailyTrip.findOne({ driverId }).sort({ date: -1, createdAt: -1 });
@@ -177,13 +221,50 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       const dd = String(tripDate.getDate()).padStart(2, '0');
       const reason = `Daily trip on ${yyyy}-${mm}-${dd} deleted`;
 
+      // Update balance
       await updateEmployeeService(driverId, {
         balance: newBalance,
         updatedBy: user?.sub,
         balanceUpdateReason: reason,
       });
+
+      // Remove due entry for this trip if it exists
+      const employee = await Employee.findOne({ id: driverId });
+      if (employee && employee.dueHistory && employee.dueHistory.length > 0) {
+        const dueEntryToRemove = employee.dueHistory.find(entry => entry.tripId === id);
+        
+        if (dueEntryToRemove) {
+          // Remove the due entry from history
+          const updatedDueHistory = employee.dueHistory.filter(entry => entry.tripId !== id);
+          
+          // Recalculate total due by summing all remaining due entries
+          const newTotalDue = updatedDueHistory.reduce((sum, entry) => sum + (entry.due || 0), 0);
+          
+          // Update employee with new dueHistory and recalculated total due
+          const updatedEmployee = await Employee.findOneAndUpdate(
+            { id: driverId },
+            {
+              due: newTotalDue,
+              dueHistory: updatedDueHistory,
+              updatedBy: user?.sub,
+            },
+            { new: true, runValidators: true }
+          );
+
+          // Log to history
+          await History.create({
+            collectionName: 'employees',
+            documentId: employee._id,
+            action: 'update',
+            actor: user?.sub && Types.ObjectId.isValid(user.sub) ? new Types.ObjectId(user.sub) : undefined,
+            before: employee.toObject(),
+            after: updatedEmployee?.toObject() || null,
+            timestamp: new Date(),
+          });
+        }
+      }
     } catch (balanceUpdateError) {
-      console.error('Failed to sync driver balance after trip deletion:', balanceUpdateError);
+      console.error('Failed to sync driver balance/due after trip deletion:', balanceUpdateError);
     }
     
     // Log to history

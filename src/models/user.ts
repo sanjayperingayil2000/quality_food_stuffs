@@ -16,6 +16,7 @@ export interface IUser {
   mustChangePassword?: boolean;
   resetPasswordOtp?: string;
   resetPasswordOtpExpiry?: Date;
+  employeeId?: string; // Link to employee (for manager/driver users)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +38,7 @@ const UserSchema = new Schema<IUserDocument>(
     mustChangePassword: { type: Boolean, default: false },
     resetPasswordOtp: { type: String },
     resetPasswordOtpExpiry: { type: Date },
+    employeeId: { type: String, trim: true, index: true, sparse: true }, // Link to employee, sparse index for optional field
   },
   { timestamps: true }
 );
