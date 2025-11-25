@@ -7,6 +7,7 @@ dotenv.config();
 export interface JwtPayload {
   sub: string; // user id
   roles: string[];
+  employeeId?: string; // employee id for manager/driver users
   iat?: number;
   exp?: number;
 }

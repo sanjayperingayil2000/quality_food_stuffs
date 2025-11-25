@@ -21,6 +21,14 @@ export interface BalanceHistoryEntry {
   updatedBy?: string; // Employee ID who made the change
 }
 
+export interface DueHistoryEntry {
+  version: number;
+  due: number; // Can be negative or positive
+  tripDate: Date; // Date of the trip for which due is calculated
+  updatedAt: Date;
+  tripId?: string; // ID of the daily trip
+}
+
 export interface Employee {
   id: string;
   name: string;
@@ -33,6 +41,8 @@ export interface Employee {
   salary?: number; // For staff and CEO
   balance?: number; // For drivers only - current balance
   balanceHistory?: BalanceHistoryEntry[]; // For drivers only - history of balance changes
+  due?: number; // For drivers only - current total due (sum of all dues from trips)
+  dueHistory?: DueHistoryEntry[]; // For drivers only - history of due calculations
   hireDate: Date;
   isActive: boolean;
   createdAt: Date;

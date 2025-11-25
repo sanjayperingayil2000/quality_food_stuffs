@@ -10,11 +10,16 @@ import { MainNavWrapper } from '@/components/dashboard/layout/main-nav';
 import { useDailyTrips } from '@/contexts/daily-trip-context';
 import { useEmployees } from '@/contexts/employee-context';
 import { useFilters } from '@/contexts/filter-context';
+import { useUser } from '@/hooks/use-user';
 
 export default function Page(): React.JSX.Element {
   const { trips } = useDailyTrips();
   const { drivers } = useEmployees();
   const { filters } = useFilters();
+  const { user } = useUser();
+  
+  // Check if user is a driver
+  const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
 
   // Calculate overview metrics from trips and employee data
   const overviewMetrics = React.useMemo(() => {
@@ -31,8 +36,11 @@ export default function Page(): React.JSX.Element {
              (tripDate.isSame(toDate, 'day') || tripDate.isBefore(toDate));
     });
 
-    // Filter trips based on driver selection
-    if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+    // For driver users, trips are already filtered by API, but ensure we only show their trips
+    if (isDriver && user?.employeeId) {
+      filteredTrips = filteredTrips.filter(trip => trip.driverId === user.employeeId);
+    } else if (filters.selection === 'driver' && filters.driver !== 'All drivers') {
+      // Filter trips based on driver selection (for non-driver users)
       const selectedDriver = drivers.find(driver => driver.name === filters.driver);
       if (selectedDriver) {
         filteredTrips = filteredTrips.filter(trip => trip.driverId === selectedDriver.id);
@@ -174,7 +182,7 @@ export default function Page(): React.JSX.Element {
         trend: 'up' as 'up' | 'down'
       }
     };
-  }, [trips, drivers, filters]);
+  }, [trips, drivers, filters, isDriver, user?.employeeId]);
 
   return (
     <> 
@@ -379,20 +387,22 @@ export default function Page(): React.JSX.Element {
             value={`${overviewMetrics.profit.value.toFixed(0)}`} 
           />
         </Grid>
-        <Grid
-          size={{
-            lg: 12,
-            md: 12,
-            sm: 12,
-            xs: 12,
-          }}
-        >
-          <Sales
-            trips={trips}
-            drivers={drivers}
-            sx={{ height: '100%' }}
-          />
-        </Grid>
+        {!isDriver && (
+          <Grid
+            size={{
+              lg: 12,
+              md: 12,
+              sm: 12,
+              xs: 12,
+            }}
+          >
+            <Sales
+              trips={trips}
+              drivers={drivers}
+              sx={{ height: '100%' }}
+            />
+          </Grid>
+        )}
         {/* <Grid
         size={{
           lg: 4,

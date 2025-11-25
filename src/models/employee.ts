@@ -10,6 +10,14 @@ export interface BalanceHistoryEntry {
   updatedBy?: string; // Employee ID who made the change
 }
 
+export interface DueHistoryEntry {
+  version: number;
+  due: number; // Can be negative or positive
+  tripDate: Date; // Date of the trip for which due is calculated
+  updatedAt: Date;
+  tripId?: string; // ID of the daily trip
+}
+
 export interface IEmployee {
   id: string;
   name: string;
@@ -22,6 +30,8 @@ export interface IEmployee {
   salary?: number; // For staff and CEO
   balance?: number; // For drivers only - current balance
   balanceHistory?: BalanceHistoryEntry[]; // For drivers only - history of balance changes
+  due?: number; // For drivers only - current total due (sum of all dues from trips)
+  dueHistory?: DueHistoryEntry[]; // For drivers only - history of due calculations
   hireDate: Date;
   isActive: boolean;
   createdAt: Date;
@@ -57,6 +67,14 @@ const EmployeeSchema = new Schema<IEmployeeDocument>(
       updatedAt: { type: Date, required: true },
       reason: { type: String, trim: true },
       updatedBy: { type: String, trim: true }
+    }],
+    due: { type: Number, default: 0 }, // For drivers only - current total due
+    dueHistory: [{
+      version: { type: Number, required: true },
+      due: { type: Number, required: true },
+      tripDate: { type: Date, required: true },
+      updatedAt: { type: Date, required: true },
+      tripId: { type: String, trim: true }
     }],
     hireDate: { type: Date, required: true },
     isActive: { type: Boolean, default: true, index: true },

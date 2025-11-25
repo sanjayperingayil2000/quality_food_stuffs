@@ -80,8 +80,9 @@ const tripSchema = zod.object({
     transferredFromDriverId: zod.string(),
     transferredFromDriverName: zod.string(),
   })),
-  previousBalance: zod.coerce.number(),
+  previousBalance: zod.coerce.number().min(0, 'Previous balance is required').refine(val => val >= 0, 'Previous balance is required'),
   collectionAmount: zod.coerce.number().min(0, 'Collection amount is required').refine(val => val > 0, 'Collection amount is required'),
+  actualCollectionAmount: zod.coerce.number().min(0, 'Actual collection amount is required').refine(val => val >= 0, 'Actual collection amount is required'),
   purchaseAmount: zod.coerce.number().min(0, 'Purchase amount must be non-negative').optional(),
   expiry: zod.coerce.number().min(0, 'Expiry amount is required').refine(val => val >= 0, 'Expiry amount is required'),
   expiryAfterTax: zod.coerce.number().min(0, 'Expiry after tax must be non-negative'),
@@ -216,6 +217,7 @@ export default function Page(): React.JSX.Element {
       transferredProducts: [],
       previousBalance: 0,
       collectionAmount: 0,
+      actualCollectionAmount: 0,
       purchaseAmount: 0,
       expiry: 0,
       expiryAfterTax: 0,
@@ -249,15 +251,32 @@ export default function Page(): React.JSX.Element {
     // console.log('========================');
   }, [drivers, currentDriverId, transferForm.receivingDriverId]);
 
-  // Auto-populate previous balance when driver is selected (only for new trips, not editing)
+  // Auto-populate previous balance when driver is selected or when driver balance changes
   React.useEffect(() => {
-    if (currentDriverId && !editingTrip) {
+    if (currentDriverId) {
       const driver = drivers.find(d => d.id === currentDriverId);
       if (driver && driver.balance !== undefined) {
-        setValue('previousBalance', driver.balance);
+        // Always update previous balance when driver balance changes (for new trips or when balance is updated from employee page)
+        if (editingTrip) {
+          // For editing, only update if previousBalance is 0/empty or if driver balance changed
+          const currentPreviousBalance = watchedPreviousBalance;
+          if (currentPreviousBalance && currentPreviousBalance !== 0) {
+            return; // Don't update if there's already a value
+          }
+        }
+        setValue('previousBalance', driver.balance || 0);
       }
     }
-  }, [currentDriverId, drivers, editingTrip, setValue]);
+  }, [currentDriverId, drivers, editingTrip, setValue, watchedPreviousBalance]);
+  
+  // Set default driver filter and selected driver for driver users
+  React.useEffect(() => {
+    if (isDriver && user?.employeeId && typeof user.employeeId === 'string' && mounted) {
+      setDriverFilter(user.employeeId);
+      setSelectedDriverId(user.employeeId);
+      setValue('driverId', user.employeeId);
+    }
+  }, [isDriver, user?.employeeId, mounted, setValue]);
 
   // Filter products based on search
   React.useEffect(() => {
@@ -300,6 +319,10 @@ export default function Page(): React.JSX.Element {
 
     const selectedDate = dayjs(watchedDate).format('YYYY-MM-DD');
     return drivers.filter(driver => {
+      // For driver users, only show their own driver
+      if (isDriver && driver.id !== user?.employeeId) {
+        return false;
+      }
       // Filter out drivers who already have a trip for this date
       const hasTripForDate = trips.some(trip =>
         trip.driverId === driver.id &&
@@ -307,7 +330,7 @@ export default function Page(): React.JSX.Element {
       );
       return !hasTripForDate;
     });
-  }, [drivers, watchedDate, trips]);
+  }, [drivers, watchedDate, trips, isDriver, user?.employeeId]);
 
   // Calculation functions
 
@@ -326,6 +349,7 @@ export default function Page(): React.JSX.Element {
       transferredProducts: [],
       previousBalance: 0,
       collectionAmount: 0,
+      actualCollectionAmount: 0,
       purchaseAmount: 0,
       expiry: 0,
       expiryAfterTax: 0,
@@ -364,6 +388,7 @@ export default function Page(): React.JSX.Element {
       products: trip.products,
       previousBalance: typeof trip.previousBalance === 'number' ? trip.previousBalance : 0,
       collectionAmount: safeCollectionAmount,
+      actualCollectionAmount: typeof trip.actualCollectionAmount === 'number' ? trip.actualCollectionAmount : 0,
       purchaseAmount: safePurchaseAmount,
       expiry: safeExpiry,
       expiryAfterTax: safeExpiryAfterTax,
@@ -408,8 +433,11 @@ export default function Page(): React.JSX.Element {
   const handleApplyFilter = React.useCallback(() => {
     let filtered = trips;
 
-    // Filter by driver
-    if (driverFilter) {
+    // For driver users, always filter by their employeeId
+    if (isDriver && user?.employeeId) {
+      filtered = filtered.filter(trip => trip.driverId === user.employeeId);
+    } else if (driverFilter) {
+      // For non-driver users, filter by selected driver
       filtered = filtered.filter(trip => trip.driverId === driverFilter);
     }
 
@@ -436,7 +464,7 @@ export default function Page(): React.JSX.Element {
     });
 
     setFilteredTrips(filtered);
-  }, [trips, driverFilter, dateFrom, dateTo]);
+  }, [trips, driverFilter, dateFrom, dateTo, isDriver, user?.employeeId]);
 
   // Apply filter when dependencies change
   React.useEffect(() => {
@@ -549,6 +577,9 @@ export default function Page(): React.JSX.Element {
     // Calculate Purchase Amount dynamically from Grand Totals
     const calculatedPurchaseAmount = totals.overall.grandTotal;
 
+    // Calculate due (actualCollectionAmount is now required)
+    const due = data.collectionAmount - data.actualCollectionAmount;
+
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
       driverName: driver?.name || '',
@@ -558,6 +589,8 @@ export default function Page(): React.JSX.Element {
       acceptedProducts: editingTrip ? editingTrip.acceptedProducts : acceptedProductsForForm,
       previousBalance: data.previousBalance,
       collectionAmount: data.collectionAmount,
+      actualCollectionAmount: data.actualCollectionAmount,
+      due,
       purchaseAmount: calculatedPurchaseAmount, // Use calculated value
       expiry: data.expiry,
       discount: data.discount,
@@ -664,13 +697,16 @@ export default function Page(): React.JSX.Element {
             label="All Drivers"
             displayEmpty
             onChange={(e) => setDriverFilter(e.target.value)}
+            disabled={isDriver}
           >
-            <MenuItem value="">All Drivers</MenuItem>
-            {drivers.map((driver) => (
-              <MenuItem key={driver.id} value={driver.id}>
-                {driver.name}
-              </MenuItem>
-            ))}
+            {!isDriver && <MenuItem value="">All Drivers</MenuItem>}
+            {drivers
+              .filter(driver => !isDriver || driver.id === user?.employeeId)
+              .map((driver) => (
+                <MenuItem key={driver.id} value={driver.id}>
+                  {driver.name}
+                </MenuItem>
+              ))}
           </Select>
         </FormControl>
         <TextField
@@ -1014,50 +1050,64 @@ export default function Page(): React.JSX.Element {
                 <Paper sx={{ p: 2, bgcolor: 'primary.50', border: 2, borderColor: 'primary.main' }}>
                   <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Calculated Financial Metrics</Typography>
                   <Grid container spacing={2}>
-                    {/* First row: 5 columns */}
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    {/* First row: 6 columns */}
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Collection Amount</Typography>
                       <Typography variant="h6" color="success.main">AED {trip.collectionAmount.toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    {trip.actualCollectionAmount !== undefined && trip.actualCollectionAmount !== null && (
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <Typography variant="body2" color="text.secondary">Actual Collection Amount</Typography>
+                        <Typography variant="h6" color="info.main">AED {trip.actualCollectionAmount.toFixed(2)}</Typography>
+                      </Grid>
+                    )}
+                    {trip.due !== undefined && trip.due !== null && (
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <Typography variant="body2" color="text.secondary">Due</Typography>
+                        <Typography variant="h6" color={trip.due >= 0 ? 'success.dark' : 'error.dark'}>
+                          {trip.due >= 0 ? '+' : ''}AED {trip.due.toFixed(2)}
+                        </Typography>
+                      </Grid>
+                    )}
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Purchase Amount</Typography>
                       <Typography variant="h6" color="primary.main">AED {trip.purchaseAmount.toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Amount To Be</Typography>
                       <Typography variant="h6" color="info.dark">AED {(trip.amountToBe ?? 0).toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
                       <Typography variant="h6" color="warning.dark">AED {(trip.expiryAfterTax ?? 0).toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+
+                    {/* Second row: 6 columns */}
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Expiry Amount</Typography>
                       <Typography variant="h6" color="warning.main">AED {trip.expiry.toFixed(2)}</Typography>
                     </Grid>
-
-                    {/* Second row: 5 columns */}
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
                       <Typography variant="h6" color={(trip.salesDifference ?? 0) >= 0 ? 'success.dark' : 'error.dark'}>
                         AED {(trip.salesDifference ?? 0).toFixed(2)}
                       </Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Profit</Typography>
                       <Typography variant="h6" color={(trip.profit ?? 0) >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
                         AED {(trip.profit ?? 0).toFixed(2)}
                       </Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Discount Amount</Typography>
                       <Typography variant="h6" color="warning.main">AED {trip.discount.toFixed(2)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Balance</Typography>
                       <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance ?? 0)}</Typography>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Petrol</Typography>
                       <Typography variant="h6" color="error.main">AED {trip.petrol.toFixed(2)}</Typography>
                     </Grid>
@@ -1214,13 +1264,25 @@ export default function Page(): React.JSX.Element {
                 </Box>
 
                 {/* Driver selection cards */}
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
-                    Available Drivers:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {getAvailableDrivers().length > 0 ? (
-                      getAvailableDrivers().map((driver) => (
+                {isDriver ? (
+                  isDriver && user?.employeeId && typeof user.employeeId === 'string' ? (
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                        {drivers.find(d => d.id === user.employeeId)?.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {drivers.find(d => d.id === user.employeeId)?.routeName} - {drivers.find(d => d.id === user.employeeId)?.location}
+                      </Typography>
+                    </Box>
+                  ) : null
+                ) : (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
+                      Available Drivers:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {getAvailableDrivers().length > 0 ? (
+                        getAvailableDrivers().map((driver) => (
                         <Box
                           key={driver.id}
                           sx={{
@@ -1320,6 +1382,7 @@ export default function Page(): React.JSX.Element {
                     )}
                   </Box>
                 </Box>
+                )}
 
                 {errors.driverId && (
                   <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
@@ -1907,9 +1970,10 @@ export default function Page(): React.JSX.Element {
                     render={({ field }) => (
                       <TextField
                         {...field}
-                        label="Previous Balance (AED)"
+                        label="Previous Balance (AED) *"
                         type="number"
                         fullWidth
+                        required
                         error={Boolean(errors.previousBalance)}
                         helperText={errors.previousBalance?.message || 'Auto-filled from employee balance (editable)'}
                         inputProps={{ min: 0, step: 0.01 }}
@@ -1935,6 +1999,26 @@ export default function Page(): React.JSX.Element {
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
                         value={field.value || ''}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
+                  <Controller
+                    control={control}
+                    name="actualCollectionAmount"
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        label="Actual Collection Amount (AED) *"
+                        type="number"
+                        fullWidth
+                        required
+                        error={Boolean(errors.actualCollectionAmount)}
+                        helperText={errors.actualCollectionAmount?.message || 'Enter the actual collection amount expected'}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        value={field.value ?? ''}
                       />
                     )}
                   />
