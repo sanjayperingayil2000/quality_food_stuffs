@@ -1264,7 +1264,18 @@ export default function Page(): React.JSX.Element {
                 </Box>
 
                 {/* Driver selection cards */}
-                {!isDriver ? (
+                {isDriver ? (
+                  isDriver && user?.employeeId && typeof user.employeeId === 'string' ? (
+                    <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                        {drivers.find(d => d.id === user.employeeId)?.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {drivers.find(d => d.id === user.employeeId)?.routeName} - {drivers.find(d => d.id === user.employeeId)?.location}
+                      </Typography>
+                    </Box>
+                  ) : null
+                ) : (
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
                       Available Drivers:
@@ -1371,17 +1382,6 @@ export default function Page(): React.JSX.Element {
                     )}
                   </Box>
                 </Box>
-                ) : (
-                  isDriver && user?.employeeId && typeof user.employeeId === 'string' ? (
-                    <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                        {drivers.find(d => d.id === user.employeeId)?.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {drivers.find(d => d.id === user.employeeId)?.routeName} - {drivers.find(d => d.id === user.employeeId)?.location}
-                      </Typography>
-                    </Box>
-                  ) : null
                 )}
 
                 {errors.driverId && (
