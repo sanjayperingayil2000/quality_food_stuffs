@@ -178,6 +178,7 @@ export default function Page(): React.JSX.Element {
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
   const [acceptedProductsForForm, setAcceptedProductsForForm] = React.useState<TripProduct[]>([]);
   const [previousBalanceManuallyEdited, setPreviousBalanceManuallyEdited] = React.useState(false);
+  const lastAutoPopulatedDriverIdRef = React.useRef<string>('');
 
   // Transfer product form state
   const [transferForm, setTransferForm] = React.useState({
@@ -252,20 +253,24 @@ export default function Page(): React.JSX.Element {
     // console.log('========================');
   }, [drivers, currentDriverId, transferForm.receivingDriverId]);
 
-  // Auto-populate previous balance when driver is selected or when driver balance changes
+  // Auto-populate previous balance when driver is selected (only once per driver selection)
   React.useEffect(() => {
-    if (currentDriverId && !previousBalanceManuallyEdited) {
+    // Only auto-populate if:
+    // 1. Driver is selected
+    // 2. User hasn't manually edited the field
+    // 3. This is a different driver than last time we auto-populated (or first time)
+    if (currentDriverId && !previousBalanceManuallyEdited && currentDriverId !== lastAutoPopulatedDriverIdRef.current) {
       const driver = drivers.find(d => d.id === currentDriverId);
       if (driver && driver.balance !== undefined) {
-        // Always update previous balance when driver balance changes (for new trips or when balance is updated from employee page)
+        // For editing trips, only auto-populate if previousBalance is 0/empty
         if (editingTrip) {
-          // For editing, only update if previousBalance is 0/empty
           const currentPreviousBalance = watchedPreviousBalance;
           if (currentPreviousBalance && currentPreviousBalance !== 0) {
             return; // Don't update if there's already a value
           }
         }
         setValue('previousBalance', driver.balance || 0);
+        lastAutoPopulatedDriverIdRef.current = currentDriverId;
       }
     }
   }, [currentDriverId, drivers, editingTrip, setValue, watchedPreviousBalance, previousBalanceManuallyEdited]);
@@ -342,6 +347,7 @@ export default function Page(): React.JSX.Element {
     setSearchByNumber('');
     setSearchByName('');
     setPreviousBalanceManuallyEdited(false);
+    lastAutoPopulatedDriverIdRef.current = '';
     reset({
       driverId: '',
       date: dayjs().toDate(),
@@ -370,6 +376,7 @@ export default function Page(): React.JSX.Element {
     setSearchByNumber('');
     setSearchByName('');
     setPreviousBalanceManuallyEdited(false);
+    lastAutoPopulatedDriverIdRef.current = '';
 
     const tripDate = dayjs(trip.date).toDate();
 
@@ -407,6 +414,7 @@ export default function Page(): React.JSX.Element {
     setEditingTrip(null);
     setSelectedDriverId('');
     setPreviousBalanceManuallyEdited(false);
+    lastAutoPopulatedDriverIdRef.current = '';
     reset();
   };
 
@@ -1982,8 +1990,11 @@ export default function Page(): React.JSX.Element {
                         helperText={errors.previousBalance?.message || 'Auto-filled from employee balance (editable)'}
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => {
+                          const newValue = e.target.value === '' ? 0 : Number(e.target.value);
                           setPreviousBalanceManuallyEdited(true);
-                          field.onChange(e.target.value === '' ? 0 : Number(e.target.value));
+                          // Clear the last auto-populated driver ID so we don't auto-populate again
+                          lastAutoPopulatedDriverIdRef.current = '';
+                          field.onChange(newValue);
                         }}
                         value={field.value || ''}
                       />
