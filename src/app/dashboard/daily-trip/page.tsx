@@ -2096,7 +2096,7 @@ export default function Page(): React.JSX.Element {
                         helperText={errors.petrol?.message}
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                        value={field.value || ''}
+                        value={field.value ?? 0}
                       />
                     )}
                   />
