@@ -87,7 +87,7 @@ const tripSchema = zod.object({
   expiry: zod.coerce.number().min(0, 'Expiry amount is required').refine(val => val >= 0, 'Expiry amount is required'),
   expiryAfterTax: zod.coerce.number().min(0, 'Expiry after tax must be non-negative'),
   discount: zod.coerce.number().min(0, 'Discount amount is required').refine(val => val >= 0, 'Discount amount is required'),
-  petrol: zod.coerce.number().min(0, 'Petrol amount is required').refine(val => val >= 0, 'Petrol amount is required'),
+  petrol: zod.coerce.number().min(0, 'Petrol amount must be non-negative').refine(val => val >= 0, 'Petrol amount must be non-negative'),
   balance: zod.coerce.number(),
 });
 
@@ -119,12 +119,12 @@ const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[
   const transferredFreshTotal = transferredFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const transferredBakeryTotal = transferredBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
 
-  // Calculate net totals after subtracting transferred products
-  const freshNetTotal = Math.floor((freshTotal - transferredFreshTotal) * (1 - 0.115)); // 11.5% reduction
-  const bakeryNetTotal = Math.floor((bakeryTotal - transferredBakeryTotal) * (1 - 0.16)); // 16% reduction
+  // Calculate net totals after subtracting transferred products (netTotal should NOT be rounded)
+  const freshNetTotal = (freshTotal - transferredFreshTotal) * (1 - 0.115); // 11.5% reduction (not rounded)
+  const bakeryNetTotal = (bakeryTotal - transferredBakeryTotal) * (1 - 0.16); // 16% reduction (not rounded)
 
-  const freshGrandTotal = Math.floor(freshNetTotal * 1.05); // 5% addition
-  const bakeryGrandTotal = Math.floor(bakeryNetTotal * 1.05); // 5% addition
+  const freshGrandTotal = Math.floor(freshNetTotal * 1.05); // 5% addition (rounded)
+  const bakeryGrandTotal = Math.floor(bakeryNetTotal * 1.05); // 5% addition (rounded)
 
   return {
     fresh: {
@@ -177,6 +177,7 @@ export default function Page(): React.JSX.Element {
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
   const [acceptedProductsForForm, setAcceptedProductsForForm] = React.useState<TripProduct[]>([]);
+  const [previousBalanceManuallyEdited, setPreviousBalanceManuallyEdited] = React.useState(false);
 
   // Transfer product form state
   const [transferForm, setTransferForm] = React.useState({
@@ -253,12 +254,12 @@ export default function Page(): React.JSX.Element {
 
   // Auto-populate previous balance when driver is selected or when driver balance changes
   React.useEffect(() => {
-    if (currentDriverId) {
+    if (currentDriverId && !previousBalanceManuallyEdited) {
       const driver = drivers.find(d => d.id === currentDriverId);
       if (driver && driver.balance !== undefined) {
         // Always update previous balance when driver balance changes (for new trips or when balance is updated from employee page)
         if (editingTrip) {
-          // For editing, only update if previousBalance is 0/empty or if driver balance changed
+          // For editing, only update if previousBalance is 0/empty
           const currentPreviousBalance = watchedPreviousBalance;
           if (currentPreviousBalance && currentPreviousBalance !== 0) {
             return; // Don't update if there's already a value
@@ -267,7 +268,7 @@ export default function Page(): React.JSX.Element {
         setValue('previousBalance', driver.balance || 0);
       }
     }
-  }, [currentDriverId, drivers, editingTrip, setValue, watchedPreviousBalance]);
+  }, [currentDriverId, drivers, editingTrip, setValue, watchedPreviousBalance, previousBalanceManuallyEdited]);
   
   // Set default driver filter and selected driver for driver users
   React.useEffect(() => {
@@ -340,6 +341,7 @@ export default function Page(): React.JSX.Element {
     setProductSearch('');
     setSearchByNumber('');
     setSearchByName('');
+    setPreviousBalanceManuallyEdited(false);
     reset({
       driverId: '',
       date: dayjs().toDate(),
@@ -367,6 +369,7 @@ export default function Page(): React.JSX.Element {
     setProductSearch('');
     setSearchByNumber('');
     setSearchByName('');
+    setPreviousBalanceManuallyEdited(false);
 
     const tripDate = dayjs(trip.date).toDate();
 
@@ -403,6 +406,7 @@ export default function Page(): React.JSX.Element {
     setOpen(false);
     setEditingTrip(null);
     setSelectedDriverId('');
+    setPreviousBalanceManuallyEdited(false);
     reset();
   };
 
@@ -1977,7 +1981,10 @@ export default function Page(): React.JSX.Element {
                         error={Boolean(errors.previousBalance)}
                         helperText={errors.previousBalance?.message || 'Auto-filled from employee balance (editable)'}
                         inputProps={{ min: 0, step: 0.01 }}
-                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        onChange={(e) => {
+                          setPreviousBalanceManuallyEdited(true);
+                          field.onChange(e.target.value === '' ? 0 : Number(e.target.value));
+                        }}
                         value={field.value || ''}
                       />
                     )}
