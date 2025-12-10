@@ -44,6 +44,7 @@ import { useDailyTrips, ProductTransfer } from '@/contexts/daily-trip-context';
 import { useNotifications } from '@/contexts/notification-context';
 import { useUser } from '@/hooks/use-user';
 import type { DailyTrip, TripProduct } from '@/contexts/daily-trip-context';
+import { getProductPriceForDate } from '@/utils/price-history';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -80,12 +81,16 @@ const tripSchema = zod.object({
     transferredFromDriverId: zod.string(),
     transferredFromDriverName: zod.string(),
   })),
-  previousBalance: zod.coerce.number().min(0, 'Previous balance is required').refine(val => val >= 0, 'Previous balance is required'),
-  collectionAmount: zod.coerce.number().min(0, 'Collection amount is required').refine(val => val > 0, 'Collection amount is required'),
+  previousBalance: zod.coerce.number().min(0, 'Previous balance is required').refine(val => val > 0, 'Previous balance must be greater than zero'),
+  collectionAmount: zod.coerce.number().min(0, 'Collection amount is required').refine(val => val > 0, 'Collection amount must be greater than zero'),
   actualCollectionAmount: zod.coerce.number().min(0, 'Actual collection amount is required').refine(val => val >= 0, 'Actual collection amount is required'),
   purchaseAmount: zod.coerce.number().min(0, 'Purchase amount must be non-negative').optional(),
-  expiry: zod.coerce.number().min(0, 'Expiry amount is required').refine(val => val >= 0, 'Expiry amount is required'),
-  expiryAfterTax: zod.coerce.number().min(0, 'Expiry after tax must be non-negative'),
+  expiry: zod.coerce.number().min(0, 'Expiry amount is required').refine(val => val > 0, 'Expiry amount must be greater than zero'),
+  expiryAfterTax: zod.coerce.number().min(0, 'Expiry after tax must be non-negative').optional(),
+  amountToBe: zod.coerce.number().optional(),
+  salesDifference: zod.coerce.number().optional(),
+  profit: zod.coerce.number().optional(),
+  due: zod.coerce.number().optional(),
   discount: zod.coerce.number().min(0, 'Discount amount is required').refine(val => val >= 0, 'Discount amount is required'),
   petrol: zod.coerce.number().min(0, 'Petrol amount must be non-negative').refine(val => val >= 0, 'Petrol amount must be non-negative'),
   balance: zod.coerce.number(),
@@ -177,8 +182,6 @@ export default function Page(): React.JSX.Element {
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
   const [acceptedProductsForForm, setAcceptedProductsForForm] = React.useState<TripProduct[]>([]);
-  const [previousBalanceManuallyEdited, setPreviousBalanceManuallyEdited] = React.useState(false);
-  const lastAutoPopulatedDriverIdRef = React.useRef<string>('');
 
   // Transfer product form state
   const [transferForm, setTransferForm] = React.useState({
@@ -253,27 +256,7 @@ export default function Page(): React.JSX.Element {
     // console.log('========================');
   }, [drivers, currentDriverId, transferForm.receivingDriverId]);
 
-  // Auto-populate previous balance when driver is selected (only once per driver selection)
-  React.useEffect(() => {
-    // Only auto-populate if:
-    // 1. Driver is selected
-    // 2. User hasn't manually edited the field
-    // 3. This is a different driver than last time we auto-populated (or first time)
-    if (currentDriverId && !previousBalanceManuallyEdited && currentDriverId !== lastAutoPopulatedDriverIdRef.current) {
-      const driver = drivers.find(d => d.id === currentDriverId);
-      if (driver && driver.balance !== undefined) {
-        // For editing trips, only auto-populate if previousBalance is 0/empty
-        if (editingTrip) {
-          const currentPreviousBalance = watchedPreviousBalance;
-          if (currentPreviousBalance && currentPreviousBalance !== 0) {
-            return; // Don't update if there's already a value
-          }
-        }
-        setValue('previousBalance', driver.balance || 0);
-        lastAutoPopulatedDriverIdRef.current = currentDriverId;
-      }
-    }
-  }, [currentDriverId, drivers, editingTrip, setValue, watchedPreviousBalance, previousBalanceManuallyEdited]);
+  // Previous balance is now manual input only - no auto-population
   
   // Set default driver filter and selected driver for driver users
   React.useEffect(() => {
@@ -297,7 +280,11 @@ export default function Page(): React.JSX.Element {
     }
   }, [productSearch, products]);
 
-  // Auto-recalculate balance when financial fields change
+  // Watch additional fields for recalculation
+  const watchedActualCollectionAmount = watch('actualCollectionAmount');
+  const watchedPetrol = watch('petrol');
+
+  // Auto-recalculate all financial metrics when fields change
   React.useEffect(() => {
     if (watchedProducts && watchedProducts.length > 0) {
       const acceptedProducts = editingTrip?.acceptedProducts || acceptedProductsForForm || [];
@@ -308,16 +295,24 @@ export default function Page(): React.JSX.Element {
       );
 
       const purchaseAmount = totals.overall.grandTotal;
-      const expiryAfterTax = Math.floor(watchedExpiry * 1.05 * 0.87);
+      const expiryAfterTax = Math.floor((watchedExpiry || 0) * 1.05 * 0.87);
       const amountToBe = Math.floor(purchaseAmount - expiryAfterTax);
-      const salesDifference = Math.floor(watchedCollectionAmount - amountToBe);
-      const profit = Math.floor((totals.fresh.netTotal - expiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - watchedDiscount);
-      const calculatedBalance = Math.floor(watchedPreviousBalance + profit - salesDifference);
+      const salesDifference = Math.floor((watchedCollectionAmount || 0) - amountToBe);
+      const profit = Math.floor((totals.fresh.netTotal - expiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - (watchedDiscount || 0));
+      const calculatedBalance = Math.floor((watchedPreviousBalance || 0) + profit - salesDifference);
+      
+      // Calculate Due: Due = AmountToBe - ActualCollectionAmount - Petrol
+      const calculatedDue = amountToBe - (watchedActualCollectionAmount || 0) - (watchedPetrol || 0);
 
       setValue('balance', calculatedBalance);
       setValue('purchaseAmount', purchaseAmount);
+      setValue('expiryAfterTax', expiryAfterTax);
+      setValue('amountToBe', amountToBe);
+      setValue('salesDifference', salesDifference);
+      setValue('profit', profit);
+      setValue('due', calculatedDue);
     }
-  }, [watchedProducts, watchedPreviousBalance, watchedCollectionAmount, watchedExpiry, watchedDiscount, watchedTransferredProducts, acceptedProductsForForm, editingTrip, setValue]);
+  }, [watchedProducts, watchedPreviousBalance, watchedCollectionAmount, watchedExpiry, watchedDiscount, watchedTransferredProducts, watchedActualCollectionAmount, watchedPetrol, acceptedProductsForForm, editingTrip, setValue]);
 
   // Get available drivers (excluding those who already have trips for the selected date)
   const getAvailableDrivers = React.useCallback(() => {
@@ -346,8 +341,6 @@ export default function Page(): React.JSX.Element {
     setProductSearch('');
     setSearchByNumber('');
     setSearchByName('');
-    setPreviousBalanceManuallyEdited(false);
-    lastAutoPopulatedDriverIdRef.current = '';
     reset({
       driverId: '',
       date: dayjs().toDate(),
@@ -375,8 +368,6 @@ export default function Page(): React.JSX.Element {
     setProductSearch('');
     setSearchByNumber('');
     setSearchByName('');
-    setPreviousBalanceManuallyEdited(false);
-    lastAutoPopulatedDriverIdRef.current = '';
 
     const tripDate = dayjs(trip.date).toDate();
 
@@ -413,8 +404,6 @@ export default function Page(): React.JSX.Element {
     setOpen(false);
     setEditingTrip(null);
     setSelectedDriverId('');
-    setPreviousBalanceManuallyEdited(false);
-    lastAutoPopulatedDriverIdRef.current = '';
     reset();
   };
 
@@ -486,16 +475,24 @@ export default function Page(): React.JSX.Element {
   const handleProductQuantityChange = (productId: string, quantity: number) => {
     const currentProducts = watchedProducts || [];
     const existingIndex = currentProducts.findIndex(p => p.productId === productId);
+    const tripDate = watch('date');
 
     if (quantity > 0) {
       const product = products.find(p => p.id === productId);
       if (product) {
+        // Get price from price history based on trip date
+        const priceForDate = getProductPriceForDate(
+          product.price,
+          product.priceHistory,
+          tripDate ? (tripDate instanceof Date ? tripDate : new Date(tripDate)) : new Date()
+        );
+
         const updatedProduct = {
           productId: product.id,
           productName: product.name,
           category: product.category,
           quantity,
-          unitPrice: product.price,
+          unitPrice: priceForDate,
           displayNumber: product.displayNumber,
         };
 
@@ -519,15 +516,23 @@ export default function Page(): React.JSX.Element {
     const product = products.find(p => p.id === productId);
     const receivingDriver = drivers.find(d => d.id === receivingDriverId);
     const currentDriver = drivers.find(d => d.id === watch('driverId'));
+    const tripDate = watch('date');
 
     if (product && receivingDriver && currentDriver) {
+      // Get price from price history based on trip date
+      const priceForDate = getProductPriceForDate(
+        product.price,
+        product.priceHistory,
+        tripDate ? (tripDate instanceof Date ? tripDate : new Date(tripDate)) : new Date()
+      );
+
       const currentTransferredProducts = watchedTransferredProducts || [];
       const newTransferredProduct = {
         productId: product.id,
         productName: product.name,
         category: product.category,
         quantity,
-        unitPrice: product.price,
+        unitPrice: priceForDate,
         displayNumber: product.displayNumber,
         receivingDriverId,
         receivingDriverName: receivingDriver.name,
@@ -588,9 +593,13 @@ export default function Page(): React.JSX.Element {
 
     // Calculate Purchase Amount dynamically from Grand Totals
     const calculatedPurchaseAmount = totals.overall.grandTotal;
-
-    // Calculate due (actualCollectionAmount is now required)
-    const due = data.collectionAmount - data.actualCollectionAmount;
+    const calculatedExpiryAfterTax = Math.floor((data.expiry || 0) * 1.05 * 0.87);
+    const calculatedAmountToBe = Math.floor(calculatedPurchaseAmount - calculatedExpiryAfterTax);
+    const calculatedSalesDifference = Math.floor((data.collectionAmount || 0) - calculatedAmountToBe);
+    const calculatedProfit = Math.floor((totals.fresh.netTotal - calculatedExpiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - (data.discount || 0));
+    
+    // Calculate Due: Due = AmountToBe - ActualCollectionAmount - Petrol
+    const calculatedDue = calculatedAmountToBe - (data.actualCollectionAmount || 0) - (data.petrol || 0);
 
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
@@ -602,19 +611,19 @@ export default function Page(): React.JSX.Element {
       previousBalance: data.previousBalance,
       collectionAmount: data.collectionAmount,
       actualCollectionAmount: data.actualCollectionAmount,
-      due,
-      purchaseAmount: calculatedPurchaseAmount, // Use calculated value
+      due: calculatedDue,
+      purchaseAmount: calculatedPurchaseAmount,
       expiry: data.expiry,
       discount: data.discount,
-      petrol: data.petrol,
+      petrol: data.petrol || 0,
       balance: roundBalance(data.balance),
       totalAmount: totals.overall.total,
       netTotal: totals.overall.netTotal,
       grandTotal: totals.overall.grandTotal,
-      expiryAfterTax: data.expiryAfterTax, // Will be calculated in context
-      amountToBe: 0, // Will be calculated in context
-      salesDifference: 0, // Will be calculated in context
-      profit: 0, // Will be calculated in context
+      expiryAfterTax: calculatedExpiryAfterTax,
+      amountToBe: calculatedAmountToBe,
+      salesDifference: calculatedSalesDifference,
+      profit: calculatedProfit,
     };
 
     setIsSaving(true);
@@ -1062,25 +1071,11 @@ export default function Page(): React.JSX.Element {
                 <Paper sx={{ p: 2, bgcolor: 'primary.50', border: 2, borderColor: 'primary.main' }}>
                   <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>Calculated Financial Metrics</Typography>
                   <Grid container spacing={2}>
-                    {/* First row: 6 columns */}
+                    {/* Row 1: Collection Amount, Purchase Amount, Amount To Be, Expiry Amount, Expiry After Tax, Sales Difference */}
                     <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Collection Amount</Typography>
                       <Typography variant="h6" color="success.main">AED {trip.collectionAmount.toFixed(2)}</Typography>
                     </Grid>
-                    {trip.actualCollectionAmount !== undefined && trip.actualCollectionAmount !== null && (
-                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                        <Typography variant="body2" color="text.secondary">Actual Collection Amount</Typography>
-                        <Typography variant="h6" color="info.main">AED {trip.actualCollectionAmount.toFixed(2)}</Typography>
-                      </Grid>
-                    )}
-                    {trip.due !== undefined && trip.due !== null && (
-                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                        <Typography variant="body2" color="text.secondary">Due</Typography>
-                        <Typography variant="h6" color={trip.due >= 0 ? 'success.dark' : 'error.dark'}>
-                          {trip.due >= 0 ? '+' : ''}AED {trip.due.toFixed(2)}
-                        </Typography>
-                      </Grid>
-                    )}
                     <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Purchase Amount</Typography>
                       <Typography variant="h6" color="primary.main">AED {trip.purchaseAmount.toFixed(2)}</Typography>
@@ -1090,14 +1085,12 @@ export default function Page(): React.JSX.Element {
                       <Typography variant="h6" color="info.dark">AED {(trip.amountToBe ?? 0).toFixed(2)}</Typography>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-                      <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
-                      <Typography variant="h6" color="warning.dark">AED {(trip.expiryAfterTax ?? 0).toFixed(2)}</Typography>
-                    </Grid>
-
-                    {/* Second row: 6 columns */}
-                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Expiry Amount</Typography>
                       <Typography variant="h6" color="warning.main">AED {trip.expiry.toFixed(2)}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                      <Typography variant="body2" color="text.secondary">Expiry After Tax</Typography>
+                      <Typography variant="h6" color="warning.dark">AED {(trip.expiryAfterTax ?? 0).toFixed(2)}</Typography>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Sales Difference</Typography>
@@ -1105,6 +1098,8 @@ export default function Page(): React.JSX.Element {
                         AED {(trip.salesDifference ?? 0).toFixed(2)}
                       </Typography>
                     </Grid>
+
+                    {/* Row 2: Profit, Discount Amount, Balance, Petrol, Actual Collection Amount, Due */}
                     <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Profit</Typography>
                       <Typography variant="h6" color={(trip.profit ?? 0) >= 0 ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
@@ -1123,6 +1118,20 @@ export default function Page(): React.JSX.Element {
                       <Typography variant="body2" color="text.secondary">Petrol</Typography>
                       <Typography variant="h6" color="error.main">AED {trip.petrol.toFixed(2)}</Typography>
                     </Grid>
+                    {trip.actualCollectionAmount !== undefined && trip.actualCollectionAmount !== null && (
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <Typography variant="body2" color="text.secondary">Actual Collection Amount</Typography>
+                        <Typography variant="h6" color="info.main">AED {trip.actualCollectionAmount.toFixed(2)}</Typography>
+                      </Grid>
+                    )}
+                    {trip.due !== undefined && trip.due !== null && (
+                      <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                        <Typography variant="body2" color="text.secondary">Due</Typography>
+                        <Typography variant="h6" color={trip.due >= 0 ? 'success.dark' : 'error.dark'}>
+                          {trip.due >= 0 ? '+' : ''}AED {trip.due.toFixed(2)}
+                        </Typography>
+                      </Grid>
+                    )}
                   </Grid>
                 </Paper>
 
@@ -1987,16 +1996,13 @@ export default function Page(): React.JSX.Element {
                         fullWidth
                         required
                         error={Boolean(errors.previousBalance)}
-                        helperText={errors.previousBalance?.message || 'Auto-filled from employee balance (editable)'}
+                        helperText={errors.previousBalance?.message || 'Enter the previous balance manually'}
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => {
-                          const newValue = e.target.value === '' ? 0 : Number(e.target.value);
-                          setPreviousBalanceManuallyEdited(true);
-                          // Clear the last auto-populated driver ID so we don't auto-populate again
-                          lastAutoPopulatedDriverIdRef.current = '';
-                          field.onChange(newValue);
+                          const value = e.target.value;
+                          field.onChange(value === '' ? '' : Number(value));
                         }}
-                        value={field.value || ''}
+                        value={field.value ?? ''}
                       />
                     )}
                   />
@@ -2035,7 +2041,10 @@ export default function Page(): React.JSX.Element {
                         error={Boolean(errors.actualCollectionAmount)}
                         helperText={errors.actualCollectionAmount?.message || 'Enter the actual collection amount expected'}
                         inputProps={{ min: 0, step: 0.01 }}
-                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === '' ? '' : Number(value));
+                        }}
                         value={field.value ?? ''}
                       />
                     )}
@@ -2095,8 +2104,11 @@ export default function Page(): React.JSX.Element {
                         error={Boolean(errors.petrol)}
                         helperText={errors.petrol?.message}
                         inputProps={{ min: 0, step: 0.01 }}
-                        onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                        value={field.value ?? 0}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          field.onChange(value === '' ? '' : Number(value));
+                        }}
+                        value={field.value ?? ''}
                       />
                     )}
                   />
