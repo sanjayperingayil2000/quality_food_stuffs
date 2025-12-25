@@ -301,8 +301,8 @@ export default function Page(): React.JSX.Element {
       const profit = Math.floor((totals.fresh.netTotal - expiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - (watchedDiscount || 0));
       const calculatedBalance = Math.floor((watchedPreviousBalance || 0) + profit - salesDifference);
       
-      // Calculate Due: Due = AmountToBe - ActualCollectionAmount - Petrol
-      const calculatedDue = amountToBe - (watchedActualCollectionAmount || 0) - (watchedPetrol || 0);
+      // Calculate Due: Due = ActualCollectionAmount - CollectionAmount
+      const calculatedDue = (watchedActualCollectionAmount || 0) - (watchedCollectionAmount || 0);
 
       setValue('balance', calculatedBalance);
       setValue('purchaseAmount', purchaseAmount);
@@ -598,8 +598,8 @@ export default function Page(): React.JSX.Element {
     const calculatedSalesDifference = Math.floor((data.collectionAmount || 0) - calculatedAmountToBe);
     const calculatedProfit = Math.floor((totals.fresh.netTotal - calculatedExpiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - (data.discount || 0));
     
-    // Calculate Due: Due = AmountToBe - ActualCollectionAmount - Petrol
-    const calculatedDue = calculatedAmountToBe - (data.actualCollectionAmount || 0) - (data.petrol || 0);
+    // Calculate Due: Due = ActualCollectionAmount - CollectionAmount
+    const calculatedDue = (data.actualCollectionAmount || 0) - (data.collectionAmount || 0);
 
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
