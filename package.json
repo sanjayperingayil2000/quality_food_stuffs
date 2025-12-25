@@ -45,7 +45,7 @@
     "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.1",
-    "next": "15.3.6",
+    "next": "15.3.8",
     "nodemailer": "^7.0.9",
     "react": "19.1.0",
     "react-apexcharts": "1.7.0",
