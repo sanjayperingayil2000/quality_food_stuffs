@@ -83,7 +83,7 @@ const tripSchema = zod.object({
   })),
   previousBalance: zod.coerce.number().min(0, 'Previous balance is required').refine(val => val > 0, 'Previous balance must be greater than zero'),
   collectionAmount: zod.coerce.number().min(0, 'Collection amount is required').refine(val => val > 0, 'Collection amount must be greater than zero'),
-  actualCollectionAmount: zod.coerce.number().min(0, 'Actual collection amount is required').refine(val => val >= 0, 'Actual collection amount is required'),
+  actualCollectionAmount: zod.coerce.number().min(0, 'Actual collection amount is required').refine(val => val > 0, 'Actual collection amount must be greater than zero'),
   purchaseAmount: zod.coerce.number().min(0, 'Purchase amount must be non-negative').optional(),
   expiry: zod.coerce.number().min(0, 'Expiry amount is required').refine(val => val > 0, 'Expiry amount must be greater than zero'),
   expiryAfterTax: zod.coerce.number().min(0, 'Expiry after tax must be non-negative').optional(),
@@ -91,8 +91,8 @@ const tripSchema = zod.object({
   salesDifference: zod.coerce.number().optional(),
   profit: zod.coerce.number().optional(),
   due: zod.coerce.number().optional(),
-  discount: zod.coerce.number().min(0, 'Discount amount is required').refine(val => val >= 0, 'Discount amount is required'),
-  petrol: zod.coerce.number().min(0, 'Petrol amount must be non-negative').refine(val => val >= 0, 'Petrol amount must be non-negative'),
+  discount: zod.coerce.number().min(0, 'Discount amount is required').refine(val => val > 0, 'Discount amount must be greater than zero'),
+  petrol: zod.coerce.number().min(0, 'Petrol amount is required').refine(val => val >= 0, 'Petrol amount must be non-negative'),
   balance: zod.coerce.number(),
 });
 
@@ -301,8 +301,8 @@ export default function Page(): React.JSX.Element {
       const profit = Math.floor((totals.fresh.netTotal - expiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - (watchedDiscount || 0));
       const calculatedBalance = Math.floor((watchedPreviousBalance || 0) + profit - salesDifference);
       
-      // Calculate Due: Due = AmountToBe - ActualCollectionAmount - Petrol
-      const calculatedDue = amountToBe - (watchedActualCollectionAmount || 0) - (watchedPetrol || 0);
+      // Calculate Due: Due = ActualCollectionAmount - CollectionAmount
+      const calculatedDue = (watchedActualCollectionAmount || 0) - (watchedCollectionAmount || 0);
 
       setValue('balance', calculatedBalance);
       setValue('purchaseAmount', purchaseAmount);
@@ -598,8 +598,8 @@ export default function Page(): React.JSX.Element {
     const calculatedSalesDifference = Math.floor((data.collectionAmount || 0) - calculatedAmountToBe);
     const calculatedProfit = Math.floor((totals.fresh.netTotal - calculatedExpiryAfterTax) * 0.135 + totals.bakery.netTotal * 0.195 - (data.discount || 0));
     
-    // Calculate Due: Due = AmountToBe - ActualCollectionAmount - Petrol
-    const calculatedDue = calculatedAmountToBe - (data.actualCollectionAmount || 0) - (data.petrol || 0);
+    // Calculate Due: Due = ActualCollectionAmount - CollectionAmount
+    const calculatedDue = (data.actualCollectionAmount || 0) - (data.collectionAmount || 0);
 
     const tripData: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       driverId: data.driverId,
@@ -2000,9 +2000,9 @@ export default function Page(): React.JSX.Element {
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => {
                           const value = e.target.value;
-                          field.onChange(value === '' ? '' : Number(value));
+                          field.onChange(value === '' ? undefined : Number(value));
                         }}
-                        value={field.value ?? ''}
+                        value={field.value === 0 ? '' : (field.value ?? '')}
                       />
                     )}
                   />
@@ -2043,9 +2043,9 @@ export default function Page(): React.JSX.Element {
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => {
                           const value = e.target.value;
-                          field.onChange(value === '' ? '' : Number(value));
+                          field.onChange(value === '' ? undefined : Number(value));
                         }}
-                        value={field.value ?? ''}
+                        value={field.value === 0 ? '' : (field.value ?? '')}
                       />
                     )}
                   />
@@ -2106,9 +2106,9 @@ export default function Page(): React.JSX.Element {
                         inputProps={{ min: 0, step: 0.01 }}
                         onChange={(e) => {
                           const value = e.target.value;
-                          field.onChange(value === '' ? '' : Number(value));
+                          field.onChange(value === '' ? undefined : Number(value));
                         }}
-                        value={field.value ?? ''}
+                        value={field.value === 0 ? '' : (field.value ?? '')}
                       />
                     )}
                   />

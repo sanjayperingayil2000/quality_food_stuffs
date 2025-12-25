@@ -35,8 +35,10 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
 
   const userPopover = usePopover<HTMLDivElement>();
   
-  // Check if user is a driver
+  // Check if user is a driver or manager
   const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
+  const isManager = user?.roles?.includes('manager') && !user?.roles?.includes('super_admin');
+  const shouldHideDownloads = isDriver || isManager;
 
   const handleSelectionChange = (event: SelectChangeEvent) => {
     const value = event.target.value as 'company' | 'driver';
@@ -235,16 +237,20 @@ export function MainNav({ sx, ...props }: MainNavProps): React.JSX.Element {
 
           {/* Right side */}
           <Stack sx={{ alignItems: 'center' }} direction="row" spacing={2}>
-            <Tooltip title="Download Report Pdf">
-              <IconButton>
-                <FilePdfIcon size={32} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Download Report Excel">
-              <IconButton>
-                <FileXlsIcon size={32} />
-              </IconButton>
-            </Tooltip>
+            {!shouldHideDownloads && (
+              <>
+                <Tooltip title="Download Report Pdf">
+                  <IconButton>
+                    <FilePdfIcon size={32} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Download Report Excel">
+                  <IconButton>
+                    <FileXlsIcon size={32} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
             <Avatar
               onClick={userPopover.handleOpen}
               ref={userPopover.anchorRef}

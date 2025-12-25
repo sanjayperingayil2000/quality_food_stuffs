@@ -111,19 +111,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       { new: true, runValidators: true }
     );
     
-    // Sync employee balance if balance changed
+    // Sync employee balance - only update if this is the latest trip for the driver
     try {
       if (updatedTrip?.balance !== undefined) {
-        const tripDate = updatedTrip.date instanceof Date ? updatedTrip.date : new Date(updatedTrip.date);
-        const yyyy = tripDate.getFullYear();
-        const mm = String(tripDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(tripDate.getDate()).padStart(2, '0');
-        const reason = `Daily trip updated on ${yyyy}-${mm}-${dd}`;
-        await updateEmployeeService(updatedTrip.driverId, {
-          balance: updatedTrip.balance,
-          updatedBy: user?.sub,
-          balanceUpdateReason: reason,
-        });
+        const driverId = updatedTrip.driverId;
+        // Find the latest trip for this driver (by date, then by createdAt)
+        const latestTrip = await DailyTrip.findOne({ driverId }).sort({ date: -1, createdAt: -1 });
+        
+        // Only update balance if this edited trip is the latest one
+        if (latestTrip && latestTrip.id === id) {
+          const tripDate = updatedTrip.date instanceof Date ? updatedTrip.date : new Date(updatedTrip.date);
+          const yyyy = tripDate.getFullYear();
+          const mm = String(tripDate.getMonth() + 1).padStart(2, '0');
+          const dd = String(tripDate.getDate()).padStart(2, '0');
+          const reason = `Daily trip updated on ${yyyy}-${mm}-${dd}`;
+          await updateEmployeeService(driverId, {
+            balance: updatedTrip.balance,
+            updatedBy: user?.sub,
+            balanceUpdateReason: reason,
+          });
+        }
       }
       
       // Update driver due if actualCollectionAmount and due are provided
