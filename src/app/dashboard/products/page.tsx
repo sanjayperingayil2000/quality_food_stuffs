@@ -183,8 +183,10 @@ export default function Page(): React.JSX.Element {
   const { products, addProduct, updateProduct, deleteProduct, isLoading: isLoadingProducts } = useProducts();
   const { user } = useUser();
   
-  // Check if user is a driver
+  // Check if user is a driver or manager
   const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
+  const isManager = user?.roles?.includes('manager') && !user?.roles?.includes('super_admin');
+  const shouldHideDownloads = isDriver || isManager;
   const { showSuccess, showError } = useNotifications();
   const [open, setOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -487,9 +489,13 @@ export default function Page(): React.JSX.Element {
       <Stack direction="row" spacing={3} justifyContent="space-between">
         <Typography variant="h4">Products</Typography>
         <Stack direction="row" spacing={1}>
-          {/* <Button color="inherit" startIcon={<FilePdfIcon fontSize="var(--icon-fontSize-md)" />} onClick={handleExportPdf}>PDF</Button> */}
-          <ExportPdfButton products={filteredProducts} />
-          <Button color="inherit" startIcon={<TableIcon fontSize="var(--icon-fontSize-md)" />} onClick={handleExportExcel}>Excel</Button>
+          {!shouldHideDownloads && (
+            <>
+              {/* <Button color="inherit" startIcon={<FilePdfIcon fontSize="var(--icon-fontSize-md)" />} onClick={handleExportPdf}>PDF</Button> */}
+              <ExportPdfButton products={filteredProducts} />
+              <Button color="inherit" startIcon={<TableIcon fontSize="var(--icon-fontSize-md)" />} onClick={handleExportExcel}>Excel</Button>
+            </>
+          )}
           {!isDriver && (
             <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>Add</Button>
           )}

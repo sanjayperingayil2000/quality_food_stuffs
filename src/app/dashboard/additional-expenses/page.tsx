@@ -113,8 +113,10 @@ export default function Page(): React.JSX.Element {
   const { employees } = useEmployees();
   const { user } = useUser();
   
-  // Check if user is a driver
+  // Check if user is a driver or manager
   const isDriver = user?.roles?.includes('driver') && !user?.roles?.includes('super_admin') && !user?.roles?.includes('manager');
+  const isManager = user?.roles?.includes('manager') && !user?.roles?.includes('super_admin');
+  const shouldHideDownloads = isDriver || isManager;
   const [open, setOpen] = React.useState(false);
   const [editingExpense, setEditingExpense] = React.useState<Expense | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -462,20 +464,24 @@ export default function Page(): React.JSX.Element {
           <Typography variant="h4">Additional Expenses</Typography>
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button
-            color="inherit"
-            startIcon={<FilePdfIcon fontSize="var(--icon-fontSize-md)" />}
-            onClick={handleExportPdf}
-          >
-            PDF
-          </Button>
-          <Button
-            color="inherit"
-            startIcon={<TableIcon fontSize="var(--icon-fontSize-md)" />}
-            onClick={handleExportExcel}
-          >
-            Excel
-          </Button>
+          {!shouldHideDownloads && (
+            <>
+              <Button
+                color="inherit"
+                startIcon={<FilePdfIcon fontSize="var(--icon-fontSize-md)" />}
+                onClick={handleExportPdf}
+              >
+                PDF
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<TableIcon fontSize="var(--icon-fontSize-md)" />}
+                onClick={handleExportExcel}
+              >
+                Excel
+              </Button>
+            </>
+          )}
           {!isDriver && (
             <Button startIcon={<PlusIcon fontSize="var(--icon-fontSize-md)" />} variant="contained" onClick={handleOpen}>
               Add Expense
@@ -516,21 +522,23 @@ export default function Page(): React.JSX.Element {
             <MenuItem value="others">Others</MenuItem>
           </Select>
         </FormControl>
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Employee</InputLabel>
-          <Select
-            value={employeeFilter}
-            label="Employee"
-            onChange={(e) => setEmployeeFilter(e.target.value)}
-          >
-            <MenuItem value="allEmployees">All Employees</MenuItem>
-            {employees.map((employee) => (
-              <MenuItem key={employee.id} value={employee.id}>
-                {employee.name} ({employee.designation.charAt(0).toUpperCase() + employee.designation.slice(1).toLowerCase()})
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {!isDriver && (
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Employee</InputLabel>
+            <Select
+              value={employeeFilter}
+              label="Employee"
+              onChange={(e) => setEmployeeFilter(e.target.value)}
+            >
+              <MenuItem value="allEmployees">All Employees</MenuItem>
+              {employees.map((employee) => (
+                <MenuItem key={employee.id} value={employee.id}>
+                  {employee.name} ({employee.designation.charAt(0).toUpperCase() + employee.designation.slice(1).toLowerCase()})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
 
         <Tooltip title="Reset Filters">
           <IconButton onClick={handleResetFilters} color="primary">
@@ -670,30 +678,49 @@ export default function Page(): React.JSX.Element {
               />
 
               {(watchedType === 'petrol' || watchedType === 'maintenance' || watchedType === 'variance' || watchedType === 'salary' || watchedType === 'others') && (
-                <Controller
-                  control={control}
-                  name="employeeId"
-                  render={({ field }) => (
-                    <FormControl fullWidth error={Boolean(errors.employeeId)}>
-                      <InputLabel>Employee/Company</InputLabel>
-                      <Select {...field} label="Employee/Company">
-                        <MenuItem value="COMPANY">
-                          Company
-                        </MenuItem>
-                        {employees.map((employee) => (
-                          <MenuItem key={employee.id} value={employee.id}>
-                            {employee.name} ({employee.designation.charAt(0).toUpperCase() + employee.designation.slice(1).toLowerCase()})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {errors.employeeId && (
-                        <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                          {errors.employeeId.message}
-                        </Typography>
+                <>
+                  {isDriver && user?.employeeId ? (
+                    <Controller
+                      control={control}
+                      name="employeeId"
+                      render={({ field }) => (
+                        <TextField
+                          {...field}
+                          value={user.employeeId}
+                          label="Employee"
+                          disabled
+                          fullWidth
+                          helperText="Your expenses are automatically linked to your account"
+                        />
                       )}
-                    </FormControl>
+                    />
+                  ) : (
+                    <Controller
+                      control={control}
+                      name="employeeId"
+                      render={({ field }) => (
+                        <FormControl fullWidth error={Boolean(errors.employeeId)}>
+                          <InputLabel>Employee/Company</InputLabel>
+                          <Select {...field} label="Employee/Company">
+                            <MenuItem value="COMPANY">
+                              Company
+                            </MenuItem>
+                            {employees.map((employee) => (
+                              <MenuItem key={employee.id} value={employee.id}>
+                                {employee.name} ({employee.designation.charAt(0).toUpperCase() + employee.designation.slice(1).toLowerCase()})
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {errors.employeeId && (
+                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                              {errors.employeeId.message}
+                            </Typography>
+                          )}
+                        </FormControl>
+                      )}
+                    />
                   )}
-                />
+                </>
               )}
 
 

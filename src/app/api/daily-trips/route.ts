@@ -130,20 +130,28 @@ export async function POST(req: NextRequest) {
     const trip = await DailyTrip.create(tripData);
 
     // After creating the trip, update the driver's current balance in employees
+    // Only update if this is the latest trip for the driver
     try {
       const tripDate = parsed.data.date instanceof Date
         ? parsed.data.date
         : new Date(parsed.data.date as unknown as string);
-      const yyyy = tripDate.getFullYear();
-      const mm = String(tripDate.getMonth() + 1).padStart(2, '0');
-      const dd = String(tripDate.getDate()).padStart(2, '0');
-      const reason = `Daily trip on ${yyyy}-${mm}-${dd}`;
+      
+      // Find the latest trip for this driver (by date, then by createdAt)
+      const latestTrip = await DailyTrip.findOne({ driverId: parsed.data.driverId }).sort({ date: -1, createdAt: -1 });
+      
+      // Only update balance if this new trip is the latest one
+      if (!latestTrip || String(latestTrip._id) === String(trip._id)) {
+        const yyyy = tripDate.getFullYear();
+        const mm = String(tripDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(tripDate.getDate()).padStart(2, '0');
+        const reason = `Daily trip on ${yyyy}-${mm}-${dd}`;
 
-      await updateEmployeeService(parsed.data.driverId, {
-        balance: parsed.data.balance,
-        updatedBy: user?.sub,
-        balanceUpdateReason: reason,
-      });
+        await updateEmployeeService(parsed.data.driverId, {
+          balance: parsed.data.balance,
+          updatedBy: user?.sub,
+          balanceUpdateReason: reason,
+        });
+      }
       
       // Update driver due if actualCollectionAmount and due are provided
       if (parsed.data.actualCollectionAmount !== undefined && parsed.data.actualCollectionAmount !== null && parsed.data.due !== undefined && parsed.data.due !== null) {
