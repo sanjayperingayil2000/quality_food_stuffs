@@ -1112,7 +1112,9 @@ export default function Page(): React.JSX.Element {
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Balance</Typography>
-                      <Typography variant="h6" color="info.main">AED {roundBalance(trip.balance ?? 0)}</Typography>
+                      <Typography variant="h6" color="info.main">
+                        AED {roundBalance((trip.previousBalance ?? 0) + (trip.profit ?? 0) - (trip.salesDifference ?? 0))}
+                      </Typography>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                       <Typography variant="body2" color="text.secondary">Petrol</Typography>
