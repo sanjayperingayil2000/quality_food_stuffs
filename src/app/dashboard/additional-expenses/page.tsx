@@ -145,8 +145,13 @@ export default function Page(): React.JSX.Element {
 
   // Initialize filtered expenses
   React.useEffect(() => {
-    setFilteredExpenses(mappedExpenses);
-  }, [mappedExpenses]);
+    // For driver users, filter expenses immediately
+    if (isDriver && user?.employeeId) {
+      setFilteredExpenses(mappedExpenses.filter(expense => expense.employeeId === user.employeeId));
+    } else {
+      setFilteredExpenses(mappedExpenses);
+    }
+  }, [mappedExpenses, isDriver, user?.employeeId]);
 
   const {
     control,
@@ -238,6 +243,11 @@ export default function Page(): React.JSX.Element {
   const applyFilters = React.useCallback(() => {
     let filtered = mappedExpenses;
 
+    // For driver users, always filter by their employeeId
+    if (isDriver && user?.employeeId) {
+      filtered = filtered.filter(expense => expense.employeeId === user.employeeId);
+    }
+
     // Date range filter
     if (dateFrom) {
       const fromDate = dayjs(dateFrom).startOf('day').utc();
@@ -258,13 +268,13 @@ export default function Page(): React.JSX.Element {
       filtered = filtered.filter(expense => expense.type === expenseTypeFilter);
     }
 
-    // Employee filter
-    if (employeeFilter !== 'allEmployees') {
+    // Employee filter (only for non-driver users)
+    if (!isDriver && employeeFilter !== 'allEmployees') {
       filtered = filtered.filter(expense => expense.employeeId === employeeFilter);
     }
 
     setFilteredExpenses(filtered);
-  }, [mappedExpenses, dateFrom, dateTo, expenseTypeFilter, employeeFilter]);
+  }, [mappedExpenses, dateFrom, dateTo, expenseTypeFilter, employeeFilter, isDriver, user?.employeeId]);
 
   // Auto-apply filters when any filter changes
   React.useEffect(() => {
