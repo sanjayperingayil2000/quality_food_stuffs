@@ -201,8 +201,13 @@ export default function Page(): React.JSX.Element {
   // Initialize state after component mounts to avoid hydration issues
   React.useEffect(() => {
     setMounted(true);
-    setFilteredTrips(trips);
-  }, [trips]);
+    // For driver users, filter trips immediately
+    if (isDriver && user?.employeeId) {
+      setFilteredTrips(trips.filter(trip => trip.driverId === user.employeeId));
+    } else {
+      setFilteredTrips(trips);
+    }
+  }, [trips, isDriver, user?.employeeId]);
 
   const {
     control,
