@@ -177,6 +177,90 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       console.error('Failed to sync driver balance/due after trip update:', balanceUpdateError);
     }
     
+    // Update receiving driver trips if transfer products were updated
+    try {
+      if (updatedTrip?.transfer?.isProductTransferred && updatedTrip.transfer.transferredProducts && updatedTrip.transfer.transferredProducts.length > 0) {
+        const tripDate = updatedTrip.date instanceof Date ? updatedTrip.date : new Date(updatedTrip.date);
+        const tripDateStr = tripDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Group transfer products by receiving driver
+        const productsByDriver = updatedTrip.transfer.transferredProducts.reduce((acc, product) => {
+          if (!acc[product.receivingDriverId]) {
+            acc[product.receivingDriverId] = [];
+          }
+          acc[product.receivingDriverId].push({
+            productId: product.productId,
+            productName: product.productName,
+            category: product.category,
+            quantity: product.quantity,
+            unitPrice: product.unitPrice,
+          });
+          return acc;
+        }, {} as Record<string, Array<{ productId: string; productName: string; category: string; quantity: number; unitPrice: number }>>);
+        
+        // Update each receiving driver's trip
+        for (const [receivingDriverId, transferProducts] of Object.entries(productsByDriver)) {
+          // Find the receiving driver's trip on the same date
+          const receivingDriverTrip = await DailyTrip.findOne({
+            driverId: receivingDriverId,
+            date: {
+              $gte: new Date(tripDateStr + 'T00:00:00.000Z'),
+              $lt: new Date(tripDateStr + 'T23:59:59.999Z'),
+            },
+          });
+          
+          if (receivingDriverTrip) {
+            // Get existing accepted products that are NOT from the transferring driver
+            const existingAcceptedProducts = (receivingDriverTrip.acceptedProducts || []).filter(
+              (ap: { productId: string; quantity: number; unitPrice: number; transferredFromDriverId?: string }) =>
+                ap.transferredFromDriverId !== updatedTrip.driverId
+            );
+            
+            // Create a Set of existing product keys for quick lookup (including unitPrice)
+            const existingProductKeys = new Set(
+              existingAcceptedProducts.map((p: { productId: string; quantity: number; unitPrice: number; transferredFromDriverId?: string }) =>
+                `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`
+              )
+            );
+            
+            // Add NEW transfer products from the updated trip
+            const newAcceptedProducts = transferProducts
+              .filter(product => {
+                const productKey = `${product.productId}-${product.quantity}-${updatedTrip.driverId}-${product.unitPrice}`;
+                return !existingProductKeys.has(productKey);
+              })
+              .map(product => ({
+                ...product,
+                transferredFromDriverId: updatedTrip.driverId,
+                transferredFromDriverName: updatedTrip.driverName,
+              }));
+            
+            // Combine and deduplicate
+            const combinedAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProducts];
+            const uniqueAcceptedProducts = [...new Map(
+              combinedAcceptedProducts.map((p: { productId: string; quantity: number; unitPrice: number; transferredFromDriverId?: string }) => [
+                `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`,
+                p
+              ])
+            ).values()];
+            
+            // Update the receiving driver's trip
+            await DailyTrip.findOneAndUpdate(
+              { id: receivingDriverTrip.id },
+              {
+                acceptedProducts: uniqueAcceptedProducts,
+                updatedBy: user?.sub,
+              },
+              { new: true, runValidators: true }
+            );
+          }
+        }
+      }
+    } catch (transferUpdateError) {
+      console.error('Failed to update receiving driver trips after transfer update:', transferUpdateError);
+      // Don't fail the request if this fails
+    }
+    
     // Log to history
     await History.create({
       collectionName: 'dailyTrips',
