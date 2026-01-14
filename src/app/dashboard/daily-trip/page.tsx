@@ -771,7 +771,8 @@ export default function Page(): React.JSX.Element {
       handleClose();
     } catch (error) {
       console.error('Failed to save trip:', error);
-      showError('Failed to save daily trip. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save daily trip. Please try again.';
+      showError(errorMessage);
     } finally {
       setIsSaving(false);
     }

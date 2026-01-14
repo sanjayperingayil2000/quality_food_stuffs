@@ -1165,7 +1165,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
         // Revert local state on error
         setTrips(prev => prev.filter(trip => trip.id !== newTrip.id));
         setError(result.error);
-        return;
+        throw new Error(result.error);
       }
 
     // Optimistically sync employee balance immediately so the Employees page reflects without reload
@@ -1180,8 +1180,9 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       console.error('Error saving trip to backend:', error_);
       // Revert local state on error
       setTrips(prev => prev.filter(trip => trip.id !== newTrip.id));
-      setError(error_ instanceof Error ? error_.message : 'Failed to save trip');
-      return;
+      const errorMessage = error_ instanceof Error ? error_.message : 'Failed to save trip';
+      setError(errorMessage);
+      throw error_;
     }
 
     // Track balance update to be processed after state change
