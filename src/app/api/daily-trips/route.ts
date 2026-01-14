@@ -117,14 +117,21 @@ export async function POST(req: NextRequest) {
     const user = getRequestUser(authed);
     
     // Generate unique ID - find the highest existing ID number to avoid duplicates
-    const existingTrips = await DailyTrip.find().sort({ id: -1 }).limit(1);
-    let nextIdNumber = 1;
-    if (existingTrips.length > 0 && existingTrips[0].id) {
-      const match = existingTrips[0].id.match(/TRP-(\d+)/);
-      if (match) {
-        nextIdNumber = parseInt(match[1], 10) + 1;
+    // Get all trips and find the highest numeric ID
+    const allTrips = await DailyTrip.find({}, { id: 1 }).lean();
+    let maxIdNumber = 0;
+    for (const trip of allTrips) {
+      if (trip.id) {
+        const match = trip.id.match(/TRP-(\d+)/);
+        if (match) {
+          const idNumber = parseInt(match[1], 10);
+          if (idNumber > maxIdNumber) {
+            maxIdNumber = idNumber;
+          }
+        }
       }
     }
+    const nextIdNumber = maxIdNumber + 1;
     const id = `TRP-${String(nextIdNumber).padStart(3, '0')}`;
     
     const tripData = {
