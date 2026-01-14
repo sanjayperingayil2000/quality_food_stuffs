@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
       if (trip.id) {
         const match = trip.id.match(/TRP-(\d+)/);
         if (match) {
-          const idNumber = parseInt(match[1], 10);
+          const idNumber = Number.parseInt(match[1], 10);
           if (idNumber > maxIdNumber) {
             maxIdNumber = idNumber;
           }
