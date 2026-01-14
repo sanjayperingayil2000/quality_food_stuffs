@@ -1078,19 +1078,35 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
           );
           
           if (driverTrip) {
-            // Add transfer source information to accepted products
-            const enrichedAcceptedProducts = acceptedProducts.map(product => ({
-              ...product,
-              transferredFromDriverId: tempTrip.driverId,
-              transferredFromDriverName: tempTrip.driverName,
-            }));
+            // Get existing accepted products from Driver-B's trip
+            const existingAcceptedProducts = driverTrip.acceptedProducts || [];
             
-            // Combine existing accepted products with new ones
-            const combinedAcceptedProducts = [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts];
+            // Create a Set of existing product keys for quick lookup (including unitPrice)
+            const existingProductKeys = new Set(
+              existingAcceptedProducts.map(p => 
+                `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`
+              )
+            );
             
-            // Deduplicate based on productId, quantity, and transferredFromDriverId
+            // Only add NEW products that aren't already in Driver-B's accepted products
+            const newAcceptedProducts = acceptedProducts
+              .filter(product => {
+                const productKey = `${product.productId}-${product.quantity}-${tempTrip.driverId}-${product.unitPrice}`;
+                return !existingProductKeys.has(productKey);
+              })
+              .map(product => ({
+                ...product,
+                transferredFromDriverId: tempTrip.driverId,
+                transferredFromDriverName: tempTrip.driverName,
+              }));
+            
+            // Combine existing with only NEW products and deduplicate using robust key
+            const combinedAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProducts];
             const uniqueAcceptedProducts = [...new Map(
-              combinedAcceptedProducts.map(p => [p.productId + p.quantity + (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId, p])
+              combinedAcceptedProducts.map(p => [
+                `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`,
+                p
+              ])
             ).values()];
             
             const updatedDriverTrip = {
@@ -1354,16 +1370,35 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 );
                 
                 if (driverTrip) {
-                  const enrichedAcceptedProducts = receivedProducts.map(product => ({
-                    ...product,
-                    transferredFromDriverId: theUpdatedTrip.driverId,
-                    transferredFromDriverName: theUpdatedTrip.driverName,
-                  }));
+                  // Get existing accepted products from Driver-B's trip
+                  const existingAcceptedProducts = driverTrip.acceptedProducts || [];
                   
-                  // Combine and deduplicate
-                  const combinedAcceptedProducts = [...(driverTrip.acceptedProducts || []), ...enrichedAcceptedProducts];
+                  // Create a Set of existing product keys for quick lookup (including unitPrice)
+                  const existingProductKeys = new Set(
+                    existingAcceptedProducts.map(p => 
+                      `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`
+                    )
+                  );
+                  
+                  // Only add NEW products that aren't already in Driver-B's accepted products
+                  const newAcceptedProducts = receivedProducts
+                    .filter(product => {
+                      const productKey = `${product.productId}-${product.quantity}-${theUpdatedTrip.driverId}-${product.unitPrice}`;
+                      return !existingProductKeys.has(productKey);
+                    })
+                    .map(product => ({
+                      ...product,
+                      transferredFromDriverId: theUpdatedTrip.driverId,
+                      transferredFromDriverName: theUpdatedTrip.driverName,
+                    }));
+                  
+                  // Combine existing with only NEW products and deduplicate using robust key
+                  const combinedAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProducts];
                   const uniqueAcceptedProducts = [...new Map(
-                    combinedAcceptedProducts.map(p => [p.productId + p.quantity + (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId, p])
+                    combinedAcceptedProducts.map(p => [
+                      `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`,
+                      p
+                    ])
                   ).values()];
                   
                   // Update the receiving driver's trip
