@@ -1370,35 +1370,32 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 );
                 
                 if (driverTrip) {
-                  // Get existing accepted products from Driver-B's trip
-                  const existingAcceptedProducts = driverTrip.acceptedProducts || [];
-                  
-                  // Create a Set of existing product keys for quick lookup (including unitPrice)
-                  const existingProductKeys = new Set(
-                    existingAcceptedProducts.map(p => 
-                      `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`
-                    )
+                  // Remove ALL accepted products from Driver-A (the transferring driver)
+                  // This ensures we rebuild from scratch and don't have orphaned entries
+                  const existingAcceptedProductsFromOthers = (driverTrip.acceptedProducts || []).filter(
+                    (p: TripProduct & { transferredFromDriverId?: string }) =>
+                      p.transferredFromDriverId !== theUpdatedTrip.driverId
                   );
                   
-                  // Only add NEW products that aren't already in Driver-B's accepted products
-                  const newAcceptedProducts = receivedProducts
-                    .filter(product => {
-                      const productKey = `${product.productId}-${product.quantity}-${theUpdatedTrip.driverId}-${product.unitPrice}`;
-                      return !existingProductKeys.has(productKey);
-                    })
-                    .map(product => ({
-                      ...product,
-                      transferredFromDriverId: theUpdatedTrip.driverId,
-                      transferredFromDriverName: theUpdatedTrip.driverName,
-                    }));
+                  // Rebuild accepted products from Driver-A from scratch using ALL current transfers
+                  const acceptedProductsFromUpdatedDriver = receivedProducts.map(product => ({
+                    ...product,
+                    transferredFromDriverId: theUpdatedTrip.driverId,
+                    transferredFromDriverName: theUpdatedTrip.driverName,
+                  }));
                   
-                  // Combine existing with only NEW products and deduplicate using robust key
-                  const combinedAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProducts];
+                  // Combine products from other drivers with products from the updated driver
+                  const combinedAcceptedProducts = [...existingAcceptedProductsFromOthers, ...acceptedProductsFromUpdatedDriver];
+                  
+                  // Deduplicate using robust key (handles cases where transferredFromDriverId might be missing)
                   const uniqueAcceptedProducts = [...new Map(
-                    combinedAcceptedProducts.map(p => [
-                      `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`,
-                      p
-                    ])
+                    combinedAcceptedProducts.map(p => {
+                      const pWithTransfer = p as TripProduct & { transferredFromDriverId?: string };
+                      return [
+                        `${p.productId}-${p.quantity}-${pWithTransfer.transferredFromDriverId || ''}-${p.unitPrice}`,
+                        p
+                      ];
+                    })
                   ).values()];
                   
                   // Update the receiving driver's trip
@@ -1410,11 +1407,14 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                       currentTrips[driverTripIndex].transfer.transferredProducts
                     );
                     
+                    // Recalculate purchaseAmount from grand totals
+                    const newPurchaseAmount = driverTotals.fresh.grandTotal + driverTotals.bakery.grandTotal;
+                    
                     const driverPreviousBalance = getPreviousBalance(driverTrip.driverId, new Date(driverTrip.date), currentTrips);
                     
                     const driverFinancialMetrics = calculateFinancialMetrics(
                       currentTrips[driverTripIndex].expiry,
-                      currentTrips[driverTripIndex].purchaseAmount,
+                      newPurchaseAmount,
                       currentTrips[driverTripIndex].collectionAmount,
                       currentTrips[driverTripIndex].discount,
                       driverTotals.fresh.netTotal,
@@ -1425,6 +1425,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                     currentTrips[driverTripIndex] = {
                       ...currentTrips[driverTripIndex],
                       acceptedProducts: uniqueAcceptedProducts,
+                      purchaseAmount: newPurchaseAmount,
                       totalAmount: driverTotals.overall.total,
                       netTotal: driverTotals.overall.netTotal,
                       grandTotal: driverTotals.overall.grandTotal,
@@ -1435,6 +1436,27 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                       balance: driverFinancialMetrics.balance,
                       updatedAt: new Date().toISOString(),
                     };
+                    
+                    // Also update Driver-B's trip in the backend with recalculated values
+                    (async () => {
+                      try {
+                        await apiClient.updateDailyTrip(driverTrip.id, {
+                          acceptedProducts: uniqueAcceptedProducts,
+                          purchaseAmount: newPurchaseAmount,
+                          totalAmount: driverTotals.overall.total,
+                          netTotal: driverTotals.overall.netTotal,
+                          grandTotal: driverTotals.overall.grandTotal,
+                          expiryAfterTax: driverFinancialMetrics.expiryAfterTax,
+                          amountToBe: driverFinancialMetrics.amountToBe,
+                          salesDifference: driverFinancialMetrics.salesDifference,
+                          profit: driverFinancialMetrics.profit,
+                          balance: driverFinancialMetrics.balance,
+                        });
+                      } catch (updateError) {
+                        console.error('Failed to update receiving driver trip in backend:', updateError);
+                        // Don't throw - local state is already updated
+                      }
+                    })().catch(() => {});
                   }
                 }
               }
