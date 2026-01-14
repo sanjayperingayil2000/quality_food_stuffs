@@ -301,9 +301,12 @@ export default function Page(): React.JSX.Element {
 
     // Use accepted products from the driver's trip (if exists), otherwise check pending transfers
     if (driverTripForDate && driverTripForDate.acceptedProducts && driverTripForDate.acceptedProducts.length > 0) {
-      // Deduplicate accepted products
+      // Deduplicate accepted products using a more specific key
       const uniqueProducts = [...new Map(
-        driverTripForDate.acceptedProducts.map(p => [p.productId + p.quantity + (p.transferredFromDriverId || ''), p])
+        driverTripForDate.acceptedProducts.map(p => [
+          `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`,
+          p
+        ])
       ).values()];
       setAcceptedProductsForForm(uniqueProducts);
     } else {
@@ -330,9 +333,12 @@ export default function Page(): React.JSX.Element {
             })) || []
         );
 
-      // Deduplicate
+      // Deduplicate using a more specific key
       const uniqueProducts = [...new Map(
-        acceptedProductsForThisDriver.map(p => [p.productId + p.quantity + p.transferredFromDriverId, p])
+        acceptedProductsForThisDriver.map(p => [
+          `${p.productId}-${p.quantity}-${p.transferredFromDriverId}-${p.unitPrice}`,
+          p
+        ])
       ).values()];
       setAcceptedProductsForForm(uniqueProducts);
     }
@@ -371,7 +377,8 @@ export default function Page(): React.JSX.Element {
         watchedTransferredProducts || []
       );
 
-      const purchaseAmount = totals.overall.grandTotal;
+      // Purchase amount = Fresh Grand Total + Bakery Grand Total
+      const purchaseAmount = totals.fresh.grandTotal + totals.bakery.grandTotal;
       const expiryAfterTax = Math.floor((watchedExpiry || 0) * 1.05 * 0.87);
       const amountToBe = Math.floor(purchaseAmount - expiryAfterTax);
       const salesDifference = Math.floor((watchedCollectionAmount || 0) - amountToBe);
@@ -453,18 +460,32 @@ export default function Page(): React.JSX.Element {
     // Load accepted products: start with existing accepted products from the trip
     const existingAcceptedProducts = trip.acceptedProducts || [];
     
+    // Create a Set of existing product keys for quick lookup
+    const existingProductKeys = new Set(
+      existingAcceptedProducts.map(p => 
+        `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`
+      )
+    );
+    
     // Also check for any new transfers that might have been added since the trip was created
+    // Only include transfers that are NOT already in existingAcceptedProducts
     const newAcceptedProductsFromTransfers = trips
       .filter(otherTrip => {
         // Find trips where products were transferred TO this driver on the same date
-        return otherTrip.transfer?.transferredProducts?.some(
-          tp => tp.receivingDriverId === trip.driverId &&
-            dayjs(otherTrip.date).format('YYYY-MM-DD') === selectedDate
-        );
+        // Exclude the current trip being edited
+        return otherTrip.id !== trip.id &&
+          otherTrip.transfer?.transferredProducts?.some(
+            tp => tp.receivingDriverId === trip.driverId &&
+              dayjs(otherTrip.date).format('YYYY-MM-DD') === selectedDate
+          );
       })
       .flatMap(otherTrip =>
         otherTrip.transfer?.transferredProducts
-          ?.filter(tp => tp.receivingDriverId === trip.driverId)
+          ?.filter(tp => {
+            // Only include if not already in existing accepted products
+            const productKey = `${tp.productId}-${tp.quantity}-${otherTrip.driverId}-${tp.unitPrice}`;
+            return tp.receivingDriverId === trip.driverId && !existingProductKeys.has(productKey);
+          })
           .map(tp => ({
             productId: tp.productId,
             productName: tp.productName,
@@ -479,7 +500,10 @@ export default function Page(): React.JSX.Element {
     // Combine existing and new accepted products, then deduplicate
     const allAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProductsFromTransfers];
     const uniqueAcceptedProducts = [...new Map(
-      allAcceptedProducts.map(p => [p.productId + p.quantity + (p.transferredFromDriverId || ''), p])
+      allAcceptedProducts.map(p => [
+        `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`,
+        p
+      ])
     ).values()];
     
     setAcceptedProductsForForm(uniqueAcceptedProducts);
@@ -707,7 +731,8 @@ export default function Page(): React.JSX.Element {
     );
 
     // Calculate Purchase Amount dynamically from Grand Totals
-    const calculatedPurchaseAmount = totals.overall.grandTotal;
+    // Purchase amount = Fresh Grand Total + Bakery Grand Total
+    const calculatedPurchaseAmount = totals.fresh.grandTotal + totals.bakery.grandTotal;
     const calculatedExpiryAfterTax = Math.floor((data.expiry || 0) * 1.05 * 0.87);
     const calculatedAmountToBe = Math.floor(calculatedPurchaseAmount - calculatedExpiryAfterTax);
     const calculatedSalesDifference = Math.floor((data.collectionAmount || 0) - calculatedAmountToBe);
@@ -1472,9 +1497,12 @@ export default function Page(): React.JSX.Element {
 
                             // Use accepted products from the driver's trip (if exists), otherwise check pending transfers
                             if (driverTripForDate && driverTripForDate.acceptedProducts && driverTripForDate.acceptedProducts.length > 0) {
-                              // Deduplicate accepted products
+                              // Deduplicate accepted products using a more specific key
                               const uniqueProducts = [...new Map(
-                                driverTripForDate.acceptedProducts.map(p => [p.productId + p.quantity + p.transferredFromDriverId, p])
+                                driverTripForDate.acceptedProducts.map(p => [
+                                  `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`,
+                                  p
+                                ])
                               ).values()];
                               console.log('Found accepted products for driver:', driver.id, uniqueProducts);
                               setAcceptedProductsForForm(uniqueProducts);
@@ -1502,9 +1530,12 @@ export default function Page(): React.JSX.Element {
                                     })) || []
                                 );
 
-                              // Deduplicate
+                              // Deduplicate using a more specific key
                               const uniqueProducts = [...new Map(
-                                acceptedProductsForThisDriver.map(p => [p.productId + p.quantity + p.transferredFromDriverId, p])
+                                acceptedProductsForThisDriver.map(p => [
+                                  `${p.productId}-${p.quantity}-${p.transferredFromDriverId}-${p.unitPrice}`,
+                                  p
+                                ])
                               ).values()];
                               console.log('Found accepted products for driver:', driver.id, uniqueProducts);
                               setAcceptedProductsForForm(uniqueProducts);
