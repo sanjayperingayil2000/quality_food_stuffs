@@ -18,6 +18,7 @@ import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import Backdrop from '@mui/material/Backdrop';
+import Pagination from '@mui/material/Pagination';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -187,6 +188,8 @@ export default function Page(): React.JSX.Element {
   const [mounted, setMounted] = React.useState(false);
   const [selectedDriverId, setSelectedDriverId] = React.useState<string>('');
   const [acceptedProductsForForm, setAcceptedProductsForForm] = React.useState<TripProduct[]>([]);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const tripsPerPage = 10;
 
   // Transfer product form state
   const [transferForm, setTransferForm] = React.useState({
@@ -274,8 +277,66 @@ export default function Page(): React.JSX.Element {
       setDriverFilter(user.employeeId);
       setSelectedDriverId(user.employeeId);
       setValue('driverId', user.employeeId);
+      // Set default date if not already set
+      if (!watchedDate) {
+        setValue('date', dayjs().toDate());
+      }
     }
-  }, [isDriver, user?.employeeId, mounted, setValue]);
+  }, [isDriver, user?.employeeId, mounted, setValue, watchedDate]);
+
+  // Load accepted products when date or selected driver changes
+  React.useEffect(() => {
+    if (!watchedDate || !selectedDriverId) {
+      setAcceptedProductsForForm([]);
+      return;
+    }
+
+    const selectedDate = dayjs(watchedDate).format('YYYY-MM-DD');
+    
+    // First, get the trip for this driver on this date (if it exists)
+    const driverTripForDate = trips.find(trip =>
+      trip.driverId === selectedDriverId &&
+      dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
+    );
+
+    // Use accepted products from the driver's trip (if exists), otherwise check pending transfers
+    if (driverTripForDate && driverTripForDate.acceptedProducts && driverTripForDate.acceptedProducts.length > 0) {
+      // Deduplicate accepted products
+      const uniqueProducts = [...new Map(
+        driverTripForDate.acceptedProducts.map(p => [p.productId + p.quantity + (p.transferredFromDriverId || ''), p])
+      ).values()];
+      setAcceptedProductsForForm(uniqueProducts);
+    } else {
+      // Fallback to finding pending transfers
+      const acceptedProductsForThisDriver = trips
+        .filter(trip => {
+          // Find trips where products were transferred TO this driver
+          return trip.transfer?.transferredProducts?.some(
+            tp => tp.receivingDriverId === selectedDriverId &&
+              dayjs(trip.date).format('YYYY-MM-DD') === selectedDate
+          );
+        })
+        .flatMap(trip =>
+          trip.transfer?.transferredProducts
+            ?.filter(tp => tp.receivingDriverId === selectedDriverId)
+            .map(tp => ({
+              productId: tp.productId,
+              productName: tp.productName,
+              category: tp.category as 'fresh' | 'bakery',
+              quantity: tp.quantity,
+              unitPrice: tp.unitPrice,
+              transferredFromDriverId: trip.driverId,
+              transferredFromDriverName: trip.driverName,
+            })) || []
+        );
+
+      // Deduplicate
+      const uniqueProducts = [...new Map(
+        acceptedProductsForThisDriver.map(p => [p.productId + p.quantity + p.transferredFromDriverId, p])
+      ).values()];
+      setAcceptedProductsForForm(uniqueProducts);
+    }
+  }, [watchedDate, selectedDriverId, trips]);
 
   // Filter products based on search
   React.useEffect(() => {
@@ -354,6 +415,7 @@ export default function Page(): React.JSX.Element {
   const handleOpen = () => {
     setEditingTrip(null);
     setSelectedDriverId('');
+    setAcceptedProductsForForm([]);
     setProductSearch('');
     setSearchByNumber('');
     setSearchByName('');
@@ -455,6 +517,7 @@ export default function Page(): React.JSX.Element {
     setOpen(false);
     setEditingTrip(null);
     setSelectedDriverId('');
+    setAcceptedProductsForForm([]);
     reset();
   };
 
@@ -917,7 +980,8 @@ export default function Page(): React.JSX.Element {
             </Typography>
           </Paper>
         ) : (
-          filteredTrips.map((trip, index) => (
+          <>
+            {filteredTrips.slice((currentPage - 1) * tripsPerPage, currentPage * tripsPerPage).map((trip, index) => (
             <Card key={trip.id} sx={{
               p: 2,
               bgcolor: index % 2 === 0 ? 'blue.50' : 'white',
@@ -1241,7 +1305,24 @@ export default function Page(): React.JSX.Element {
                 )}
               </Stack>
             </Card>
-          )))}
+          ))}
+          
+          {/* Pagination */}
+          {filteredTrips.length > tripsPerPage && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Pagination
+                count={Math.ceil(filteredTrips.length / tripsPerPage)}
+                page={currentPage}
+                onChange={(event, value) => setCurrentPage(value)}
+                color="primary"
+                size="large"
+                showFirstButton
+                showLastButton
+              />
+            </Box>
+          )}
+          </>
+        )}
       </Stack>
 
       <Dialog
@@ -1966,7 +2047,7 @@ export default function Page(): React.JSX.Element {
 
 
               {/* Accepted Products View (Shown when adding trip for receiving driver) */}
-              {acceptedProductsForForm.length > 0 && !editingTrip && (
+              {acceptedProductsForForm.length > 0 && (
                 <Box sx={{ mt: 3, p: 2, border: '1px solid', borderColor: 'success.main', borderRadius: 1, bgcolor: 'success.light' }}>
                   <Typography variant="h6" sx={{ mb: 2, color: 'success.dark' }}>
                     Products Accepted from Other Drivers ({acceptedProductsForForm.length})
