@@ -1019,10 +1019,10 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       previousBalance
     );
     
-    const newTrip: DailyTrip = {
+    // Create trip data without ID - let the API generate it
+    const tripDataToSend: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       ...tripData,
       acceptedProducts: allAcceptedProducts,
-      id: `TRP-${String(trips.length + 1).padStart(3, '0')}`,
       totalAmount: totals.overall.total,
       netTotal: totals.overall.netTotal,
       grandTotal: totals.overall.grandTotal,
@@ -1031,12 +1031,18 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       salesDifference: financialMetrics.salesDifference,
       profit: financialMetrics.profit,
       balance: financialMetrics.balance,
+    };
+
+    // Create temporary trip for optimistic update (will be replaced with API response)
+    const tempTrip: DailyTrip = {
+      ...tripDataToSend,
+      id: `TEMP-${Date.now()}`, // Temporary ID for optimistic update
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     setTrips(prev => {
-      const updatedTrips = [...prev, newTrip];
+      const updatedTrips = [...prev, tempTrip];
       
       // Remove applied pending transfers
       if (pendingForThisDriver.length > 0) {
@@ -1068,15 +1074,15 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
         for (const [driverId, acceptedProducts] of Object.entries(productsByDriver)) {
           const driverTrip = updatedTrips.find(trip => 
             trip.driverId === driverId && 
-            dayjs(trip.date).format('YYYY-MM-DD') === dayjs(newTrip.date).format('YYYY-MM-DD')
+            dayjs(trip.date).format('YYYY-MM-DD') === dayjs(tempTrip.date).format('YYYY-MM-DD')
           );
           
           if (driverTrip) {
             // Add transfer source information to accepted products
             const enrichedAcceptedProducts = acceptedProducts.map(product => ({
               ...product,
-              transferredFromDriverId: newTrip.driverId,
-              transferredFromDriverName: newTrip.driverName,
+              transferredFromDriverId: tempTrip.driverId,
+              transferredFromDriverName: tempTrip.driverName,
             }));
             
             // Combine existing accepted products with new ones
@@ -1129,8 +1135,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             // Store as pending transfer if receiving driver doesn't have a trip yet
             const enrichedAcceptedProducts = acceptedProducts.map(product => ({
               ...product,
-              transferredFromDriverId: newTrip.driverId,
-              transferredFromDriverName: newTrip.driverName,
+              transferredFromDriverId: tempTrip.driverId,
+              transferredFromDriverName: tempTrip.driverName,
             }));
             
             setPendingTransfers(prev => [
@@ -1140,8 +1146,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 date: tripDate,
                 receivingDriverId: driverId,
                 products: enrichedAcceptedProducts,
-                transferredFromDriverId: newTrip.driverId,
-                transferredFromDriverName: newTrip.driverName,
+                transferredFromDriverId: tempTrip.driverId,
+                transferredFromDriverName: tempTrip.driverName,
               }
             ]);
           }
@@ -1154,18 +1160,21 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     // Save to backend
     try {
       const result = await apiClient.createDailyTrip({
-        ...newTrip,
-        date: newTrip.date,
-        createdAt: newTrip.createdAt,
-        updatedAt: newTrip.updatedAt,
+        ...tripDataToSend,
+        date: tripDataToSend.date,
       });
       
       if (result.error) {
         console.error('Failed to save trip to backend:', result.error);
         // Revert local state on error
-        setTrips(prev => prev.filter(trip => trip.id !== newTrip.id));
+        setTrips(prev => prev.filter(trip => trip.id !== tempTrip.id));
         setError(result.error);
         throw new Error(result.error);
+      }
+
+      // Replace temporary trip with the one from API (which has the correct ID)
+      if (result.data?.trip) {
+        setTrips(prev => prev.map(trip => trip.id === tempTrip.id ? result.data!.trip : trip));
       }
 
     // Optimistically sync employee balance immediately so the Employees page reflects without reload
@@ -1179,7 +1188,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     } catch (error_) {
       console.error('Error saving trip to backend:', error_);
       // Revert local state on error
-      setTrips(prev => prev.filter(trip => trip.id !== newTrip.id));
+      setTrips(prev => prev.filter(trip => trip.id !== tempTrip.id));
       const errorMessage = error_ instanceof Error ? error_.message : 'Failed to save trip';
       setError(errorMessage);
       throw error_;
