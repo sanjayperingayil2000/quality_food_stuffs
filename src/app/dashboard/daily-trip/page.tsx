@@ -291,10 +291,11 @@ export default function Page(): React.JSX.Element {
 
   // Auto-recalculate all financial metrics when fields change
   React.useEffect(() => {
-    if (watchedProducts && watchedProducts.length > 0) {
-      const acceptedProducts = editingTrip?.acceptedProducts || acceptedProductsForForm || [];
+    const acceptedProducts = editingTrip?.acceptedProducts || acceptedProductsForForm || [];
+    // Calculate if there are regular products OR accepted products
+    if ((watchedProducts && watchedProducts.length > 0) || (acceptedProducts && acceptedProducts.length > 0)) {
       const totals = calculateTotals(
-        watchedProducts,
+        watchedProducts || [],
         acceptedProducts,
         watchedTransferredProducts || []
       );
