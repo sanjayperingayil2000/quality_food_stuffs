@@ -116,9 +116,23 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const user = getRequestUser(authed);
     
-    // Generate unique ID
-    const count = await DailyTrip.countDocuments();
-    const id = `TRP-${String(count + 1).padStart(3, '0')}`;
+    // Generate unique ID - find the highest existing ID number to avoid duplicates
+    // Get all trips and find the highest numeric ID
+    const allTrips = await DailyTrip.find({}, { id: 1 }).lean();
+    let maxIdNumber = 0;
+    for (const trip of allTrips) {
+      if (trip.id) {
+        const match = trip.id.match(/TRP-(\d+)/);
+        if (match) {
+          const idNumber = Number.parseInt(match[1], 10);
+          if (idNumber > maxIdNumber) {
+            maxIdNumber = idNumber;
+          }
+        }
+      }
+    }
+    const nextIdNumber = maxIdNumber + 1;
+    const id = `TRP-${String(nextIdNumber).padStart(3, '0')}`;
     
     const tripData = {
       ...parsed.data,
