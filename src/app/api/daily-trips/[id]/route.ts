@@ -9,6 +9,7 @@ import { Employee } from '@/models/employee';
 import { History } from '@/models/history';
 import { Types } from 'mongoose';
 import { updateEmployee as updateEmployeeService, updateDriverDue } from '@/services/employee-service';
+import { deduplicateAcceptedProducts } from '@/utils/deduplicate-accepted-products';
 
 const tripProductSchema = z.object({
   productId: z.string().min(1),
@@ -210,39 +211,47 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           });
           
           if (receivingDriverTrip) {
-            // Get existing accepted products that are NOT from the transferring driver
-            const existingAcceptedProducts = (receivingDriverTrip.acceptedProducts || []).filter(
-              (ap: { productId: string; quantity: number; unitPrice: number; transferredFromDriverId?: string }) =>
+            // Remove ALL accepted products from the transferring driver (Driver-A)
+            // This ensures we rebuild from scratch and don't have orphaned entries without transferredFromDriverId
+            type AcceptedProduct = {
+              productId: string;
+              productName: string;
+              category: 'bakery' | 'fresh';
+              quantity: number;
+              unitPrice: number;
+              transferredFromDriverId?: string;
+              transferredFromDriverName?: string;
+            };
+            
+            const existingAcceptedProductsFromOthers = ((receivingDriverTrip.acceptedProducts || []) as unknown as AcceptedProduct[]).filter(
+              (ap: AcceptedProduct) =>
                 ap.transferredFromDriverId !== updatedTrip.driverId
-            );
+            ).map(ap => ({
+              productId: ap.productId,
+              productName: ap.productName || '',
+              category: (ap.category || 'bakery') as 'bakery' | 'fresh',
+              quantity: ap.quantity,
+              unitPrice: ap.unitPrice,
+              transferredFromDriverId: ap.transferredFromDriverId,
+              transferredFromDriverName: ap.transferredFromDriverName,
+            }));
             
-            // Create a Set of existing product keys for quick lookup (including unitPrice)
-            const existingProductKeys = new Set(
-              existingAcceptedProducts.map((p: { productId: string; quantity: number; unitPrice: number; transferredFromDriverId?: string }) =>
-                `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`
-              )
-            );
+            // Rebuild accepted products from Driver-A from scratch using ALL current transfers
+            const acceptedProductsFromUpdatedDriver = transferProducts.map(product => ({
+              productId: product.productId,
+              productName: product.productName,
+              category: product.category as 'bakery' | 'fresh',
+              quantity: product.quantity,
+              unitPrice: product.unitPrice,
+              transferredFromDriverId: updatedTrip.driverId,
+              transferredFromDriverName: updatedTrip.driverName,
+            }));
             
-            // Add NEW transfer products from the updated trip
-            const newAcceptedProducts = transferProducts
-              .filter(product => {
-                const productKey = `${product.productId}-${product.quantity}-${updatedTrip.driverId}-${product.unitPrice}`;
-                return !existingProductKeys.has(productKey);
-              })
-              .map(product => ({
-                ...product,
-                transferredFromDriverId: updatedTrip.driverId,
-                transferredFromDriverName: updatedTrip.driverName,
-              }));
+            // Combine products from other drivers with products from the updated driver
+            const combinedAcceptedProducts = [...existingAcceptedProductsFromOthers, ...acceptedProductsFromUpdatedDriver];
             
-            // Combine and deduplicate
-            const combinedAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProducts];
-            const uniqueAcceptedProducts = [...new Map(
-              combinedAcceptedProducts.map((p: { productId: string; quantity: number; unitPrice: number; transferredFromDriverId?: string }) => [
-                `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`,
-                p
-              ])
-            ).values()];
+            // Deduplicate using shared utility function
+            const uniqueAcceptedProducts = deduplicateAcceptedProducts(combinedAcceptedProducts);
             
             // Update the receiving driver's trip
             await DailyTrip.findOneAndUpdate(

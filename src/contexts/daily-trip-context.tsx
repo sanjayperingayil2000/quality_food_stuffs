@@ -9,6 +9,7 @@ import { apiClient } from '@/lib/api-client';
 import { freshProducts } from './data/fresh-products';
 import { bakeryProducts } from './data/bakery-products';
 import { useUser } from '@/hooks/use-user';
+import { deduplicateAcceptedProducts } from '@/utils/deduplicate-accepted-products';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -92,47 +93,55 @@ const DailyTripContext = React.createContext<DailyTripContextType | undefined>(u
 
 // Helper function to calculate totals including transferred products
 const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[] = [], transferredProducts: TransferredProduct[] = []) => {
-  // Combine regular products and accepted products
-  const allProducts = [...products, ...acceptedProducts];
+  // Deduplicate accepted products before calculating totals
+  const deduplicatedAcceptedProducts = deduplicateAcceptedProducts(acceptedProducts);
   
-  // Calculate totals for regular products (including accepted)
-  const freshProducts = allProducts.filter(p => p.category === 'fresh');
-  const bakeryProducts = allProducts.filter(p => p.category === 'bakery');
+  // Calculate regular products totals (without accepted products)
+  const regularFreshProducts = products.filter(p => p.category === 'fresh');
+  const regularBakeryProducts = products.filter(p => p.category === 'bakery');
 
-  const freshTotal = freshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
-  const bakeryTotal = bakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
-
-  // Calculate accepted products totals by category
-  const acceptedFreshProducts = acceptedProducts.filter(p => p.category === 'fresh');
-  const acceptedBakeryProducts = acceptedProducts.filter(p => p.category === 'bakery');
-  const acceptedFreshTotal = acceptedFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
-  const acceptedBakeryTotal = acceptedBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  // Calculate accepted products totals by category (using deduplicated products)
+  const acceptedFreshProducts = deduplicatedAcceptedProducts.filter(p => p.category === 'fresh');
+  const acceptedBakeryProducts = deduplicatedAcceptedProducts.filter(p => p.category === 'bakery');
 
   // Calculate transferred products totals by category (to subtract from sender)
   const transferredFreshProducts = transferredProducts.filter(p => p.category === 'fresh');
   const transferredBakeryProducts = transferredProducts.filter(p => p.category === 'bakery');
   
+  // Calculate totals
+  const regularFreshTotal = regularFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  const regularBakeryTotal = regularBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+
+  const acceptedFreshTotal = acceptedFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  const acceptedBakeryTotal = acceptedBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
+  
   const transferredFreshTotal = transferredFreshProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const transferredBakeryTotal = transferredBakeryProducts.reduce((sum, p) => sum + (p.quantity * p.unitPrice), 0);
   const transferredTotal = transferredFreshTotal + transferredBakeryTotal;
 
-  // Calculate net totals after subtracting transferred products by category
+  // Total = regular products + accepted products (MUST include accepted products before calculating netTotal)
+  const freshTotal = regularFreshTotal + acceptedFreshTotal;
+  const bakeryTotal = regularBakeryTotal + acceptedBakeryTotal;
+
+  // Calculate net totals: (Total - Transferred) * (1 - percentage)
+  // For fresh: (total + accepted - transferred) * (1 - 0.115) = 11.5% reduction
+  // For bakery: (total + accepted - transferred) * (1 - 0.16) = 16% reduction
   const freshNetTotal = (freshTotal - transferredFreshTotal) * (1 - 0.115); // 11.5% reduction
   const bakeryNetTotal = (bakeryTotal - transferredBakeryTotal) * (1 - 0.16); // 16% reduction
 
-  const freshGrandTotal = freshNetTotal * 1.05; // 5% addition
-  const bakeryGrandTotal = bakeryNetTotal * 1.05; // 5% addition
+  const freshGrandTotal = Math.floor(freshNetTotal * 1.05); // 5% addition (rounded)
+  const bakeryGrandTotal = Math.floor(bakeryNetTotal * 1.05); // 5% addition (rounded)
 
   return {
     fresh: { 
-      total: freshTotal, 
+      total: regularFreshTotal, // Regular products total only
       accepted: acceptedFreshTotal,
       transferred: transferredFreshTotal,
       netTotal: freshNetTotal, 
       grandTotal: freshGrandTotal 
     },
     bakery: { 
-      total: bakeryTotal, 
+      total: regularBakeryTotal, // Regular products total only
       accepted: acceptedBakeryTotal,
       transferred: transferredBakeryTotal,
       netTotal: bakeryNetTotal, 
@@ -144,7 +153,7 @@ const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[
       bakery: transferredBakeryTotal
     },
     overall: { 
-      total: freshTotal + bakeryTotal - transferredTotal, 
+      total: regularFreshTotal + regularBakeryTotal, // Regular products total only
       netTotal: freshNetTotal + bakeryNetTotal,
       grandTotal: freshGrandTotal + bakeryGrandTotal
     },
@@ -1005,13 +1014,17 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       tripData.transfer.transferredProducts
     );
     
+    // Recalculate purchaseAmount from grand totals (includes accepted products)
+    // Purchase amount = Math.floor(Fresh Grand Total) + Math.floor(Bakery Grand Total)
+    const recalculatedPurchaseAmount = Math.floor(totals.fresh.grandTotal) + Math.floor(totals.bakery.grandTotal);
+    
     // Get previous balance for this driver
     const previousBalance = getPreviousBalance(tripData.driverId, new Date(tripData.date), trips);
     
-    // Calculate all financial metrics
+    // Calculate all financial metrics using recalculated purchaseAmount
     const financialMetrics = calculateFinancialMetrics(
       tripData.expiry,
-      tripData.purchaseAmount,
+      recalculatedPurchaseAmount,
       tripData.collectionAmount,
       tripData.discount,
       totals.fresh.netTotal,
@@ -1023,6 +1036,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     const tripDataToSend: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       ...tripData,
       acceptedProducts: allAcceptedProducts,
+      purchaseAmount: recalculatedPurchaseAmount,
       totalAmount: totals.overall.total,
       netTotal: totals.overall.netTotal,
       grandTotal: totals.overall.grandTotal,
@@ -1100,14 +1114,9 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 transferredFromDriverName: tempTrip.driverName,
               }));
             
-            // Combine existing with only NEW products and deduplicate using robust key
+            // Combine existing with only NEW products and deduplicate using shared utility
             const combinedAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProducts];
-            const uniqueAcceptedProducts = [...new Map(
-              combinedAcceptedProducts.map(p => [
-                `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`,
-                p
-              ])
-            ).values()];
+            const uniqueAcceptedProducts = deduplicateAcceptedProducts(combinedAcceptedProducts);
             
             const updatedDriverTrip = {
               ...driverTrip,
@@ -1121,13 +1130,17 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
               updatedDriverTrip.transfer.transferredProducts
             );
             
+            // Recalculate purchaseAmount from grand totals (includes accepted products)
+            // Purchase amount = Math.floor(Fresh Grand Total) + Math.floor(Bakery Grand Total)
+            const recalculatedDriverPurchaseAmount = Math.floor(driverTotals.fresh.grandTotal) + Math.floor(driverTotals.bakery.grandTotal);
+            
             // Get previous balance for the receiving driver
             const driverPreviousBalance = getPreviousBalance(driverId, new Date(updatedDriverTrip.date), updatedTrips);
             
-            // Recalculate financial metrics for the receiving driver
+            // Recalculate financial metrics for the receiving driver using recalculated purchaseAmount
             const driverFinancialMetrics = calculateFinancialMetrics(
               updatedDriverTrip.expiry,
-              updatedDriverTrip.purchaseAmount,
+              recalculatedDriverPurchaseAmount,
               updatedDriverTrip.collectionAmount,
               updatedDriverTrip.discount,
               driverTotals.fresh.netTotal,
@@ -1138,6 +1151,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             updatedDriverTrip.totalAmount = driverTotals.overall.total;
             updatedDriverTrip.netTotal = driverTotals.overall.netTotal;
             updatedDriverTrip.grandTotal = driverTotals.overall.grandTotal;
+            updatedDriverTrip.purchaseAmount = recalculatedDriverPurchaseAmount;
             updatedDriverTrip.expiryAfterTax = driverFinancialMetrics.expiryAfterTax;
             updatedDriverTrip.amountToBe = driverFinancialMetrics.amountToBe;
             updatedDriverTrip.salesDifference = driverFinancialMetrics.salesDifference;
@@ -1254,17 +1268,22 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 updatedTrip.acceptedProducts,
                 updatedTrip.transfer.transferredProducts
               );
+              
+              // Recalculate purchaseAmount from grand totals (includes accepted products)
+              const recalculatedPurchaseAmount = totals.fresh.grandTotal + totals.bakery.grandTotal;
+              
               updatedTrip.totalAmount = totals.overall.total;
               updatedTrip.netTotal = totals.overall.netTotal;
               updatedTrip.grandTotal = totals.overall.grandTotal;
+              updatedTrip.purchaseAmount = recalculatedPurchaseAmount;
               
               // Get previous balance for this driver
               const previousBalance = getPreviousBalance(updatedTrip.driverId, new Date(updatedTrip.date), prev);
               
-              // Recalculate financial metrics
+              // Recalculate financial metrics using recalculated purchaseAmount
               const financialMetrics = calculateFinancialMetrics(
                 updatedTrip.expiry,
-                updatedTrip.purchaseAmount,
+                recalculatedPurchaseAmount,
                 updatedTrip.collectionAmount,
                 updatedTrip.discount,
                 totals.fresh.netTotal,
@@ -1370,36 +1389,25 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 );
                 
                 if (driverTrip) {
-                  // Get existing accepted products from Driver-B's trip
-                  const existingAcceptedProducts = driverTrip.acceptedProducts || [];
-                  
-                  // Create a Set of existing product keys for quick lookup (including unitPrice)
-                  const existingProductKeys = new Set(
-                    existingAcceptedProducts.map(p => 
-                      `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`
-                    )
+                  // Remove ALL accepted products from Driver-A (the transferring driver)
+                  // This ensures we rebuild from scratch and don't have orphaned entries
+                  const existingAcceptedProductsFromOthers = (driverTrip.acceptedProducts || []).filter(
+                    (p: TripProduct & { transferredFromDriverId?: string }) =>
+                      p.transferredFromDriverId !== theUpdatedTrip.driverId
                   );
                   
-                  // Only add NEW products that aren't already in Driver-B's accepted products
-                  const newAcceptedProducts = receivedProducts
-                    .filter(product => {
-                      const productKey = `${product.productId}-${product.quantity}-${theUpdatedTrip.driverId}-${product.unitPrice}`;
-                      return !existingProductKeys.has(productKey);
-                    })
-                    .map(product => ({
-                      ...product,
-                      transferredFromDriverId: theUpdatedTrip.driverId,
-                      transferredFromDriverName: theUpdatedTrip.driverName,
-                    }));
+                  // Rebuild accepted products from Driver-A from scratch using ALL current transfers
+                  const acceptedProductsFromUpdatedDriver = receivedProducts.map(product => ({
+                    ...product,
+                    transferredFromDriverId: theUpdatedTrip.driverId,
+                    transferredFromDriverName: theUpdatedTrip.driverName,
+                  }));
                   
-                  // Combine existing with only NEW products and deduplicate using robust key
-                  const combinedAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProducts];
-                  const uniqueAcceptedProducts = [...new Map(
-                    combinedAcceptedProducts.map(p => [
-                      `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`,
-                      p
-                    ])
-                  ).values()];
+                  // Combine products from other drivers with products from the updated driver
+                  const combinedAcceptedProducts = [...existingAcceptedProductsFromOthers, ...acceptedProductsFromUpdatedDriver];
+                  
+                  // Deduplicate using robust key (handles cases where transferredFromDriverId might be missing)
+                  const uniqueAcceptedProducts = deduplicateAcceptedProducts(combinedAcceptedProducts);
                   
                   // Update the receiving driver's trip
                   const driverTripIndex = currentTrips.findIndex(t => t.id === driverTrip.id);
@@ -1410,11 +1418,15 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                       currentTrips[driverTripIndex].transfer.transferredProducts
                     );
                     
+                    // Recalculate purchaseAmount from grand totals
+                    // Purchase amount = Math.floor(Fresh Grand Total) + Math.floor(Bakery Grand Total)
+                    const newPurchaseAmount = Math.floor(driverTotals.fresh.grandTotal) + Math.floor(driverTotals.bakery.grandTotal);
+                    
                     const driverPreviousBalance = getPreviousBalance(driverTrip.driverId, new Date(driverTrip.date), currentTrips);
                     
                     const driverFinancialMetrics = calculateFinancialMetrics(
                       currentTrips[driverTripIndex].expiry,
-                      currentTrips[driverTripIndex].purchaseAmount,
+                      newPurchaseAmount,
                       currentTrips[driverTripIndex].collectionAmount,
                       currentTrips[driverTripIndex].discount,
                       driverTotals.fresh.netTotal,
@@ -1425,6 +1437,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                     currentTrips[driverTripIndex] = {
                       ...currentTrips[driverTripIndex],
                       acceptedProducts: uniqueAcceptedProducts,
+                      purchaseAmount: newPurchaseAmount,
                       totalAmount: driverTotals.overall.total,
                       netTotal: driverTotals.overall.netTotal,
                       grandTotal: driverTotals.overall.grandTotal,
@@ -1435,6 +1448,27 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                       balance: driverFinancialMetrics.balance,
                       updatedAt: new Date().toISOString(),
                     };
+                    
+                    // Also update Driver-B's trip in the backend with recalculated values
+                    (async () => {
+                      try {
+                        await apiClient.updateDailyTrip(driverTrip.id, {
+                          acceptedProducts: uniqueAcceptedProducts,
+                          purchaseAmount: newPurchaseAmount,
+                          totalAmount: driverTotals.overall.total,
+                          netTotal: driverTotals.overall.netTotal,
+                          grandTotal: driverTotals.overall.grandTotal,
+                          expiryAfterTax: driverFinancialMetrics.expiryAfterTax,
+                          amountToBe: driverFinancialMetrics.amountToBe,
+                          salesDifference: driverFinancialMetrics.salesDifference,
+                          profit: driverFinancialMetrics.profit,
+                          balance: driverFinancialMetrics.balance,
+                        });
+                      } catch (updateError) {
+                        console.error('Failed to update receiving driver trip in backend:', updateError);
+                        // Don't throw - local state is already updated
+                      }
+                    })().catch(() => {});
                   }
                 }
               }
