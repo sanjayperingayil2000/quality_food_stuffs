@@ -378,7 +378,7 @@ export default function Page(): React.JSX.Element {
       );
 
       // Purchase amount = Fresh Grand Total + Bakery Grand Total
-      const purchaseAmount = totals.fresh.grandTotal + totals.bakery.grandTotal;
+      const purchaseAmount = Math.floor(totals.fresh.grandTotal) + Math.floor(totals.bakery.grandTotal);
       const expiryAfterTax = Math.floor((watchedExpiry || 0) * 1.05 * 0.87);
       const amountToBe = Math.floor(purchaseAmount - expiryAfterTax);
       const salesDifference = Math.floor((watchedCollectionAmount || 0) - amountToBe);
