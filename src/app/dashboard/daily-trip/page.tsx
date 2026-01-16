@@ -301,13 +301,32 @@ export default function Page(): React.JSX.Element {
 
     // Use accepted products from the driver's trip (if exists), otherwise check pending transfers
     if (driverTripForDate && driverTripForDate.acceptedProducts && driverTripForDate.acceptedProducts.length > 0) {
-      // Deduplicate accepted products using a more specific key
-      const uniqueProducts = [...new Map(
-        driverTripForDate.acceptedProducts.map(p => [
-          `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`,
-          p
-        ])
-      ).values()];
+      // Deduplicate accepted products based on productId and transferredFromDriverId
+      // If same productId and same transferredFromDriverId, keep only one
+      // Prefer products with transferredFromDriverId over those without
+      const productsMap = new Map<string, typeof driverTripForDate.acceptedProducts[0]>();
+      
+      for (const p of driverTripForDate.acceptedProducts) {
+        const transferredFromDriverId = (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || '';
+        const key = `${p.productId}-${transferredFromDriverId}`;
+        
+        // If key exists, check if we should replace it
+        if (productsMap.has(key)) {
+          const existing = productsMap.get(key)!;
+          const existingHasTransfer = !!(existing as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId;
+          const currentHasTransfer = !!transferredFromDriverId;
+          
+          // Prefer product with transferredFromDriverId
+          if (currentHasTransfer && !existingHasTransfer) {
+            productsMap.set(key, p);
+          }
+        } else {
+          // Key doesn't exist, add it
+          productsMap.set(key, p);
+        }
+      }
+      
+      const uniqueProducts = [...productsMap.values()];
       setAcceptedProductsForForm(uniqueProducts);
     } else {
       // Fallback to finding pending transfers
@@ -1062,16 +1081,32 @@ export default function Page(): React.JSX.Element {
                 )}
 
                 {trip.acceptedProducts && trip.acceptedProducts.length > 0 && (() => {
-                  // Deduplicate accepted products based on productId, quantity, unitPrice, and transferredFromDriverId
-                  // This ensures products with same ID from same driver are properly deduplicated
-                  const uniqueAcceptedProducts = [
-                    ...new Map(
-                      trip.acceptedProducts.map(p => [
-                        `${p.productId}-${p.quantity}-${p.unitPrice}-${p.transferredFromDriverId || ''}`,
-                        p
-                      ])
-                    ).values()
-                  ];
+                  // Deduplicate accepted products based on productId and transferredFromDriverId
+                  // If same productId and same transferredFromDriverId, keep only one
+                  // Prefer products with transferredFromDriverId over those without
+                  const productsMap = new Map<string, typeof trip.acceptedProducts[0]>();
+                  
+                  for (const p of trip.acceptedProducts) {
+                    const transferredFromDriverId = (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || '';
+                    const key = `${p.productId}-${transferredFromDriverId}`;
+                    
+                    // If key exists, check if we should replace it
+                    if (productsMap.has(key)) {
+                      const existing = productsMap.get(key)!;
+                      const existingHasTransfer = !!(existing as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId;
+                      const currentHasTransfer = !!transferredFromDriverId;
+                      
+                      // Prefer product with transferredFromDriverId
+                      if (currentHasTransfer && !existingHasTransfer) {
+                        productsMap.set(key, p);
+                      }
+                    } else {
+                      // Key doesn't exist, add it
+                      productsMap.set(key, p);
+                    }
+                  }
+                  
+                  const uniqueAcceptedProducts = [...productsMap.values()];
 
                   console.log('uniqueAcceptedProducts at line 1082:', uniqueAcceptedProducts);
 

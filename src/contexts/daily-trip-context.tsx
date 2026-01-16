@@ -1006,8 +1006,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     );
     
     // Recalculate purchaseAmount from grand totals (includes accepted products)
-    // Purchase amount = Fresh Grand Total + Bakery Grand Total
-    const recalculatedPurchaseAmount = totals.fresh.grandTotal + totals.bakery.grandTotal;
+    // Purchase amount = Math.floor(Fresh Grand Total) + Math.floor(Bakery Grand Total)
+    const recalculatedPurchaseAmount = Math.floor(totals.fresh.grandTotal) + Math.floor(totals.bakery.grandTotal);
     
     // Get previous balance for this driver
     const previousBalance = getPreviousBalance(tripData.driverId, new Date(tripData.date), trips);
@@ -1127,7 +1127,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             );
             
             // Recalculate purchaseAmount from grand totals (includes accepted products)
-            const recalculatedDriverPurchaseAmount = driverTotals.fresh.grandTotal + driverTotals.bakery.grandTotal;
+            // Purchase amount = Math.floor(Fresh Grand Total) + Math.floor(Bakery Grand Total)
+            const recalculatedDriverPurchaseAmount = Math.floor(driverTotals.fresh.grandTotal) + Math.floor(driverTotals.bakery.grandTotal);
             
             // Get previous balance for the receiving driver
             const driverPreviousBalance = getPreviousBalance(driverId, new Date(updatedDriverTrip.date), updatedTrips);
@@ -1422,7 +1423,8 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                     );
                     
                     // Recalculate purchaseAmount from grand totals
-                    const newPurchaseAmount = driverTotals.fresh.grandTotal + driverTotals.bakery.grandTotal;
+                    // Purchase amount = Math.floor(Fresh Grand Total) + Math.floor(Bakery Grand Total)
+                    const newPurchaseAmount = Math.floor(driverTotals.fresh.grandTotal) + Math.floor(driverTotals.bakery.grandTotal);
                     
                     const driverPreviousBalance = getPreviousBalance(driverTrip.driverId, new Date(driverTrip.date), currentTrips);
                     
