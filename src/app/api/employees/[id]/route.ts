@@ -26,7 +26,7 @@ const employeeUpdateSchema = z.object({
   routeName: z.string().optional(),
   location: z.string().optional(),
   salary: z.number().min(0).optional(),
-  balance: z.number().min(0).optional(),
+  balance: z.number().optional(), // Allow negative balances
   balanceHistory: z.array(balanceHistoryEntrySchema).optional(),
   hireDate: z.string().transform(str => new Date(str)).optional(),
   isActive: z.boolean().optional(),
