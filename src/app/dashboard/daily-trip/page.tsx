@@ -99,15 +99,71 @@ const tripSchema = zod.object({
 
 type TripFormData = zod.infer<typeof tripSchema>;
 
+// Helper function to deduplicate accepted products
+const deduplicateAcceptedProducts = (acceptedProducts: TripProduct[]): TripProduct[] => {
+  // First, group by productId to handle duplicates with same productId
+  const productsByProductId = new Map<string, TripProduct[]>();
+  
+  for (const p of acceptedProducts) {
+    const productId = p.productId;
+    if (!productsByProductId.has(productId)) {
+      productsByProductId.set(productId, []);
+    }
+    productsByProductId.get(productId)!.push(p);
+  }
+  
+  // For each productId, deduplicate and prefer products with transferredFromDriverId
+  const deduplicatedProducts: TripProduct[] = [];
+  
+  for (const [, products] of productsByProductId.entries()) {
+    // Group by transferredFromDriverId for this productId
+    const productsByDriver = new Map<string, TripProduct>();
+    
+    for (const p of products) {
+      const transferredFromDriverId = (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || '';
+      
+      // If we already have a product with this driver, skip (duplicate)
+      if (productsByDriver.has(transferredFromDriverId)) {
+        continue;
+      }
+      
+      productsByDriver.set(transferredFromDriverId, p);
+    }
+    
+    // If there are products with and without transferredFromDriverId for the same productId,
+    // prefer the one with transferredFromDriverId
+    const productsArray = [...productsByDriver.values()];
+    const productsWithTransfer = productsArray.filter(p => 
+      !!(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId
+    );
+    const productsWithoutTransfer = productsArray.filter(p => 
+      !(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId
+    );
+    
+    if (productsWithTransfer.length > 0) {
+      // Prefer products with transfer info
+      deduplicatedProducts.push(...productsWithTransfer);
+    } else {
+      // Only add products without transfer if there are no products with transfer
+      deduplicatedProducts.push(...productsWithoutTransfer);
+    }
+  }
+  
+  return deduplicatedProducts;
+};
+
 // Calculation functions
 const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[] = [], transferredProducts: TripProduct[] = []) => {
+  // Deduplicate accepted products before calculating totals
+  const deduplicatedAcceptedProducts = deduplicateAcceptedProducts(acceptedProducts);
+  
   // Calculate regular products totals (without accepted products)
   const regularFreshProducts = products.filter(p => p.category === 'fresh');
   const regularBakeryProducts = products.filter(p => p.category === 'bakery');
 
-  // Calculate accepted products totals by category
-  const acceptedFreshProducts = acceptedProducts.filter(p => p.category === 'fresh');
-  const acceptedBakeryProducts = acceptedProducts.filter(p => p.category === 'bakery');
+  // Calculate accepted products totals by category (using deduplicated products)
+  const acceptedFreshProducts = deduplicatedAcceptedProducts.filter(p => p.category === 'fresh');
+  const acceptedBakeryProducts = deduplicatedAcceptedProducts.filter(p => p.category === 'bakery');
 
   // Calculate transferred products totals (to subtract from sender)
   const transferredFreshProducts = transferredProducts.filter(p => p.category === 'fresh');
@@ -1323,9 +1379,11 @@ export default function Page(): React.JSX.Element {
                   <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                     <Typography variant="h6" sx={{ mb: 2 }}>Product Calculations</Typography>
                     {(() => {
+                      // Deduplicate accepted products before calculating totals
+                      const deduplicatedAcceptedProducts = deduplicateAcceptedProducts(trip.acceptedProducts || []);
                       const totals = calculateTotals(
                         trip.products,
-                        trip.acceptedProducts || [],
+                        deduplicatedAcceptedProducts,
                         trip.transfer?.transferredProducts || []
                       );
                       return (
