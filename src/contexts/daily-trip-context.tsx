@@ -1005,13 +1005,17 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
       tripData.transfer.transferredProducts
     );
     
+    // Recalculate purchaseAmount from grand totals (includes accepted products)
+    // Purchase amount = Fresh Grand Total + Bakery Grand Total
+    const recalculatedPurchaseAmount = totals.fresh.grandTotal + totals.bakery.grandTotal;
+    
     // Get previous balance for this driver
     const previousBalance = getPreviousBalance(tripData.driverId, new Date(tripData.date), trips);
     
-    // Calculate all financial metrics
+    // Calculate all financial metrics using recalculated purchaseAmount
     const financialMetrics = calculateFinancialMetrics(
       tripData.expiry,
-      tripData.purchaseAmount,
+      recalculatedPurchaseAmount,
       tripData.collectionAmount,
       tripData.discount,
       totals.fresh.netTotal,
@@ -1023,6 +1027,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
     const tripDataToSend: Omit<DailyTrip, 'id' | 'createdAt' | 'updatedAt'> = {
       ...tripData,
       acceptedProducts: allAcceptedProducts,
+      purchaseAmount: recalculatedPurchaseAmount,
       totalAmount: totals.overall.total,
       netTotal: totals.overall.netTotal,
       grandTotal: totals.overall.grandTotal,
@@ -1121,13 +1126,16 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
               updatedDriverTrip.transfer.transferredProducts
             );
             
+            // Recalculate purchaseAmount from grand totals (includes accepted products)
+            const recalculatedDriverPurchaseAmount = driverTotals.fresh.grandTotal + driverTotals.bakery.grandTotal;
+            
             // Get previous balance for the receiving driver
             const driverPreviousBalance = getPreviousBalance(driverId, new Date(updatedDriverTrip.date), updatedTrips);
             
-            // Recalculate financial metrics for the receiving driver
+            // Recalculate financial metrics for the receiving driver using recalculated purchaseAmount
             const driverFinancialMetrics = calculateFinancialMetrics(
               updatedDriverTrip.expiry,
-              updatedDriverTrip.purchaseAmount,
+              recalculatedDriverPurchaseAmount,
               updatedDriverTrip.collectionAmount,
               updatedDriverTrip.discount,
               driverTotals.fresh.netTotal,
@@ -1138,6 +1146,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
             updatedDriverTrip.totalAmount = driverTotals.overall.total;
             updatedDriverTrip.netTotal = driverTotals.overall.netTotal;
             updatedDriverTrip.grandTotal = driverTotals.overall.grandTotal;
+            updatedDriverTrip.purchaseAmount = recalculatedDriverPurchaseAmount;
             updatedDriverTrip.expiryAfterTax = driverFinancialMetrics.expiryAfterTax;
             updatedDriverTrip.amountToBe = driverFinancialMetrics.amountToBe;
             updatedDriverTrip.salesDifference = driverFinancialMetrics.salesDifference;
@@ -1254,17 +1263,22 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 updatedTrip.acceptedProducts,
                 updatedTrip.transfer.transferredProducts
               );
+              
+              // Recalculate purchaseAmount from grand totals (includes accepted products)
+              const recalculatedPurchaseAmount = totals.fresh.grandTotal + totals.bakery.grandTotal;
+              
               updatedTrip.totalAmount = totals.overall.total;
               updatedTrip.netTotal = totals.overall.netTotal;
               updatedTrip.grandTotal = totals.overall.grandTotal;
+              updatedTrip.purchaseAmount = recalculatedPurchaseAmount;
               
               // Get previous balance for this driver
               const previousBalance = getPreviousBalance(updatedTrip.driverId, new Date(updatedTrip.date), prev);
               
-              // Recalculate financial metrics
+              // Recalculate financial metrics using recalculated purchaseAmount
               const financialMetrics = calculateFinancialMetrics(
                 updatedTrip.expiry,
-                updatedTrip.purchaseAmount,
+                recalculatedPurchaseAmount,
                 updatedTrip.collectionAmount,
                 updatedTrip.discount,
                 totals.fresh.netTotal,
