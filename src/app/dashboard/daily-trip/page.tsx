@@ -93,7 +93,7 @@ const tripSchema = zod.object({
   profit: zod.coerce.number().optional(),
   due: zod.coerce.number().optional(),
   discount: zod.coerce.number().min(0, 'Discount amount is required').refine(val => val > 0, 'Discount amount must be greater than zero'),
-  petrol: zod.coerce.number().min(0, 'Petrol amount is required').refine(val => val >= 0, 'Petrol amount must be non-negative'),
+  petrol: zod.coerce.number().min(0, 'Petrol amount must be non-negative'),
   balance: zod.coerce.number(),
 });
 
@@ -1062,11 +1062,12 @@ export default function Page(): React.JSX.Element {
                 )}
 
                 {trip.acceptedProducts && trip.acceptedProducts.length > 0 && (() => {
-                  // Deduplicate accepted products based on productId, quantity, and transferredFromDriverId
+                  // Deduplicate accepted products based on productId, quantity, unitPrice, and transferredFromDriverId
+                  // This ensures products with same ID from same driver are properly deduplicated
                   const uniqueAcceptedProducts = [
                     ...new Map(
                       trip.acceptedProducts.map(p => [
-                        `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}`,
+                        `${p.productId}-${p.quantity}-${p.unitPrice}-${p.transferredFromDriverId || ''}`,
                         p
                       ])
                     ).values()
