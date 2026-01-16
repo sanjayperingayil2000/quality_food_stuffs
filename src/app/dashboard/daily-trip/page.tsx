@@ -732,7 +732,7 @@ export default function Page(): React.JSX.Element {
 
     // Calculate Purchase Amount dynamically from Grand Totals
     // Purchase amount = Fresh Grand Total + Bakery Grand Total
-    const calculatedPurchaseAmount = totals.fresh.grandTotal + totals.bakery.grandTotal;
+    const calculatedPurchaseAmount = Math.floor(totals.fresh.grandTotal) + Math.floor(totals.bakery.grandTotal);
     const calculatedExpiryAfterTax = Math.floor((data.expiry || 0) * 1.05 * 0.87);
     const calculatedAmountToBe = Math.floor(calculatedPurchaseAmount - calculatedExpiryAfterTax);
     const calculatedSalesDifference = Math.floor((data.collectionAmount || 0) - calculatedAmountToBe);
@@ -1071,6 +1071,8 @@ export default function Page(): React.JSX.Element {
                       ])
                     ).values()
                   ];
+
+                  console.log('uniqueAcceptedProducts at line 1082:', uniqueAcceptedProducts);
 
                   return uniqueAcceptedProducts.length > 0 ? (
                     <>
