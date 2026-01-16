@@ -9,6 +9,7 @@ import { apiClient } from '@/lib/api-client';
 import { freshProducts } from './data/fresh-products';
 import { bakeryProducts } from './data/bakery-products';
 import { useUser } from '@/hooks/use-user';
+import { deduplicateAcceptedProducts } from '@/utils/deduplicate-accepted-products';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -1105,14 +1106,9 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                 transferredFromDriverName: tempTrip.driverName,
               }));
             
-            // Combine existing with only NEW products and deduplicate using robust key
+            // Combine existing with only NEW products and deduplicate using shared utility
             const combinedAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProducts];
-            const uniqueAcceptedProducts = [...new Map(
-              combinedAcceptedProducts.map(p => [
-                `${p.productId}-${p.quantity}-${(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || ''}-${p.unitPrice}`,
-                p
-              ])
-            ).values()];
+            const uniqueAcceptedProducts = deduplicateAcceptedProducts(combinedAcceptedProducts);
             
             const updatedDriverTrip = {
               ...driverTrip,
@@ -1403,15 +1399,7 @@ export function DailyTripProvider({ children }: { children: React.ReactNode }): 
                   const combinedAcceptedProducts = [...existingAcceptedProductsFromOthers, ...acceptedProductsFromUpdatedDriver];
                   
                   // Deduplicate using robust key (handles cases where transferredFromDriverId might be missing)
-                  const uniqueAcceptedProducts = [...new Map(
-                    combinedAcceptedProducts.map(p => {
-                      const pWithTransfer = p as TripProduct & { transferredFromDriverId?: string };
-                      return [
-                        `${p.productId}-${p.quantity}-${pWithTransfer.transferredFromDriverId || ''}-${p.unitPrice}`,
-                        p
-                      ];
-                    })
-                  ).values()];
+                  const uniqueAcceptedProducts = deduplicateAcceptedProducts(combinedAcceptedProducts);
                   
                   // Update the receiving driver's trip
                   const driverTripIndex = currentTrips.findIndex(t => t.id === driverTrip.id);

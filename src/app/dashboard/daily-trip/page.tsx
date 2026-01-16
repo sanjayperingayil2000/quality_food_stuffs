@@ -46,6 +46,7 @@ import { useNotifications } from '@/contexts/notification-context';
 import { useUser } from '@/hooks/use-user';
 import type { DailyTrip, TripProduct } from '@/contexts/daily-trip-context';
 import { getProductPriceForDate } from '@/utils/price-history';
+import { deduplicateAcceptedProducts } from '@/utils/deduplicate-accepted-products';
 
 // Configure dayjs plugins
 dayjs.extend(utc);
@@ -98,59 +99,6 @@ const tripSchema = zod.object({
 });
 
 type TripFormData = zod.infer<typeof tripSchema>;
-
-// Helper function to deduplicate accepted products
-const deduplicateAcceptedProducts = (acceptedProducts: TripProduct[]): TripProduct[] => {
-  // First, group by productId to handle duplicates with same productId
-  const productsByProductId = new Map<string, TripProduct[]>();
-  
-  for (const p of acceptedProducts) {
-    const productId = p.productId;
-    if (!productsByProductId.has(productId)) {
-      productsByProductId.set(productId, []);
-    }
-    productsByProductId.get(productId)!.push(p);
-  }
-  
-  // For each productId, deduplicate and prefer products with transferredFromDriverId
-  const deduplicatedProducts: TripProduct[] = [];
-  
-  for (const [, products] of productsByProductId.entries()) {
-    // Group by transferredFromDriverId for this productId
-    const productsByDriver = new Map<string, TripProduct>();
-    
-    for (const p of products) {
-      const transferredFromDriverId = (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || '';
-      
-      // If we already have a product with this driver, skip (duplicate)
-      if (productsByDriver.has(transferredFromDriverId)) {
-        continue;
-      }
-      
-      productsByDriver.set(transferredFromDriverId, p);
-    }
-    
-    // If there are products with and without transferredFromDriverId for the same productId,
-    // prefer the one with transferredFromDriverId
-    const productsArray = [...productsByDriver.values()];
-    const productsWithTransfer = productsArray.filter(p => 
-      !!(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId
-    );
-    const productsWithoutTransfer = productsArray.filter(p => 
-      !(p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId
-    );
-    
-    if (productsWithTransfer.length > 0) {
-      // Prefer products with transfer info
-      deduplicatedProducts.push(...productsWithTransfer);
-    } else {
-      // Only add products without transfer if there are no products with transfer
-      deduplicatedProducts.push(...productsWithoutTransfer);
-    }
-  }
-  
-  return deduplicatedProducts;
-};
 
 // Calculation functions
 const calculateTotals = (products: TripProduct[], acceptedProducts: TripProduct[] = [], transferredProducts: TripProduct[] = []) => {
@@ -357,32 +305,10 @@ export default function Page(): React.JSX.Element {
 
     // Use accepted products from the driver's trip (if exists), otherwise check pending transfers
     if (driverTripForDate && driverTripForDate.acceptedProducts && driverTripForDate.acceptedProducts.length > 0) {
-      // Deduplicate accepted products based on productId and transferredFromDriverId
-      // If same productId and same transferredFromDriverId, keep only one
-      // Prefer products with transferredFromDriverId over those without
-      const productsMap = new Map<string, typeof driverTripForDate.acceptedProducts[0]>();
-      
-      for (const p of driverTripForDate.acceptedProducts) {
-        const transferredFromDriverId = (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || '';
-        const key = `${p.productId}-${transferredFromDriverId}`;
-        
-        // If key exists, check if we should replace it
-        if (productsMap.has(key)) {
-          const existing = productsMap.get(key)!;
-          const existingHasTransfer = !!(existing as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId;
-          const currentHasTransfer = !!transferredFromDriverId;
-          
-          // Prefer product with transferredFromDriverId
-          if (currentHasTransfer && !existingHasTransfer) {
-            productsMap.set(key, p);
-          }
-        } else {
-          // Key doesn't exist, add it
-          productsMap.set(key, p);
-        }
-      }
-      
-      const uniqueProducts = [...productsMap.values()];
+      // Deduplicate accepted products using helper function
+      // This removes duplicates based on productId and transferredFromDriverId
+      // Prefers products with transferredFromDriverId over those without
+      const uniqueProducts = deduplicateAcceptedProducts(driverTripForDate.acceptedProducts);
       setAcceptedProductsForForm(uniqueProducts);
     } else {
       // Fallback to finding pending transfers
@@ -572,14 +498,11 @@ export default function Page(): React.JSX.Element {
           })) || []
       );
 
-    // Combine existing and new accepted products, then deduplicate
+    // Combine existing and new accepted products, then deduplicate using helper function
     const allAcceptedProducts = [...existingAcceptedProducts, ...newAcceptedProductsFromTransfers];
-    const uniqueAcceptedProducts = [...new Map(
-      allAcceptedProducts.map(p => [
-        `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`,
-        p
-      ])
-    ).values()];
+    // Use helper function to deduplicate - removes products without transferredFromDriverId
+    // when products with the same productId and transferredFromDriverId exist
+    const uniqueAcceptedProducts = deduplicateAcceptedProducts(allAcceptedProducts);
     
     setAcceptedProductsForForm(uniqueAcceptedProducts);
 
@@ -798,10 +721,16 @@ export default function Page(): React.JSX.Element {
     const acceptedProductsToInclude = editingTrip
       ? (acceptedProductsForForm.length > 0 ? acceptedProductsForForm : editingTrip.acceptedProducts || [])
       : acceptedProductsForForm;
+    
+    // Deduplicate accepted products before using them for calculations and saving
+    const deduplicatedAcceptedProducts = deduplicateAcceptedProducts(acceptedProductsToInclude);
+    
+    console.log('onSubmit - Before deduplication:', acceptedProductsToInclude);
+    console.log('onSubmit - After deduplication:', deduplicatedAcceptedProducts);
 
     const totals = calculateTotals(
       filteredProducts,
-      acceptedProductsToInclude,
+      deduplicatedAcceptedProducts,
       filteredTransferredProducts
     );
 
@@ -822,9 +751,7 @@ export default function Page(): React.JSX.Element {
       date: dayjs(data.date).format('YYYY-MM-DD'),
       products: filteredProducts,
       transfer,
-      acceptedProducts: editingTrip 
-        ? (acceptedProductsForForm.length > 0 ? acceptedProductsForForm : editingTrip.acceptedProducts || [])
-        : acceptedProductsForForm,
+      acceptedProducts: deduplicatedAcceptedProducts,
       previousBalance: data.previousBalance,
       collectionAmount: data.collectionAmount,
       actualCollectionAmount: data.actualCollectionAmount,
@@ -1137,34 +1064,12 @@ export default function Page(): React.JSX.Element {
                 )}
 
                 {trip.acceptedProducts && trip.acceptedProducts.length > 0 && (() => {
-                  // Deduplicate accepted products based on productId and transferredFromDriverId
-                  // If same productId and same transferredFromDriverId, keep only one
-                  // Prefer products with transferredFromDriverId over those without
-                  const productsMap = new Map<string, typeof trip.acceptedProducts[0]>();
-                  
-                  for (const p of trip.acceptedProducts) {
-                    const transferredFromDriverId = (p as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId || '';
-                    const key = `${p.productId}-${transferredFromDriverId}`;
-                    
-                    // If key exists, check if we should replace it
-                    if (productsMap.has(key)) {
-                      const existing = productsMap.get(key)!;
-                      const existingHasTransfer = !!(existing as TripProduct & { transferredFromDriverId?: string }).transferredFromDriverId;
-                      const currentHasTransfer = !!transferredFromDriverId;
-                      
-                      // Prefer product with transferredFromDriverId
-                      if (currentHasTransfer && !existingHasTransfer) {
-                        productsMap.set(key, p);
-                      }
-                    } else {
-                      // Key doesn't exist, add it
-                      productsMap.set(key, p);
-                    }
-                  }
-                  
-                  const uniqueAcceptedProducts = [...productsMap.values()];
-
-                  console.log('uniqueAcceptedProducts at line 1082:', uniqueAcceptedProducts);
+                  // Deduplicate accepted products using helper function
+                  // This removes duplicates based on productId and transferredFromDriverId
+                  // Prefers products with transferredFromDriverId over those without
+                  console.log('Before deduplication - trip.acceptedProducts:', trip.acceptedProducts);
+                  const uniqueAcceptedProducts = deduplicateAcceptedProducts(trip.acceptedProducts);
+                  console.log('After deduplication - uniqueAcceptedProducts:', uniqueAcceptedProducts);
 
                   return uniqueAcceptedProducts.length > 0 ? (
                     <>
@@ -1593,13 +1498,8 @@ export default function Page(): React.JSX.Element {
 
                             // Use accepted products from the driver's trip (if exists), otherwise check pending transfers
                             if (driverTripForDate && driverTripForDate.acceptedProducts && driverTripForDate.acceptedProducts.length > 0) {
-                              // Deduplicate accepted products using a more specific key
-                              const uniqueProducts = [...new Map(
-                                driverTripForDate.acceptedProducts.map(p => [
-                                  `${p.productId}-${p.quantity}-${p.transferredFromDriverId || ''}-${p.unitPrice}`,
-                                  p
-                                ])
-                              ).values()];
+                              // Deduplicate accepted products using helper function
+                              const uniqueProducts = deduplicateAcceptedProducts(driverTripForDate.acceptedProducts);
                               console.log('Found accepted products for driver:', driver.id, uniqueProducts);
                               setAcceptedProductsForForm(uniqueProducts);
                             } else {
@@ -1626,13 +1526,8 @@ export default function Page(): React.JSX.Element {
                                     })) || []
                                 );
 
-                              // Deduplicate using a more specific key
-                              const uniqueProducts = [...new Map(
-                                acceptedProductsForThisDriver.map(p => [
-                                  `${p.productId}-${p.quantity}-${p.transferredFromDriverId}-${p.unitPrice}`,
-                                  p
-                                ])
-                              ).values()];
+                              // Deduplicate using helper function
+                              const uniqueProducts = deduplicateAcceptedProducts(acceptedProductsForThisDriver);
                               console.log('Found accepted products for driver:', driver.id, uniqueProducts);
                               setAcceptedProductsForForm(uniqueProducts);
                             }
